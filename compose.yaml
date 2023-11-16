@@ -1,0 +1,13 @@
+services:
+  stakewise:
+    build: .
+    ports:
+      - "8000:5000"
+  geth:
+    image: "ethereum/client-go:stable"
+    ports:
+      - "30303:30303"
+  ethdo:
+    image: "wealdtech/ethdo"
+  nimbus:
+    image: "statusim/nimbus-eth2:amd64-latest"
