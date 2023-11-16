@@ -1,0 +1,1 @@
+docker exec ethdo validator exit --account=Wallet/Account --offline
