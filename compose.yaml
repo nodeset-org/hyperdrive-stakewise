@@ -3,11 +3,13 @@ services:
     build: .
   geth:
     image: "ethereum/client-go:stable"
+    command: --goerli
     ports:
       - "30303:30303"
   ethdo:
     image: "wealdtech/ethdo"
   nimbus:
     image: "statusim/nimbus-eth2:amd64-latest"
+    command: trustedNodeSync --network=goerli --trusted-node-url=https://sync-goerli.beaconcha.in --backfill=false
     ports:
       - "9000:9000"
