@@ -1,15 +1,57 @@
 services:
   stakewise:
-    build: .
+    # build:
+    #  context: .
+    #  dockerfile: europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:latest
+    #image: v3-operator
+    image: "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:v1.0.0"
+    container_name: v3-operator
+    command:
+      [
+        "src/main.py",
+        "start",
+        "--vault=0x4c54003b39e25d8a6a0157b0b4c14db2a7456199",
+        "--consensus-endpoints=http://geth:9000",
+        "--execution-endpoints=http://nimbus:30303",
+      ]
+    volumes:
+      - ./data:/data
+    environment:
+      DATA_DIR: /data
   geth:
     image: "ethereum/client-go:stable"
-    command: --goerli
+    command: --$NETWORK
+      --http
+      --authrpc.addr 0.0.0.0
+      --authrpc.port 8551
+      --authrpc.jwtsecret /tmp/jwtsecret
+      --http.addr 0.0.0.0
+    env_file:
+      - .env
+    volumes:
+      - ./data/tmp:/tmp
+      - ./geth:/root/.ethereum
     ports:
-      - "30303:30303"
+      - 30303:30303/tcp
+      - 30303:30303/udp
+      - 8551/tcp
+      - 8551/udp
   ethdo:
     image: "wealdtech/ethdo"
   nimbus:
     image: "statusim/nimbus-eth2:amd64-latest"
-    command: trustedNodeSync --network=goerli --trusted-node-url=https://sync-goerli.beaconcha.in --backfill=false
+    command: -d=/home/user/data
+      --network=$NETWORK
+      --web3-url="geth:8551"
+      --jwt-secret=/tmp/jwtsecret
+      --log-level=info
+      --enr-auto-update:true
+      --nat:extip:$EXT_IP_ADDRESS
+    env_file:
+      - .env
+    volumes:
+      - ./data:/home/user/data
+      - ./data/tmp:/tmp/
     ports:
-      - "9000:9000"
+      - 9000:9000/tcp
+      - 9000:9000/udp
