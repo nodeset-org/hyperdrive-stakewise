@@ -23,7 +23,7 @@ services:
       --authrpc.jwtsecret /tmp/jwtsecret
       --http.addr 0.0.0.0
     env_file:
-      - .env
+      - $NAME.env
     volumes:
       - ./tmp:/tmp
       - ./geth-data:/root/.ethereum
@@ -43,7 +43,7 @@ services:
       --log-level=info
       --enr-auto-update:true
     env_file:
-      - .env
+      - $NAME.env
     volumes:
       - ./nimbus-data:/home/user/data
       - ./tmp:/tmp/
