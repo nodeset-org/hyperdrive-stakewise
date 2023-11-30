@@ -1,1 +1,4 @@
-/data
+/geth-data
+/nimbus-data
+/stakewise-data
+/tmp

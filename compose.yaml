@@ -1,21 +1,17 @@
 services:
   stakewise:
-    # build:
-    #  context: .
-    #  dockerfile: europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:latest
-    #image: v3-operator
-    image: "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:v1.0.0"
+    image: "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master"
     container_name: v3-operator
-    command:
-      [
-        "src/main.py",
-        "start",
-        "--vault=0x4c54003b39e25d8a6a0157b0b4c14db2a7456199",
-        "--consensus-endpoints=http://geth:9000",
-        "--execution-endpoints=http://nimbus:30303",
-      ]
+    # command:
+    #   [
+    #     "src/main.py",
+    #     "start",
+    #     "--vault=0x4c54003b39e25d8a6a0157b0b4c14db2a7456199",
+    #     "--consensus-endpoints=http://geth:9000",
+    #     "--execution-endpoints=http://nimbus:30303",
+    #   ]
     volumes:
-      - ./data:/data
+      - ./stakewise-data:/data
     environment:
       DATA_DIR: /data
   geth:
@@ -29,8 +25,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data/tmp:/tmp
-      - ./geth:/root/.ethereum
+      - ./tmp:/tmp
+      - ./geth-data:/root/.ethereum
     ports:
       - 30303:30303/tcp
       - 30303:30303/udp
@@ -46,12 +42,11 @@ services:
       --jwt-secret=/tmp/jwtsecret
       --log-level=info
       --enr-auto-update:true
-      --nat:extip:$EXT_IP_ADDRESS
     env_file:
       - .env
     volumes:
-      - ./data:/home/user/data
-      - ./data/tmp:/tmp/
+      - ./nimbus-data:/home/user/data
+      - ./tmp:/tmp/
     ports:
       - 9000:9000/tcp
       - 9000:9000/udp
