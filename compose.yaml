@@ -6,14 +6,11 @@ services:
   stakewise:
     image: "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master"
     container_name: v3-operator
-    # command:
-    #   [
-    #     "src/main.py",
-    #     "start",
-    #     "--vault=$VAULT",
-    #     "--consensus-endpoints=http://$ELCLIENT:$ELPORT",
-    #     "--execution-endpoints=http://$CLCLIENT:$CLPORT",
-    #   ]
+    command:
+      src/main.py start
+      --vault=$VAULT
+      --consensus-endpoints=http://$CLCLIENT:$CLPORT
+      --execution-endpoints=http://$ELCLIENT:$ELPORT
     volumes:
       - ./stakewise-data:/data
     environment:

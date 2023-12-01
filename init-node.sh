@@ -11,7 +11,9 @@ clean()
     rm -rd ./geth-data
 
     mkdir ./nimbus-data
+    mkdir ./stakewise-data
     chown $(logname) ./nimbus-data
+    chown $(logname) ./stakewise-data
 }
 
 generate_jwtsecret()
@@ -31,12 +33,32 @@ checkpoint()
     fi
 }
 
+display_funding_message()
+{
+    echo "Please note that you must have enough Ether in this node wallet to register validators."
+    echo "Each validator takes approximately 0.01 ETH to create. We recommend depositing AT LEAST 0.1 ETH."
+    echo "To continue, first send some ETH to this wallet, then type 'wallet is funded' to continue."
+    read answer
+
+    if [ "$answer" != "wallet is funded" ]; then 
+        display_funding_message
+    fi
+}
+
 setup_stakewise()
 {
     echo "Pulling latest StakeWise operator binary..."
     # pull latest stakewise operator image
     docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
+
+    docker compose run stakewise src/main.py init --network=$NETWORK --vault=$VAULT --language=english
+    docker compose run stakewise src/main.py create-keys --vault=$VAULT --language=english --count=$NUMKEYS
+    docker compose run stakewise src/main.py create-wallet --vault=$VAULT --language=english --count=$NUMKEYS
+    
+    display_funding_message
 }
+
+## -- Start of Script -- ##
 
 # ensure root access
 if [ "$(id -u)" -ne 0 ]; then
@@ -92,7 +114,7 @@ if [ "$2" = "-r" ] || [ "$2" == "--reset" ]; then
 fi
 
 generate_jwtsecret
-checkpoint
+#checkpoint
 setup_stakewise
 
 echo Starting node...
