@@ -1,16 +1,22 @@
 # stakewise-testing
 
-A dockerfile for testing the NodeSet StakeWise operator experience
+A script which sets up a node for StakeWise vaults.
 
-Use `sudo docker build . -t swtest` to build the container and `docker run -it swtest` to enter it.
+## Dependencies
 
-From inside the container's shell, you have access to:
+You must have docker and docker compose already installed in your target environment. We recommend a fresh and updated Debian installation.
 
-`operator`: the StakeWise operator software used to generate keystores and validator deposit data
+## Usage
+
+To set up the environment, simply run `initialize.sh`.
+Usage: `initialize.sh VAULT [--reset|-r]`
+Supported vaults: `holesky`, `gravita`
+Example: `sh initialize.sh holesky` will initialize a node for [NodeSet's test vault on Holesky](https://app.stakewise.io/vault/0x01b353abc66a65c4c0ac9c2ecf82e693ce0303bc).
+
+[`operator`](https://github.com/stakewise/v3-operator): the StakeWise v3-operator software used to generate keystores and validator deposit data
 
 [Nimbus](https://nimbus.guide/): a lightweight Ethereum Validator Client
 
-`deposit`: a custom fork of the [staking-deposit-cli tool](https://github.com/nodeset-org/staking-deposit-cli) which can be used to generate signed voluntary exit messages from keystores or a mnemonic
+[`ethdo`](https://github.com/wealdtech/ethdo): an eth2 utility developed by Jim McDonald used to generate
 
-NOTES:
-Store chain data outside of the container and use that to start nimbus/geth instead?
+NOTE: Remember to forward your ports so you can find peers! Nimbus uses 9000 and Geth uses 30303.
