@@ -1,0 +1,19 @@
+services:
+  geth:
+    image: "ethereum/client-go:stable"
+    command: --$NETWORK
+      --http
+      --authrpc.addr 0.0.0.0
+      --authrpc.port 8551
+      --authrpc.jwtsecret /tmp/jwtsecret
+      --http.addr 0.0.0.0
+    env_file:
+      - $NAME.env
+    volumes:
+      - ./tmp:/tmp
+      - ./geth-data:/root/.ethereum
+    ports:
+      - 30303:30303/tcp
+      - 30303:30303/udp
+      - 8551/tcp
+      - 8551/udp

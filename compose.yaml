@@ -1,3 +1,7 @@
+include:
+  - $ELCLIENT.yaml
+  - $CLCLIENT.yaml
+
 services:
   stakewise:
     image: "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master"
@@ -6,47 +10,13 @@ services:
     #   [
     #     "src/main.py",
     #     "start",
-    #     "--vault=0x4c54003b39e25d8a6a0157b0b4c14db2a7456199",
-    #     "--consensus-endpoints=http://geth:9000",
-    #     "--execution-endpoints=http://nimbus:30303",
+    #     "--vault=$VAULT",
+    #     "--consensus-endpoints=http://$ELCLIENT:$ELPORT",
+    #     "--execution-endpoints=http://$CLCLIENT:$CLPORT",
     #   ]
     volumes:
       - ./stakewise-data:/data
     environment:
       DATA_DIR: /data
-  geth:
-    image: "ethereum/client-go:stable"
-    command: --$NETWORK
-      --http
-      --authrpc.addr 0.0.0.0
-      --authrpc.port 8551
-      --authrpc.jwtsecret /tmp/jwtsecret
-      --http.addr 0.0.0.0
-    env_file:
-      - $NAME.env
-    volumes:
-      - ./tmp:/tmp
-      - ./geth-data:/root/.ethereum
-    ports:
-      - 30303:30303/tcp
-      - 30303:30303/udp
-      - 8551/tcp
-      - 8551/udp
   ethdo:
     image: "wealdtech/ethdo"
-  nimbus:
-    image: "statusim/nimbus-eth2:amd64-latest"
-    command: -d=/home/user/data
-      --network=$NETWORK
-      --web3-url="geth:8551"
-      --jwt-secret=/tmp/jwtsecret
-      --log-level=info
-      --enr-auto-update:true
-    env_file:
-      - $NAME.env
-    volumes:
-      - ./nimbus-data:/home/user/data
-      - ./tmp:/tmp/
-    ports:
-      - 9000:9000/tcp
-      - 9000:9000/udp

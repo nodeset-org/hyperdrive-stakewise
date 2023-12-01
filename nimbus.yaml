@@ -1,0 +1,17 @@
+services:
+  nimbus:
+      image: "statusim/nimbus-eth2:amd64-latest"
+      command: -d=/home/user/data
+        --network=$NETWORK
+        --web3-url="geth:8551"
+        --jwt-secret=/tmp/jwtsecret
+        --log-level=info
+        --enr-auto-update:true
+      env_file:
+        - $NAME.env
+      volumes:
+        - ./nimbus-data:/home/user/data
+        - ./tmp:/tmp/
+      ports:
+        - 9000:9000/tcp
+        - 9000:9000/udp
