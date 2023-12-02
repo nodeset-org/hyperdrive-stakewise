@@ -2,7 +2,7 @@ clean()
 {
     echo "Cleaning up previous configuration..."
     
-    docker compose down
+    docker compose down --remove-orphans
 
     # clear old data (if any)
     rm -rd ./nimbus-data
@@ -14,6 +14,11 @@ clean()
     mkdir ./stakewise-data
     chown $(logname) ./nimbus-data
     chown $(logname) ./stakewise-data
+    
+    # need to figure out the user for the stakewise container
+
+    # this works, but is obviously unsafe
+    # chmod -R 777 ./stakewise-data 
 }
 
 generate_jwtsecret()
@@ -52,8 +57,8 @@ setup_stakewise()
     docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
 
     docker compose run stakewise src/main.py init --network=$NETWORK --vault=$VAULT --language=english
-    docker compose run stakewise src/main.py create-keys --vault=$VAULT --language=english --count=$NUMKEYS
-    docker compose run stakewise src/main.py create-wallet --vault=$VAULT --language=english --count=$NUMKEYS
+    docker compose run stakewise src/main.py create-keys --vault=$VAULT --count=$NUMKEYS
+    docker compose run stakewise src/main.py create-wallet --vault=$VAULT --count=$NUMKEYS
     
     display_funding_message
 }

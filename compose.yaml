@@ -6,8 +6,7 @@ services:
   stakewise:
     image: "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master"
     container_name: v3-operator
-    command:
-      src/main.py start
+    command: src/main.py start
       --vault=$VAULT
       --consensus-endpoints=http://$CLCLIENT:$CLPORT
       --execution-endpoints=http://$ELCLIENT:$ELPORT
@@ -15,5 +14,7 @@ services:
       - ./stakewise-data:/data
     environment:
       DATA_DIR: /data
+    env_file: ./$NAME.env
   ethdo:
     image: "wealdtech/ethdo"
+    env_file: ./$NAME.env
