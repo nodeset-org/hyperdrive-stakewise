@@ -28,7 +28,7 @@ Example: `sh init-node.sh holesky` will initialize a node for [NodeSet's test va
 
 If something goes wrong, you can use the `-r` flag to reset the configuration completely before initializing as usual, deleting all the chain data and client caches. On Holesky, resyncing is quick, but _DO NOT DO THIS ON MAINNET_ if you have any active validators!
 
-Remember to forward your ports so you can find peers! Nimbus uses 9000 and Geth uses 30303.
+Remember to forward your ports so you can find peers! Nimbus uses `9000` and Geth uses `30303` (both TCP & UDP).
 
 Once you run the script, logs will be shown. You may exit this view safely with `ctrl+c` and everything will continue running. To see the logs again, use `docker compose logs -f`. To bring down the containers (e.g. for maintenance), use `docker compose down`. You can safely restart everything with the same command (`sh init-node.sh VAULT`) or simply use `docker compose up -d`.
 

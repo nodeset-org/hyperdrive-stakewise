@@ -13,12 +13,10 @@ clean()
     mkdir ./nimbus-data
     mkdir ./stakewise-data
     chown $(logname) ./nimbus-data
-    chown $(logname) ./stakewise-data
-    
-    # need to figure out the user for the stakewise container
-
-    # this works, but is obviously unsafe
-    # chmod -R 777 ./stakewise-data 
+    chmod 700 ./nimbus-data
+    # v3-operator user is "nobody" for safety since keys are stored there
+    # you will need to use root to access it
+    chown nobody ./stakewise-data 
 }
 
 generate_jwtsecret()
@@ -40,8 +38,6 @@ checkpoint()
 
 display_funding_message()
 {
-    echo "Please note that you must have enough Ether in this node wallet to register validators."
-    echo "Each validator takes approximately 0.01 ETH to create. We recommend depositing AT LEAST 0.1 ETH."
     echo "To continue, first send some ETH to this wallet, then type 'wallet is funded' to continue."
     read answer
 
@@ -52,14 +48,12 @@ display_funding_message()
 
 setup_stakewise()
 {
-    echo "Pulling latest StakeWise operator binary..."
-    # pull latest stakewise operator image
-    docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
-
-    docker compose run stakewise src/main.py init --network=$NETWORK --vault=$VAULT --language=english
+    docker compose run stakewise src/main.py init --network=$NETWORK --vault=$VAULT --language=english --no-verify
     docker compose run stakewise src/main.py create-keys --vault=$VAULT --count=$NUMKEYS
-    docker compose run stakewise src/main.py create-wallet --vault=$VAULT --count=$NUMKEYS
+    docker compose run stakewise src/main.py create-wallet --vault=$VAULT
     
+    echo "Please note that you must have enough Ether in this node wallet to register validators."
+    echo "Each validator takes approximately 0.01 ETH to create. We recommend depositing AT LEAST 0.1 ETH."
     display_funding_message
 }
 
@@ -91,26 +85,26 @@ if [ "$2" != "" ] && [ "$2" != "-r" ] && [ "$2" != "--reset" ]; then
     exit
 fi
 
-if [ "$2" = "-r" ] || [ "$2" == "--reset" ]; then
+if [ "$2" = "-r" ] || [ "$2" = "--reset" ]; then
      if [ "$1" != "holesky" ]; then
         
         # todo: check if there are any active validators before giving this warning
         echo "DANGER: You are attempting to reset your configuration for a mainnet vault!"
         echo "This will require you to resync the chain completely before you can begin validating again, which may take several days."
         echo "Remember, if you're offline for too long, you may be kicked out of NodeSet!"
-        echo "Are you sure you want to continue? You must type YES to continue."
+        echo "Are you sure you want to continue? You must type 'I UNDERSTAND' to continue."
         read answer
 
-        if [ "$answer" != "YES" ]; then 
+        if [ "$answer" != "I UNDERSTAND" ]; then 
             echo Cancelled
             exit
         fi
 
         echo "THIS IS YOUR FINAL WARNING! Are you absolutely sure that you want to delete all of your data for this mainnet configuration?"
-        echo "You must type YES to continue."
+        echo "You must type 'DELETE EVERYTHING' to continue."
         read answer2
 
-        if [ "$answer2" != "YES" ]; then 
+        if [ "$answer2" != "DELETE EVERYTHING" ]; then 
             echo Cancelled
             exit
         fi
@@ -118,9 +112,26 @@ if [ "$2" = "-r" ] || [ "$2" == "--reset" ]; then
     clean
 fi
 
-generate_jwtsecret
-#checkpoint
-setup_stakewise
+if [ ! -e ./tmp/jwtsecret ]; then
+    echo "No prior jwtsecret found, creating..."
+    generate_jwtsecret
+else
+    echo "Prior jwtsecret found. Skipping creation."
+fi
+
+# todo: only run checkpoint sync if no db exists
+checkpoint
+
+# always pull latest stakewise operator image in case it's been updated
+echo "Pulling latest StakeWise operator binary..."
+docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
+
+if [ ! -d "./stakewise-data/$VAULT/keystores" ]; then
+    echo "No prior StakeWise setup found. Initializing..."
+    setup_stakewise
+else
+    echo "Prior StakeWise setup found. Skipping initialization."
+fi
 
 echo Starting node...
 docker compose up -d
