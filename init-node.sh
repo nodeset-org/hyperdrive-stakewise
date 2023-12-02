@@ -48,9 +48,18 @@ display_funding_message()
 
 setup_stakewise()
 {
-    docker compose run stakewise src/main.py init --network=$NETWORK --vault=$VAULT --language=english --no-verify
-    docker compose run stakewise src/main.py create-keys --vault=$VAULT --count=$NUMKEYS
-    docker compose run stakewise src/main.py create-wallet --vault=$VAULT
+    if [ $MNEMONIC != ""]; then
+        echo "Initializing new StakeWise configuration with existing mnemonic..."
+        echo $MNEMONIC
+        # send init output to /dev/null because it will generate a new mnemonic which isn't useful
+        docker compose run stakewise src/main.py init --network=$NETWORK --vault=$VAULT --language=english --no-verify >> /dev/null
+        docker compose run stakewise src/main.py create-keys --vault=$VAULT --count=$NUMKEYS --mnemonic="$MNEMONIC"
+        docker compose run stakewise src/main.py create-wallet --vault=$VAULT --mnemonic="$MNEMONIC"
+    else
+        docker compose run stakewise src/main.py init --network=$NETWORK --vault=$VAULT --language=english
+        docker compose run stakewise src/main.py create-keys --vault=$VAULT --count=$NUMKEYS
+        docker compose run stakewise src/main.py create-wallet --vault=$VAULT
+    fi
     
     echo "Please note that you must have enough Ether in this node wallet to register validators."
     echo "Each validator takes approximately 0.01 ETH to create. We recommend depositing AT LEAST 0.1 ETH."
@@ -65,10 +74,72 @@ if [ "$(id -u)" -ne 0 ]; then
   exit
 fi
 
-USAGEMSG="Usage: init-node.sh VAULT [--preserve-data|-p]
-Supported vaults: holesky, gravita"
+USAGEMSG="Usage: init-node.sh [--reset|-r] [--mnemonic|-m=MNEMONIC] VAULT
+Supported vaults: holesky, gravita
+Example: sudo sh init-node.sh holesky -m \"correct battery horse staple...\""
 
-# check parameters make sense
+echo "Checking options"
+while getopts ":rm:-:" options 2>/dev/null; do
+    case $options in
+        -)
+            case "${OPTARG}" in
+                reset)
+                    RESET=true
+                    ;;
+                mnemonic=*)
+                    MNEMONIC=${OPTARG#*=}
+                    echo "mnemonic provided: $MNEMONIC"
+                    ;;
+                mnemonic)
+                    MNEMONIC="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    echo "mnemonic provided: $MNEMONIC"
+                    ;;
+                \?)
+                    echo "Unrecognized option: -$OPTARG"
+                    echo $USAGEMSG
+                    exit 1
+                    ;;
+                :)
+                    echo "ERROR: Option -$OPTARG requires an argument"
+                    echo $USAGEMSG
+                    exit 1
+                    ;;
+                *) 
+                    echo "Unknown arg"
+                    exit 1
+                    ;;
+            esac
+            ;;
+        r)
+            RESET=true
+            ;;
+        m)
+            MNEMONIC=${OPTARG}
+            ;;
+        m=*)
+            MNEMONIC=${OPTARG#*=}
+            ;;
+        \?)
+            echo "Unrecognized option: -$OPTARG"
+            echo $USAGEMSG
+            exit 1
+            ;;
+        :)
+            echo "ERROR: Option -$OPTARG requires an argument"
+            echo $USAGEMSG
+            exit 1
+            ;;
+        *) 
+            echo "Unknown arg"
+            exit 1
+            ;;
+    esac
+done
+shift $(( OPTIND - 1 ))
+
+exit
+
+# check vault name makes sense
 if [ "$1" != "holesky" ] && [ "$1" != "gravita" ]; then
   echo $USAGEMSG
   exit
@@ -79,13 +150,7 @@ set -a
 source ./${1}.env
 set +a
 
-# check for preserve-data flag
-if [ "$2" != "" ] && [ "$2" != "-r" ] && [ "$2" != "--reset" ]; then
-    echo $USAGEMSG
-    exit
-fi
-
-if [ "$2" = "-r" ] || [ "$2" = "--reset" ]; then
+if [ $RESET ]; then
      if [ "$1" != "holesky" ]; then
         
         # todo: check if there are any active validators before giving this warning
