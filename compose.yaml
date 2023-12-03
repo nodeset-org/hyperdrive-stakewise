@@ -10,7 +10,7 @@ services:
     command: src/main.py start
       --vault=$VAULT
       --consensus-endpoints="http://$CCNAME:$CCPORT"
-      --execution-endpoints="http://$ECNAME:$ECNAME"
+      --execution-endpoints="http://$ECNAME:$ECPORT"
     volumes:
       - ./stakewise-data:/data
     environment:

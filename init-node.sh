@@ -1,3 +1,5 @@
+#!/bin/bash
+
 clean()
 {
     echo "Cleaning up previous configuration..."
@@ -48,17 +50,19 @@ display_funding_message()
 
 setup_stakewise()
 {
-    if [ $MNEMONIC != ""]; then
-        echo "Initializing new StakeWise configuration with existing mnemonic..."
-        echo $MNEMONIC
-        # send init output to /dev/null because it will generate a new mnemonic which isn't useful
-        docker compose run stakewise src/main.py init --network=$NETWORK --vault=$VAULT --language=english --no-verify >> /dev/null
-        docker compose run stakewise src/main.py create-keys --vault=$VAULT --count=$NUMKEYS --mnemonic="$MNEMONIC"
-        docker compose run stakewise src/main.py create-wallet --vault=$VAULT --mnemonic="$MNEMONIC"
+    if [ "$mnemonic" != "" ]; then
+        echo "Recreating StakeWise configuration using existing mnemonic..."
+
+        docker compose run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --execution-endpoints="http://$ECNAME:$ECHTTPPORT" --consensus-endpoints="http://$CCNAME:$CCPORT" --mnemonic="$mnemonic"
+        
+        sleep 10
+        
+        docker compose run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
     else
-        docker compose run stakewise src/main.py init --network=$NETWORK --vault=$VAULT --language=english
-        docker compose run stakewise src/main.py create-keys --vault=$VAULT --count=$NUMKEYS
-        docker compose run stakewise src/main.py create-wallet --vault=$VAULT
+        echo "Initializing new StakeWise configuration..."
+        docker compose run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
+        docker compose run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
+        docker compose run stakewise src/main.py create-wallet --vault="$VAULT"
     fi
     
     echo "Please note that you must have enough Ether in this node wallet to register validators."
@@ -74,59 +78,53 @@ if [ "$(id -u)" -ne 0 ]; then
   exit
 fi
 
-USAGEMSG="Usage: init-node.sh [--reset|-r] [--mnemonic|-m=MNEMONIC] VAULT
-Supported vaults: holesky, gravita
-Example: sudo sh init-node.sh holesky -m \"correct battery horse staple...\""
+usagemsg="Usage: init-node.sh [--reset|-r] [--mnemonic|-m=mnemonic] VAULT\nSupported vaults: holesky, gravita\nExample: sudo sh init-node.sh -m \"correct battery horse staple...\" holesky"
+reset=false
 
-echo "Checking options"
-while getopts ":rm:-:" options 2>/dev/null; do
-    case $options in
+while getopts "rm:-:" option; do
+    case $option in
         -)
             case "${OPTARG}" in
                 reset)
-                    RESET=true
+                    reset=true
                     ;;
                 mnemonic=*)
-                    MNEMONIC=${OPTARG#*=}
-                    echo "mnemonic provided: $MNEMONIC"
+                    mnemonic=${OPTARG#*=}
                     ;;
                 mnemonic)
-                    MNEMONIC="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    echo "mnemonic provided: $MNEMONIC"
+                    mnemonic="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 \?)
-                    echo "Unrecognized option: -$OPTARG"
-                    echo $USAGEMSG
+                    printf "$usagemsg\n"
                     exit 1
                     ;;
                 :)
-                    echo "ERROR: Option -$OPTARG requires an argument"
-                    echo $USAGEMSG
+                    printf "ERROR: Option -$option requires an argument\n\n"
+                    printf "$usagemsg\n"
                     exit 1
                     ;;
                 *) 
-                    echo "Unknown arg"
+                    echo "Unknown arg -$option"
                     exit 1
                     ;;
             esac
             ;;
         r)
-            RESET=true
+            reset=true
             ;;
         m)
-            MNEMONIC=${OPTARG}
+            mnemonic=${OPTARG}
             ;;
         m=*)
-            MNEMONIC=${OPTARG#*=}
+            mnemonic=${OPTARG#*=}
             ;;
         \?)
-            echo "Unrecognized option: -$OPTARG"
-            echo $USAGEMSG
+            printf "$usagemsg\n"
             exit 1
             ;;
         :)
-            echo "ERROR: Option -$OPTARG requires an argument"
-            echo $USAGEMSG
+            printf "ERROR: Option -$option requires an argument\n\n"
+            printf "$usagemsg\n"
             exit 1
             ;;
         *) 
@@ -137,11 +135,10 @@ while getopts ":rm:-:" options 2>/dev/null; do
 done
 shift $(( OPTIND - 1 ))
 
-exit
-
 # check vault name makes sense
 if [ "$1" != "holesky" ] && [ "$1" != "gravita" ]; then
-  echo $USAGEMSG
+  printf "Error: you must provide a valid vault name\n\n"
+  printf "$usagemsg\n"
   exit
 fi
 
@@ -150,7 +147,7 @@ set -a
 source ./${1}.env
 set +a
 
-if [ $RESET ]; then
+if [ $reset ]; then
      if [ "$1" != "holesky" ]; then
         
         # todo: check if there are any active validators before giving this warning
@@ -185,7 +182,7 @@ else
 fi
 
 # todo: only run checkpoint sync if no db exists
-checkpoint
+#checkpoint
 
 # always pull latest stakewise operator image in case it's been updated
 echo "Pulling latest StakeWise operator binary..."
