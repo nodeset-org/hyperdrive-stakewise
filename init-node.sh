@@ -33,9 +33,7 @@ generate_jwtsecret()
 checkpoint()
 {
     echo "Performing checkpoint sync..."
-    if [ "$NETWORK" != "mainnet" ]; then
-        docker compose run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false
-    fi
+    docker compose run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false
 }
 
 display_funding_message()
@@ -53,7 +51,7 @@ setup_stakewise()
     if [ "$mnemonic" != "" ]; then
         echo "Recreating StakeWise configuration using existing mnemonic..."
 
-        docker compose run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --execution-endpoints="https://$ECNAME:$ECHTTPPORT" --consensus-endpoints="http://$CCNAME:$CCPORT" --mnemonic="$mnemonic"
+        docker compose run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --execution-endpoints="http://$ECNAME:$ECAPIPORT" --consensus-endpoints="http://$CCNAME:$CCAPIPORT" --mnemonic="$mnemonic"
         docker compose run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
     else
         echo "Initializing new StakeWise configuration..."
@@ -148,6 +146,7 @@ if [ $reset ]; then
      if [ "$1" != "holesky" ]; then
         
         # todo: check if there are any active validators before giving this warning
+        # i.e. docker compose up geth "check validators request"
         echo "DANGER: You are attempting to reset your configuration for a mainnet vault!"
         echo "This will require you to resync the chain completely before you can begin validating again, which may take several days."
         echo "Remember, if you're offline for too long, you may be kicked out of NodeSet!"
@@ -179,7 +178,9 @@ else
 fi
 
 # todo: only run checkpoint sync if no db exists
-#checkpoint
+# if [ "$NETWORK" != "mainnet" ]; then
+#     checkpoint
+# fi
 
 # always pull latest stakewise operator image in case it's been updated
 echo "Pulling latest StakeWise operator binary..."
@@ -196,6 +197,6 @@ echo Starting node...
 docker compose up -d
 echo "{::} Node started successfully!"
 echo
-echo "After continuing, logs will be displayed. Please inspect them to verify everything is working as expected. Once you're satisfied, you may exit safely and the containers will continue running."
+echo "After continuing, logs will be displayed. Please inspect them to verify everything is working as expected. Once you're satisfied, you may exit safely with ^C and the containers will continue running."
 read -rsn1 -p "Press any key to continue..."; echo
 docker compose logs -f

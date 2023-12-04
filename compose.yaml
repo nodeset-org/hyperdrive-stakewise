@@ -6,7 +6,6 @@ services:
   stakewise:
     image: "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master"
     container_name: v3-operator
-    # tried: https://nimbus:9000, http://nimbus:9000, nimbus:9000, nimbus,
     command: src/main.py start
       --vault=$VAULT
       --consensus-endpoints="http://$CCNAME:$CCPORT"
