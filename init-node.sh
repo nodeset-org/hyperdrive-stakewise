@@ -75,8 +75,9 @@ fi
 
 usagemsg="Usage: init-node.sh [--reset|-r] [--mnemonic|-m=mnemonic] VAULT\nSupported vaults: holesky, gravita\nExample: sudo sh init-node.sh -m \"correct battery horse staple...\" holesky"
 reset=false
+shutdown=false
 
-while getopts "rm:-:" option; do
+while getopts "rsm:-:" option; do
     case $option in
         -)
             case "${OPTARG}" in
@@ -88,6 +89,9 @@ while getopts "rm:-:" option; do
                     ;;
                 mnemonic)
                     mnemonic="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                shutdown)
+                    shutdown=true
                     ;;
                 \?)
                     printf "$usagemsg\n"
@@ -106,6 +110,9 @@ while getopts "rm:-:" option; do
             ;;
         r)
             reset=true
+            ;;
+        s)
+            shutdown=true
             ;;
         m)
             mnemonic=${OPTARG}
@@ -141,6 +148,11 @@ fi
 set -a 
 source ./${1}.env
 set +a
+
+if [ $shutdown ]; then
+    docker compose down --remove-orphans
+    exit
+fi
 
 if [ $reset ]; then
      if [ "$1" != "holesky" ]; then

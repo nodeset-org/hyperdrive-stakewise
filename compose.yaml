@@ -8,8 +8,8 @@ services:
     container_name: v3-operator
     command: src/main.py start
       --vault=$VAULT
-      --consensus-endpoints="http://$CCNAME:$CCPORT"
-      --execution-endpoints="http://$ECNAME:$ECPORT"
+      --consensus-endpoints="http://$CCNAME:$CCAPIPORT"
+      --execution-endpoints="http://$ECNAME:$ECAPIPORT"
     volumes:
       - ./stakewise-data:/data
     environment:
