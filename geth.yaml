@@ -13,7 +13,12 @@ services:
       - ./tmp:/tmp
       - ./geth-data:/root/.ethereum
     ports:
-      - 30303:30303/tcp
-      - 30303:30303/udp
+      # external peering
+      - 30303/tcp
+      - 30303/udp
+      # connection to CC
       - 8551/tcp
       - 8551/udp
+      # API
+      - 8545/tcp
+      - 8545/udp

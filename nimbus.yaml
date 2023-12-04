@@ -14,5 +14,9 @@ services:
       - ./nimbus-data:/home/user/data
       - ./tmp:/tmp/
     ports:
-      - 9000:9000/tcp
-      - 9000:9000/udp
+      # external peering
+      - 9000/tcp
+      - 9000/udp
+      # API
+      - 5052/tcp
+      - 5052/udp
