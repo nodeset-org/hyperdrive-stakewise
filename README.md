@@ -20,7 +20,7 @@ Next, check the settings in the vault env file (`holesky.env` or `gravita.env`) 
 
 To set up the environment, simply run `init-node.sh`.
 
-Usage: `init-node.sh VAULT [--reset|-r]`
+Usage: `init-node.sh VAULT [--reset|-r] [--mnemomnic|-m=MNEMONIC]`
 
 Supported vaults: `holesky`, `gravita`
 
@@ -32,6 +32,10 @@ Remember to forward your ports so you can find peers! Nimbus uses `9000` and Get
 
 Once you run the script, logs will be shown. You may exit this view safely with `ctrl+c` and everything will continue running. To see the logs again, use `docker compose logs -f`. To bring down the containers (e.g. for maintenance), use `docker compose down`. You can safely restart everything with the same command (`sh init-node.sh VAULT`) or simply use `docker compose up -d`.
 
+If you want to run a command on any specific container, you can do so like this:
+`docker compose run CONTAINERNAME COMMAND`
+E.g., perform a trusted node sync in Nimbus: `docker compose run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false`
+
 ## Migration
 
 This script will only set up a node environment for you. It will not help you migrate your setup to another machine. You must do this manually using the your mnemonic (and ideally your keystore backups). If you need help to migrate your setup to another machine, please visit the [#tech-chat channel of our Discord](https://discord.gg/fDK3TzctPD).
@@ -40,13 +44,13 @@ This script will only set up a node environment for you. It will not help you mi
 
 At a high level, the `init-node.sh` script wraps a docker compose setup. It sets up the environment, then executes `docker compose up -d`. This includes everything you need to run a node for a NodeSet StakeWise v3 vault:
 
-[v3-operator](https://github.com/stakewise/v3-operator): the StakeWise software used to generate keystores and validator deposit data
+[v3-operator](https://github.com/stakewise/v3-operator): the StakeWise software used to generate keystores and validator deposit data, create/manage the node wallet, and register new validators
 
-[Nimbus](https://nimbus.guide/): a lightweight Ethereum validator client
+[Nimbus](https://nimbus.guide/): a lightweight Ethereum validator client.
 
-[Geth](https://geth.ethereum.org/docs): an Ethereum execution client
+[Geth](https://geth.ethereum.org/docs): an Ethereum execution client.
 
-[ethdo](https://github.com/wealdtech/ethdo): an eth2 utility developed by Jim McDonald used to generate exit messages
+[ethdo](https://github.com/wealdtech/ethdo): an eth2 utility developed by Jim McDonald. Used to generate backup exit messages to send to NodeSet.
 
 ## Future Improvements
 

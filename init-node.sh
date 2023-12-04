@@ -40,7 +40,7 @@ checkpoint()
 
 display_funding_message()
 {
-    echo "To continue, first send some ETH to this wallet, then type 'wallet is funded' to continue."
+    echo "Please send some ETH to the wallet address above (on the $NETWORK network), then type 'wallet is funded' to continue."
     read answer
 
     if [ "$answer" != "wallet is funded" ]; then 
@@ -53,10 +53,7 @@ setup_stakewise()
     if [ "$mnemonic" != "" ]; then
         echo "Recreating StakeWise configuration using existing mnemonic..."
 
-        docker compose run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --execution-endpoints="http://$ECNAME:$ECHTTPPORT" --consensus-endpoints="http://$CCNAME:$CCPORT" --mnemonic="$mnemonic"
-        
-        sleep 10
-        
+        docker compose run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --execution-endpoints="https://$ECNAME:$ECHTTPPORT" --consensus-endpoints="http://$CCNAME:$CCPORT" --mnemonic="$mnemonic"
         docker compose run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
     else
         echo "Initializing new StakeWise configuration..."
@@ -66,7 +63,7 @@ setup_stakewise()
     fi
     
     echo "Please note that you must have enough Ether in this node wallet to register validators."
-    echo "Each validator takes approximately 0.01 ETH to create. We recommend depositing AT LEAST 0.1 ETH."
+    printf "Each validator takes approximately 0.01 ETH to create. We recommend depositing AT LEAST 0.1 ETH.\nYou can withdraw this ETH at any time. For more information, see: http://nodeset.io/docs/stakewise"
     display_funding_message
 }
 

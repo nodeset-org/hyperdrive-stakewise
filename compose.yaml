@@ -16,6 +16,9 @@ services:
     environment:
       DATA_DIR: /data
     env_file: ./$NAME.env
+    depends_on:
+      - $ECNAME
+      - $CCNAME
   ethdo:
     image: "wealdtech/ethdo"
     env_file: ./$NAME.env
