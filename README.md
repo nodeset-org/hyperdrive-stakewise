@@ -14,11 +14,13 @@ This script also assumes you have a systemd-based environment to support automat
 
 ## Usage
 
+### First Setup
+
 First, clone this repository into the target location with `git clone git@github.com:nodeset-org/stakewise-reference.git`. Each vault should have its own isolated environment
 
 Next, check the settings in the vault env file (`holesky.env` or `gravita.env`) to ensure they match your needs.
 
-To set up the environment, simply run `init-node.sh`.
+To set up the environment, simply run the script as described in the `-h` or `--help` output:
 
 Usage: `init-node.sh VAULT [--reset|-r] [--mnemomnic|-m=MNEMONIC]`
 
@@ -26,19 +28,34 @@ Supported vaults: `holesky`, `gravita`
 
 Example: `sh init-node.sh holesky` will initialize a node for [NodeSet's test vault on Holesky](https://app.stakewise.io/vault/0x01b353abc66a65c4c0ac9c2ecf82e693ce0303bc).
 
-If something goes wrong, you can use the `-r` flag to reset the configuration completely before initializing as usual, deleting all the chain data and client caches. On Holesky, resyncing is quick, but _DO NOT DO THIS ON MAINNET_ if you have any active validators!
-
 Remember to forward your ports so you can find peers! Nimbus uses `9000` and Geth uses `30303` (both TCP & UDP).
 
-Once you run the script, logs will be shown. You may exit this view safely with `ctrl+c` and everything will continue running. To see the logs again, use `docker compose logs -f`. To bring down the containers (e.g. for maintenance), use `docker compose down`. You can safely restart everything with the same command (`sh init-node.sh VAULT`) or simply use `docker compose up -d`.
+Once you run the script, logs will be shown. You may exit this view safely with `ctrl+c` and everything will continue running. To see the logs again, use `docker compose logs -f`.
+
+### Reset
+
+If something goes wrong, you can use the `-r` flag to reset the configuration completely before initializing as usual, deleting all the chain data and client caches. On Holesky, resyncing is quick, but _DO NOT DO THIS ON MAINNET_ if you have any active validators!
+
+### Graceful Shutdown
+
+To bring down the node (e.g. for maintenance), use the `-s` or `--shutdown` flag. 
+
+Example: `sh init-node.sh --shutdown VAULT`
+
+You can safely restart everything with the same command, `sh init-node.sh VAULT`.
+
+### Migration
+
+Instead of setting up a new configuration from scratch, this script can import an existing setup using the `-m` or `--mnemonic` option to provide an existing mnemonic.
+
+For example:
+`sudo sh init-node.sh -m "correct horse battery staple..." holesky`
+
+### Custom Commands
 
 If you want to run a command on any specific container, you can do so like this:
 `docker compose run CONTAINERNAME COMMAND`
 E.g., perform a trusted node sync in Nimbus: `docker compose run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false`
-
-## Migration
-
-This script will only set up a node environment for you. It will not help you migrate your setup to another machine. You must do this manually using the your mnemonic (and ideally your keystore backups). If you need help to migrate your setup to another machine, please visit the [#tech-chat channel of our Discord](https://discord.gg/fDK3TzctPD).
 
 ## Environment Details
 

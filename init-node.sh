@@ -73,11 +73,11 @@ if [ "$(id -u)" -ne 0 ]; then
   exit
 fi
 
-usagemsg="Usage: init-node.sh [--reset|-r] [--mnemonic|-m=mnemonic] VAULT\nSupported vaults: holesky, gravita\nExample: sudo sh init-node.sh -m \"correct battery horse staple...\" holesky"
+usagemsg="Usage: init-node.sh [--reset|-r] [--mnemonic|-m=mnemonic] VAULT\nSupported vaults: holesky, gravita\nExample: sudo sh init-node.sh -m \"correct horse battery staple...\" holesky"
 reset=false
 shutdown=false
 
-while getopts "rsm:-:" option; do
+while getopts "rhsm:-:" option; do
     case $option in
         -)
             case "${OPTARG}" in
@@ -92,6 +92,10 @@ while getopts "rsm:-:" option; do
                     ;;
                 shutdown)
                     shutdown=true
+                    ;;
+                help)
+                    printf "$usagemsg\n"
+                    exit 0
                     ;;
                 \?)
                     printf "$usagemsg\n"
@@ -113,6 +117,10 @@ while getopts "rsm:-:" option; do
             ;;
         s)
             shutdown=true
+            ;;
+        h)
+            printf "$usagemsg\n"
+            exit 0
             ;;
         m)
             mnemonic=${OPTARG}
