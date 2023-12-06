@@ -7,6 +7,9 @@ services:
       --authrpc.port 8551
       --authrpc.jwtsecret /tmp/jwtsecret
       --http.addr 0.0.0.0
+      --http.corsdomain=*
+      --http.vhosts=*
+      --http.api=web3,eth,net,engine
     env_file:
       - $NAME.env
     volumes:
@@ -19,6 +22,6 @@ services:
       # connection to CC
       - 8551/tcp
       - 8551/udp
-      # API
+      # http API
       - 8545/tcp
       - 8545/udp

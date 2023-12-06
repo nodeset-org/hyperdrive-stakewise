@@ -1,10 +1,15 @@
 #!/bin/bash
 
+remove_containers()
+{
+    docker compose down --remove-orphans
+}
+
 clean()
 {
     echo "Cleaning up previous configuration..."
     
-    docker compose down --remove-orphans
+    remove_containers
 
     # clear old data (if any)
     rm -rd ./nimbus-data
@@ -17,16 +22,16 @@ clean()
     chown $(logname) ./nimbus-data
     chmod 700 ./nimbus-data
     # v3-operator user is "nobody" for safety since keys are stored there
-    # you will need to use root to access it
+    # you will need to use root to access this directory
     chown nobody ./stakewise-data 
 }
 
 generate_jwtsecret()
 {
     echo "Generating jwtsecret..."
-    # initialize geth
+    # initialize EC, then wait a few seconds for it to create the jwtsecret
     docker compose run -d geth --authrpc.jwtsecret /tmp/jwtsecret
-    sleep 3 # wait a few seconds for geth to boot up and create the jwtsecret
+    sleep 3
     chown $(logname) ./tmp/jwtsecret
 }
 
@@ -157,12 +162,12 @@ set -a
 source ./${1}.env
 set +a
 
-if [ $shutdown ]; then
-    docker compose down --remove-orphans
+if [ $shutdown = true ]; then
+    remove_containers
     exit
 fi
 
-if [ $reset ]; then
+if [ $reset = true ]; then
      if [ "$1" != "holesky" ]; then
         
         # todo: check if there are any active validators before giving this warning
@@ -198,9 +203,9 @@ else
 fi
 
 # todo: only run checkpoint sync if no db exists
-# if [ "$NETWORK" != "mainnet" ]; then
-#     checkpoint
-# fi
+if [ "$NETWORK" != "mainnet" ]; then
+    checkpoint
+fi
 
 # always pull latest stakewise operator image in case it's been updated
 echo "Pulling latest StakeWise operator binary..."
