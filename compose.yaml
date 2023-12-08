@@ -1,6 +1,6 @@
 include:
-  - $ECNAME.yaml
-  - $CCNAME.yaml
+  - ./clients/$ECNAME.yaml
+  - ./clients/$CCNAME.yaml
 
 services:
   stakewise:
