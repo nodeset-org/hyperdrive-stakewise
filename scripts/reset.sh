@@ -9,4 +9,3 @@ rm -rd $data_dir/nimbus-data
 rm -rd $data_dir/tmp
 rm -rd $data_dir/stakewise-data
 rm -rd $data_dir/geth-data
-

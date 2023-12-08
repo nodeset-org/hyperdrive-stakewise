@@ -1,35 +1,16 @@
 #!/usr/bin/env bash 
 
-
-
-
-
-display_funding_message()
-{
-    echo "Please send some ETH to the wallet address above (on the $NETWORK network), then type 'wallet is funded' to continue."
-    read answer
-
-    if [ "$answer" != "wallet is funded" ]; then 
-        display_funding_message
-    fi
-}
-
-
-
-
-
-
-
 # always pull latest stakewise operator image in case it's been updated
 echo "Pulling latest StakeWise operator binary..."
 docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
 
-if [ ! -d "./stakewise-data/$VAULT/keystores" ]; then
-    echo "No prior StakeWise setup found. Initializing..."
-    setup_stakewise
-else
-    echo "Prior StakeWise setup found. Skipping initialization."
+# todo: only run checkpoint sync if no db exists
+# nimbus checks this already, but we shouldn't even do it if the db exists
+if [ "$NETWORK" != "mainnet" ]; then
+    echo "Performing checkpoint sync..."
+    docker compose run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false
 fi
+
 
 echo Starting node...
 docker compose up -d

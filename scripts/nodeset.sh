@@ -10,12 +10,12 @@ fi
 
 # ensure root access
 if [ "$(id -u)" -ne 0 ]; then
-  echo "Please run this script as root (or with sudo)"
+  echo "Please run as root (or with sudo)"
   exit
 fi
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-usagemsg="Usage: init-node.sh [--reset|-r] [--mnemonic|-m=mnemonic] VAULT\nSupported vaults: holesky, gravita\nExample: sudo sh init-node.sh -m \"correct horse battery staple...\" holesky"
+usagemsg="Usage: nodeset [COMMAND] \nCommands:\nremove -- Completely deletes the existing installation\nrun [--data-dir|-d=DATA_DIRECTORY]"
 reset=false
 shutdown=false
 data_dir=/home/${ whoami }/node-data
@@ -25,27 +25,15 @@ if [ "$1" = "install" ]
     sudo bash install.sh
 fi
 
-while getopts "rhsd:m:-:" option; do
+while getopts "hd:-:" option; do
     case $option in
         -)
             case "${OPTARG}" in
-                reset)
-                    reset=true
-                    ;;
-                mnemonic=*)
-                    mnemonic=${OPTARG#*=}
-                    ;;
-                mnemonic)
-                    mnemonic="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    ;;
                 data-directory=*)
                     data_dir=${OPTARG#*=}
                     ;;
                 data-directory)
                     data_dir="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    ;;
-                shutdown)
-                    shutdown=true
                     ;;
                 help)
                     printf "$usagemsg\n"
@@ -69,21 +57,9 @@ while getopts "rhsd:m:-:" option; do
         d)
             data_dir=${OPTARG}
             ;;
-        r)
-            reset=true
-            ;;
-        s)
-            shutdown=true
-            ;;
         h)
             printf "$usagemsg\n"
             exit 0
-            ;;
-        m)
-            mnemonic=${OPTARG}
-            ;;
-        m=*)
-            mnemonic=${OPTARG#*=}
             ;;
         \?)
             printf "$usagemsg\n"
@@ -103,17 +79,29 @@ done
 shift $(( OPTIND - 1 ))
 
 
-# if no, install
+
+# if no, exit with "you must install first error"
 
 # if yes, get vault config automatically
 
 
-# check vault name makes sense
-if [ "$1" != "holesky" ] && [ "$1" != "gravita" ]; then
-    printf "Error: you must provide a valid vault name\n\n"
-    printf "$usagemsg\n"
-    exit
-fi
+# check command name makes sense
+case "$1" in
+    remove)
+        echo "remove command found"
+        ;;
+    shutdown)
+        echo "shutdown command found"
+        ;;
+    run)
+        echo "run command found"
+        ;;
+    *)
+        echo "ERROR: incorrect command"
+        printf "$usagemsg\n"
+        exit
+        ;;
+esac
 
 # set env based on vault installation
 set -a 
