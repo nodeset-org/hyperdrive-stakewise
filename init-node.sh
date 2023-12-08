@@ -66,7 +66,7 @@ setup_stakewise()
     fi
     
     echo "Please note that you must have enough Ether in this node wallet to register validators."
-    printf "Each validator takes approximately 0.01 ETH to create. We recommend depositing AT LEAST 0.1 ETH.\nYou can withdraw this ETH at any time. For more information, see: http://nodeset.io/docs/stakewise"
+    printf "Each validator takes approximately 0.01 ETH to create when gas is 30 gwei. We recommend depositing AT LEAST 0.1 ETH.\nYou can withdraw this ETH at any time. For more information, see: http://nodeset.io/docs/stakewise\n"
     display_funding_message
 }
 
