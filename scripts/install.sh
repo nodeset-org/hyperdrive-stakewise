@@ -25,7 +25,6 @@ else
     callinguser=`whoami`
 fi
 
-
 while getopts "hrv:d:m:-:" option; do
     case $option in
         -)
@@ -120,20 +119,17 @@ echo "{::} Welcome to the NodeSet node installer for StakeWise {::}"
 echo
 
 if [ "$remove" = true ]; then
-    "$SCRIPT_DIR/nodeset.sh" "-d" "$DATA_DIR" "remove"
+    "$SCRIPT_DIR/nodeset.sh" "-d" "$DATA_DIR" "remove" 
+    if [ $? -ne 0 ]; then
+        exit
+    fi
 fi
 
 ### create necessary directories and set permissions
 if [ -d "$DATA_DIR" ]; then
     if [ -n "$(ls -A "$DATA_DIR")" ]; then  
         echo "Data directory exists and is not empty."
-        if [ "$remove" = true ]; then
-            echo
-            echo "FATAL ERROR: It appears the given directory exists, is not empty, but does not have a nodeset.env configuration file."
-            echo "Are you sure this is the right data directory? If so, you must recover your configuration manually."
-        else
-            echo "To remove your existing installation, use the -r or --remove option"
-        fi
+        echo "To remove your existing installation, use the -r or --remove option"
         echo
         echo "Given data directory: $DATA_DIR"
         exit 1
@@ -178,6 +174,7 @@ elif [ "$vault" != "holesky" ] && [ "$vault" != "gravita" ]; then
 fi
 
 cp "$SCRIPT_DIR/../vaults/$vault.env" "$DATA_DIR/nodeset.env"
+echo $( ls "$DATA_DIR/nodeset.env" )
 
 
 ### set env
@@ -185,12 +182,11 @@ set -a
 source "$DATA_DIR/nodeset.env"
 set +a
 
-
 ### generate jwtsecret
 if [ ! -e ./tmp/jwtsecret ]; then
     echo "Generating jwtsecret..."
     # initialize EC, then wait a few seconds for it to create the jwtsecret
-    docker compose -f "$SCRIPT_DIR/compose.yaml" run -d  geth
+    docker compose -f "$SCRIPT_DIR/compose.yaml" run -d $ECNAME
     sleep 3
     chown $callinguser $DATA_DIR/tmp/jwtsecret
 fi
@@ -202,17 +198,18 @@ docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
 
 if [ "$mnemonic" != "" ]; then
     echo "Recreating StakeWise configuration using existing mnemonic..."
-    docker compose run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --execution-endpoints="http://$ECNAME:$ECAPIPORT" --consensus-endpoints="http://$CCNAME:$CCAPIPORT" --mnemonic="$mnemonic"
-    docker compose run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
+    docker compose -f "$SCRIPT_DIR/compose.yaml" run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --execution-endpoints="http://$ECNAME:$ECAPIPORT" --consensus-endpoints="http://$CCNAME:$CCAPIPORT" --mnemonic="$mnemonic"
+    docker compose -f "$SCRIPT_DIR/compose.yaml" run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
 else
     echo "Initializing new StakeWise configuration..."
-    docker compose run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
-    docker compose run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
-    docker compose run stakewise src/main.py create-wallet --vault="$VAULT"
+    docker compose -f "$SCRIPT_DIR/compose.yaml" run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
+    docker compose -f "$SCRIPT_DIR/compose.yaml" run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
+    docker compose -f "$SCRIPT_DIR/compose.yaml" run stakewise src/main.py create-wallet --vault="$VAULT"
 fi
 
 display_funding_message()
 {
+    echo
     echo "Please send some ETH to the wallet address above (on the $NETWORK network), then type 'wallet is funded' to continue."
     read answer
 
@@ -221,21 +218,20 @@ display_funding_message()
     fi
 }
 
+echo
 echo "Please note that you must have enough Ether in this node wallet to register validators."
 printf "Each validator takes approximately 0.01 ETH to create when gas is 30 gwei. We recommend depositing AT LEAST 0.1 ETH.\nYou can withdraw this ETH at any time. For more information, see: http://nodeset.io/docs/stakewise\n"
 display_funding_message
 
 ### set bashrc
-# todo: move this to bashrc
-sudo echo "alias nodeset='bash nodeset.sh -d $DATA_DIR'" >> /etc/bash.bashrc
-
+printf "\n\n# NodeSet\nalias nodeset='sudo bash \"$SCRIPT_DIR/nodeset.sh\" \"-d\" \"$DATA_DIR\"'\n" >> /etc/bash.bashrc
 
 ### complete
 echo 
 echo "{::} Installation Complete! {::}"
 echo 
 echo "We recommend that you verify the configuration file in your installation directory looks correct:"
-echo $DATA_DIR/$vault.env
+echo $DATA_DIR/nodeset.env
 echo
 echo "Please log out, then log back in to reload your environment, then start the node with:"
 echo "nodeset run"

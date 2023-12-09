@@ -11,7 +11,7 @@ services:
       --consensus-endpoints="http://$CCNAME:$CCAPIPORT"
       --execution-endpoints="http://$ECNAME:$ECAPIPORT"
     volumes:
-      - ./stakewise-data:/data
+      - "$DATA_DIR/stakewise-data:/data"
     environment:
       DATA_DIR: /data
     env_file: "$DATA_DIR/nodeset.env"

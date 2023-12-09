@@ -10,11 +10,10 @@ services:
       --http.corsdomain=*
       --http.vhosts=*
       --http.api=web3,eth,net,engine
-    env_file:
-      - "$DATA_DIR/nodeset.env"
+    env_file: "$DATA_DIR/nodeset.env"
     volumes:
-      - "$DATA_DIR/tmp":/tmp
-      - "$DATA_DIR/geth-data":/root/.ethereum
+      - "$DATA_DIR/tmp:/tmp"
+      - "$DATA_DIR/geth-data:/root/.ethereum"
     ports:
       # external peering
       - 30303/tcp

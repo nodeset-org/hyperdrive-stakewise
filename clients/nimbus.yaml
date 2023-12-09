@@ -8,11 +8,10 @@ services:
       --log-level=info
       --enr-auto-update:true
       --rest
-    env_file:
-      - "$DATA_DIR/nodeset.env"
+    env_file: "$DATA_DIR/nodeset.env"
     volumes:
-      - "$DATA_DIR/nimbus-data":/home/user/data
-      - "$DATA_DIR/tmp":/tmp/
+      - "$DATA_DIR/nimbus-data:/home/user/data"
+      - "$DATA_DIR/tmp:/tmp"
     ports:
       # external peering
       - 9000/tcp

@@ -10,14 +10,14 @@ fi
 
 # ensure root access
 if [ "$(id -u)" -ne 0 ]; then
-  echo "Please run as root (or with sudo)"
+  echo "Please run as root (or with sudo)."
   exit
 fi
 
 export SCRIPT_DIR=$( cd -- "$( dirname -- "$( realpath ${BASH_SOURCE[0]} )" )" &> /dev/null && pwd )
 export APP_DIR=$( cd -- "$SCRIPT_DIR/.." &> /dev/null && pwd )
 export DATA_DIR=""
-usagemsg="Usage: nodeset [COMMAND] \nCommands:\nremove -- Completely deletes the existing installation\nrun [--data-dir|-d=DATA_DIRECTORY]"
+usagemsg="Usage: nodeset [--help|-h] [--data-dir|-d=DATA_DIRECTORY] [COMMAND] \nCommands:\nlogs\t\tShow node logs\nshutdown\tShuts down the node\nremove\t\tCompletely deletes the existing installation\nstart\t\tStarts the node\n"
 reset=false
 shutdown=false
 if [ $SUDO_USER ]; then 
@@ -95,9 +95,19 @@ if [ "$1" != remove ]; then
 fi
 
 # set env based on installation config
-set -a 
-source $DATA_DIR/nodeset.env
-set +a
+# only do this if not removing or displaying help down the node
+if [ "$1" != "remove" ] && [ "$1" != "help" ]; then
+    if [ -f "$DATA_DIR/nodeset.env" ]; then
+        set -a 
+        source "$DATA_DIR/nodeset.env"
+        set +a
+    else
+        echo "FATAL ERROR: Cannot find nodeset.env configuration file"
+        echo "Are you sure this data directory is correct? If so, you must recover your configuration manually."
+        echo "Given data directory: $DATA_DIR/nodeset.env"
+        exit 2
+    fi
+fi
 
 remove()
 {
@@ -134,6 +144,10 @@ remove()
 
 # check command name makes sense
 case "$1" in
+    help)
+        printf "$usagemsg\n"
+        exit
+        ;;
     remove)
         remove
         ;;
@@ -141,15 +155,15 @@ case "$1" in
         "$SCRIPT_DIR/shutdown.sh"
         exit
         ;;
-    run)
-        echo "run command found"
+    start)
+        echo "Starting node..."
+        docker compose -f "$SCRIPT_DIR/compose.yaml" up -d
         ;;
-    help)
-        printf "$usagemsg\n"
-        exit
+    logs)
+        docker compose -f "$SCRIPT_DIR/compose.yaml" logs -f
         ;;
     *)
-        echo "ERROR: incorrect command"
+        printf "You must provide a command!\n\n"
         printf "$usagemsg\n"
         exit
         ;;
