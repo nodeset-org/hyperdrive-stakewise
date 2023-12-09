@@ -9,10 +9,10 @@ services:
       --enr-auto-update:true
       --rest
     env_file:
-      - $NAME.env
+      - "$DATA_DIR/nodeset.env"
     volumes:
-      - ./nimbus-data:/home/user/data
-      - ./tmp:/tmp/
+      - "$DATA_DIR/nimbus-data":/home/user/data
+      - "$DATA_DIR/tmp":/tmp/
     ports:
       # external peering
       - 9000/tcp

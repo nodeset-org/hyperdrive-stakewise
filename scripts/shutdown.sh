@@ -1,3 +1,5 @@
 #!/usr/bin/env bash 
 
-docker compose down --remove-orphans "$SCRIPT_DIR/compose.yaml"
+echo "Shutting down containers..."
+
+docker compose -f "$SCRIPT_DIR/compose.yaml" down --remove-orphans

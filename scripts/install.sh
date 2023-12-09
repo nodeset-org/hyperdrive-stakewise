@@ -13,8 +13,9 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 export SCRIPT_DIR=$( cd -- "$( dirname -- "$( realpath ${BASH_SOURCE[0]} )" )" &> /dev/null && pwd )
-usagemsg="Usage: node-install.sh [--data-directory|-d=DATA_DIRECTORY] [--mnemonic|-m=MNEMONIC] [--vault|-v=VAULT] [--remove|-r]\nSupported vaults: holesky, gravita\nExample: sudo bash node-install.sh -d "~/data" -m \"correct horse battery staple...\" -v=holesky"
-data_dir=""
+export APP_DIR=$( cd -- "$SCRIPT_DIR/.." &> /dev/null && pwd )
+usagemsg="Usage: install-node.sh [--data-directory|-d=DATA_DIRECTORY] [--mnemonic|-m=MNEMONIC] [--vault|-v=VAULT] [--remove|-r]\nSupported vaults: holesky, gravita\nExample: sudo bash install-node.sh -d "~/data" -m \"correct horse battery staple...\" -v=holesky"
+export DATA_DIR=""
 mnemonic=""
 vault=""
 remove=false
@@ -36,10 +37,10 @@ while getopts "hrv:d:m:-:" option; do
                     mnemonic="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 data-directory=*)
-                    data_dir=${OPTARG#*=}
+                    export DATA_DIR=${OPTARG#*=}
                     ;;
                 data-directory)
-                    data_dir="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    export DATA_DIR="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 vault=*)
                     vault=${OPTARG#*=}
@@ -70,10 +71,10 @@ while getopts "hrv:d:m:-:" option; do
             esac
             ;;
         d)
-            data_dir=${OPTARG}
+            export DATA_DIR=${OPTARG}
             ;;
         d=*)
-            data_dir=${OPTARG#*=}
+            export DATA_DIR=${OPTARG#*=}
             ;;
         h)
             printf "$usagemsg\n"
@@ -110,35 +111,35 @@ while getopts "hrv:d:m:-:" option; do
     esac
 done
 
+### set default data dir if not passed in
+if [ "$DATA_DIR" = "" ]; then
+    export DATA_DIR="/home/$callinguser/node-data"
+fi
+
 echo "{::} Welcome to the NodeSet node installer for StakeWise {::}"
 echo
 
 if [ "$remove" = true ]; then
-    "$SCRIPT_DIR/remove.sh"
-fi
-
-### set default data dir if not passed in
-if [ "$data_dir" = "" ]; then
-    data_dir="/home/$callinguser/node-data"
+    "$SCRIPT_DIR/nodeset.sh" "-d" "$DATA_DIR" "remove"
 fi
 
 ### create necessary directories and set permissions
-if [ -d "$data_dir" ]; then
-    if [ -n "$(ls -A "$data_dir")" ]; then  
+if [ -d "$DATA_DIR" ]; then
+    if [ -n "$(ls -A "$DATA_DIR")" ]; then  
         echo "Error: data directory exists and is not empty."
-        echo "Given directory: $data_dir"
+        echo "Given directory: $DATA_DIR"
         exit 1
     fi
 else
-    mkdir $data_dir
+    mkdir $DATA_DIR
 fi
-mkdir $data_dir/nimbus-data
-mkdir $data_dir/stakewise-data
-chown $callinguser $data_dir/nimbus-data
-chmod 700 $data_dir/nimbus-data
+mkdir $DATA_DIR/nimbus-data
+mkdir $DATA_DIR/stakewise-data
+chown $callinguser $DATA_DIR/nimbus-data
+chmod 700 $DATA_DIR/nimbus-data
 # v3-operator user is "nobody" for safety since keys are stored there
 # you will need to use root to access this directory
-chown nobody $data_dir/stakewise-data
+chown nobody $DATA_DIR/stakewise-data
 
 ### determine and install vault config
 get_vault()
@@ -168,12 +169,12 @@ elif [ "$vault" != "holesky" ] && [ "$vault" != "gravita" ]; then
     exit 1
 fi
 
-cp "$SCRIPT_DIR/../vaults/$vault.env" "$data_dir/$vault.env"
+cp "$SCRIPT_DIR/../vaults/$vault.env" "$DATA_DIR/nodeset.env"
 
 
 ### set env
 set -a 
-source "$data_dir/$vault.env"
+source "$DATA_DIR/nodeset.env"
 set +a
 
 
@@ -181,9 +182,9 @@ set +a
 if [ ! -e ./tmp/jwtsecret ]; then
     echo "Generating jwtsecret..."
     # initialize EC, then wait a few seconds for it to create the jwtsecret
-    docker compose -f ./scripts/compose.yaml run -d  geth --authrpc.jwtsecret /tmp/jwtsecret
+    docker compose -f "$SCRIPT_DIR/compose.yaml" run -d  geth
     sleep 3
-    chown $callinguser $data_dir/tmp/jwtsecret
+    chown $callinguser $DATA_DIR/tmp/jwtsecret
 fi
 
 
@@ -218,7 +219,7 @@ display_funding_message
 
 ### set bashrc
 # todo: move this to bashrc
-sudo echo "alias nodeset='bash nodeset.sh'" >> /etc/bash.bashrc
+sudo echo "alias nodeset='bash nodeset.sh -d $DATA_DIR'" >> /etc/bash.bashrc
 
 
 ### complete
@@ -226,7 +227,7 @@ echo
 echo "{::} Installation Complete! {::}"
 echo 
 echo "We recommend that you verify the configuration file in your installation directory looks correct:"
-echo $data_dir/$vault.env
+echo $DATA_DIR/$vault.env
 echo
 echo "Please log out, then log back in to reload your environment, then start the node with:"
 echo "nodeset run"

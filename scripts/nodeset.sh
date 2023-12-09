@@ -14,11 +14,12 @@ if [ "$(id -u)" -ne 0 ]; then
   exit
 fi
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "$( realpath ${BASH_SOURCE[0]} )" )" &> /dev/null && pwd )
+export SCRIPT_DIR=$( cd -- "$( dirname -- "$( realpath ${BASH_SOURCE[0]} )" )" &> /dev/null && pwd )
+export APP_DIR=$( cd -- "$SCRIPT_DIR/.." &> /dev/null && pwd )
+export DATA_DIR=""
 usagemsg="Usage: nodeset [COMMAND] \nCommands:\nremove -- Completely deletes the existing installation\nrun [--data-dir|-d=DATA_DIRECTORY]"
 reset=false
 shutdown=false
-data_dir=""
 if [ $SUDO_USER ]; then 
     callinguser=$SUDO_USER; 
 else 
@@ -27,16 +28,22 @@ fi
 
 # check if installation
 if [ "$1" = "install" ]; then
-    "sudo $SCRIPT_DIR/node-install.sh"
+    "sudo $SCRIPT_DIR/install-node.sh"
 fi
 
-while getopts "h-:" option; do
+while getopts "hd:-:" option; do
     case $option in
         -)
             case "${OPTARG}" in
                 help)
                     printf "$usagemsg\n"
                     exit 0
+                    ;;
+                data-directory=*)
+                    export DATA_DIR=${OPTARG#*=}
+                    ;;
+                data-directory)
+                    export DATA_DIR="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 \?)
                     printf "$usagemsg\n"
@@ -57,8 +64,14 @@ while getopts "h-:" option; do
             printf "$usagemsg\n"
             exit 0
             ;;
+        d)
+            export DATA_DIR=${OPTARG}
+            ;;
+        d=*)
+            export DATA_DIR=${OPTARG#*=}
+            ;;
         \?)
-            printf "$usagemsg\n"
+            printf "$usagemsg\n" 
             exit 1
             ;;
         :)
@@ -74,49 +87,19 @@ while getopts "h-:" option; do
 done
 shift $(( OPTIND - 1 ))
 
-
-if [ -d "$data_dir" ]; then
-    if [ -f "$data_dir/*.env")" ]; then  
-        
-    fi
-else
-    echo "No existing installation found. Exiting."
+if [ ! -d "$DATA_DIR" ] || [ ! -f "$DATA_DIR/nodeset.env" ]; then
+    echo "No installation found. Please run the installer using \"sudo bash install-node.sh\" or check to make sure the correct data directory was provided."
     exit
 fi
-echo "No installation found. Please run the installer using `bash node-install.sh` or check to make sure the correct data directory was provided."
-# if yes, get vault config automatically
 
-
-# check command name makes sense
-case "$1" in
-    remove)
-        echo "remove command found"
-        ;;
-    shutdown)
-        echo "shutdown command found"
-        ;;
-    run)
-        echo "run command found"
-        ;;
-    *)
-        echo "ERROR: incorrect command"
-        printf "$usagemsg\n"
-        exit
-        ;;
-esac
-
-# set env based on vault installation
+# set env based on installation config
 set -a 
-source $data_dir/$vault.env
+source $DATA_DIR/nodeset.env
 set +a
 
-if [ "$shutdown" = true ]; then
-    "$SCRIPT_DIR/shutdown.sh"
-    exit
-fi
-
-if [ "$reset" = true ]; then
-     if [ "$1" = "mainnet" ]; then
+remove()
+{
+    if [ "$NETWORK" = "mainnet" ]; then
 
         # todo: check if there are any active validators before giving this warning
         # i.e. docker compose up geth "check validators request"
@@ -142,5 +125,32 @@ if [ "$reset" = true ]; then
             exit
         fi
     fi
+
     "$SCRIPT_DIR/remove.sh"
-fi
+}
+
+
+# check command name makes sense
+case "$1" in
+    remove)
+        remove
+        ;;
+    shutdown)
+        "$SCRIPT_DIR/shutdown.sh"
+        exit
+        ;;
+    run)
+        echo "run command found"
+        ;;
+    help)
+        printf "$usagemsg\n"
+        exit
+        ;;
+    *)
+        echo "ERROR: incorrect command"
+        printf "$usagemsg\n"
+        exit
+        ;;
+esac
+
+

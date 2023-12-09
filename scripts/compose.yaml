@@ -1,6 +1,6 @@
 include:
-  - ./clients/$ECNAME.yaml
-  - ./clients/$CCNAME.yaml
+  - "$APP_DIR/clients/$ECNAME.yaml"
+  - "$APP_DIR/clients/$CCNAME.yaml"
 
 services:
   stakewise:
@@ -14,10 +14,10 @@ services:
       - ./stakewise-data:/data
     environment:
       DATA_DIR: /data
-    env_file: ./$NAME.env
+    env_file: "$DATA_DIR/nodeset.env"
     depends_on:
       - $ECNAME
       - $CCNAME
   ethdo:
     image: "wealdtech/ethdo"
-    env_file: ./$NAME.env
+    env_file: "$DATA_DIR/nodeset.env"
