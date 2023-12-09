@@ -126,8 +126,16 @@ fi
 ### create necessary directories and set permissions
 if [ -d "$DATA_DIR" ]; then
     if [ -n "$(ls -A "$DATA_DIR")" ]; then  
-        echo "Error: data directory exists and is not empty."
-        echo "Given directory: $DATA_DIR"
+        echo "Data directory exists and is not empty."
+        if [ "$remove" = true ]; then
+            echo
+            echo "FATAL ERROR: It appears the given directory exists, is not empty, but does not have a nodeset.env configuration file."
+            echo "Are you sure this is the right data directory? If so, you must recover your configuration manually."
+        else
+            echo "To remove your existing installation, use the -r or --remove option"
+        fi
+        echo
+        echo "Given data directory: $DATA_DIR"
         exit 1
     fi
 else

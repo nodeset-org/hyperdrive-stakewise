@@ -87,9 +87,11 @@ while getopts "hd:-:" option; do
 done
 shift $(( OPTIND - 1 ))
 
-if [ ! -d "$DATA_DIR" ] || [ ! -f "$DATA_DIR/nodeset.env" ]; then
-    echo "No installation found. Please run the installer using \"sudo bash install-node.sh\" or check to make sure the correct data directory was provided."
-    exit
+if [ "$1" != remove ]; then
+    if [ ! -d "$DATA_DIR" ] || [ ! -f "$DATA_DIR/nodeset.env" ]; then
+        echo "No installation found. Please run the installer using \"sudo bash install-node.sh\" or check to make sure the correct data directory was provided."
+        exit
+    fi
 fi
 
 # set env based on installation config
