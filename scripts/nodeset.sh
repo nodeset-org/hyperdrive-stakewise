@@ -81,7 +81,7 @@ shift $(( OPTIND - 1 ))
 
 
 # if no, exit with "you must install first error"
-
+echo "No installation found. Please run the installer using `bash install.sh` or check to make sure the correct data directory was provided."
 # if yes, get vault config automatically
 
 

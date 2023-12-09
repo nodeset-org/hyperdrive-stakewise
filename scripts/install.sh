@@ -1,24 +1,30 @@
 #!/usr/bin/env bash 
 
-echo "{::} Welcome to the NodeSet node installer for StakeWise {::}"
-network_question()
-{
-    echo 
-    echo "Which network do you want to use?"
-    echo "1) holesky"
-    echo "2) mainnet"
-    echo
-   
-    read network
-    if [ "$network" != "holesky" ] && [ "$network" != "mainnet"]
-        network_question
-}
-network_question
+# check if bash
+if [ "$BASH_VERSION" = '' ]; then
+    printf "Please execute this with a bash-compatible shell.\nExample: sudo bash install"
+    exit
+fi
 
+# ensure root access
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Please run as root (or with sudo)"
+  exit
+fi
+
+SCRIPT_DIR=$( cd -- "$( realpath dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 usagemsg="Usage: install.sh [--data-directory|-d=DATA_DIRECTORY] [--mnemonic|-m=MNEMONIC] [--vault|-v=VAULT]\nSupported vaults: holesky, gravita\nExample: sudo bash install.sh -d "~/data" -m \"correct horse battery staple...\" -v=holesky"
-data_dir="/home/${ whoami }/node-data"
+data_dir=""
+mnemonic=""
+vault=""
+if [ $SUDO_USER ]; then 
+    callinguser=$SUDO_USER; 
+else 
+    callinguser=`whoami`
+fi
 
-while getopts "hd:m:-:" option; do
+
+while getopts "hv:d:m:-:" option; do
     case $option in
         -)
             case "${OPTARG}" in
@@ -33,6 +39,12 @@ while getopts "hd:m:-:" option; do
                     ;;
                 data-directory)
                     data_dir="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                vault=*)
+                    vault=${OPTARG#*=}
+                    ;;
+                vault)
+                    vault="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 help)
                     printf "$usagemsg\n"
@@ -56,6 +68,9 @@ while getopts "hd:m:-:" option; do
         d)
             data_dir=${OPTARG}
             ;;
+        d=*)
+            data_dir=${OPTARG#*=}
+            ;;
         h)
             printf "$usagemsg\n"
             exit 0
@@ -65,6 +80,12 @@ while getopts "hd:m:-:" option; do
             ;;
         m=*)
             mnemonic=${OPTARG#*=}
+            ;;
+        v)
+            vault=${OPTARG}
+            ;;
+        v=*)
+            vault=${OPTARG#*=}
             ;;
         \?)
             printf "$usagemsg\n"
@@ -82,53 +103,79 @@ while getopts "hd:m:-:" option; do
     esac
 done
 
-# create necessary directories and set permissions
+echo "{::} Welcome to the NodeSet node installer for StakeWise {::}"
 
+get_vault()
+{
+    echo 
+    echo "Which vault do you want to use?"
+    echo "1) NodeSet Holesky Test Vault"
+    echo "2) Gravita (mainnet)"
+    echo
+    read vault
+    if [ "$vault" = "1" ]; then
+        vault="holesky"
+    fi
+    if [ "$vault" = "2" ]; then
+        vault="gravita"
+    fi
+    if [ "$vault" != "holesky" ] && [ "$vault" != "gravita" ]; then
+        get_vault
+    fi
+}
+
+## determine vault
+if [ "$vault" = "" ]; then
+    get_vault
+elif [ "$vault" != "holesky" ] && [ "$vault" != "gravita" ]; then
+    echo "Error: incorrect vault name provided."
+    printf $usagemsg
+    exit 1
+fi
+
+### set default data dir if not passed in
+if [ "$data_dir" = "" ]; then
+    data_dir="/home/$callinguser/node-data"
+fi
+
+### create necessary directories and set permissions
 if [ -d "$data_dir" ]; then
     if [ -n "$(ls -A "$data_dir")" ]; then  
-        echo "Error: data directory exists is not empty."
+        echo "Error: data directory exists and is not empty."
         echo "Given directory: $data_dir"
-        exit
+        exit 1
     fi
 else
     mkdir $data_dir
 fi
-
 mkdir $data_dir/nimbus-data
 mkdir $data_dir/stakewise-data
-chown $(logname) ./nimbus-data
-chmod 700 ./nimbus-data
+chown $callinguser $data_dir/nimbus-data
+chmod 700 $data_dir/nimbus-data
 # v3-operator user is "nobody" for safety since keys are stored there
 # you will need to use root to access this directory
-chown nobody ./stakewise-data \
+chown nobody $data_dir/stakewise-data
+echo "script dir is $SCRIPT_DIR"
+cp "$SCRIPT_DIR/../vaults/$vault.env" "$data_dir/$vault.env"
 
-# generate jwtsecret
+# set env based on vault installation
+set -a 
+source "$data_dir/$vault.env"
+set +a
 
+
+### generate jwtsecret
 if [ ! -e ./tmp/jwtsecret ]; then
-    echo "No prior jwtsecret found, creating..."
     echo "Generating jwtsecret..."
     # initialize EC, then wait a few seconds for it to create the jwtsecret
-    docker compose run -d geth --authrpc.jwtsecret /tmp/jwtsecret
+    docker compose -f ./scripts/compose.yaml run -d  geth --authrpc.jwtsecret /tmp/jwtsecret
     sleep 3
-    chown $(logname) ./tmp/jwtsecret
-else
-    echo "Prior jwtsecret found. Skipping creation."
+    chown $callinguser $data_dir/tmp/jwtsecret
 fi
 
-# setup stakewise operator
-
+### setup stakewise operator
 echo "Pulling latest StakeWise operator binary..."
 docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
-
-display_funding_message()
-{
-    echo "Please send some ETH to the wallet address above (on the $NETWORK network), then type 'wallet is funded' to continue."
-    read answer
-
-    if [ "$answer" != "wallet is funded" ]; then 
-        display_funding_message
-    fi
-}
 
 if [ "$mnemonic" != "" ]; then
     echo "Recreating StakeWise configuration using existing mnemonic..."
@@ -141,6 +188,25 @@ else
     docker compose run stakewise src/main.py create-wallet --vault="$VAULT"
 fi
 
+display_funding_message()
+{
+    echo "Please send some ETH to the wallet address above (on the $NETWORK network), then type 'wallet is funded' to continue."
+    read answer
+
+    if [ "$answer" != "wallet is funded" ]; then 
+        display_funding_message
+    fi
+}
+
 echo "Please note that you must have enough Ether in this node wallet to register validators."
 printf "Each validator takes approximately 0.01 ETH to create when gas is 30 gwei. We recommend depositing AT LEAST 0.1 ETH.\nYou can withdraw this ETH at any time. For more information, see: http://nodeset.io/docs/stakewise\n"
 display_funding_message
+
+# move this to bashrc
+sudo echo "alias nodeset='bash nodeset.sh'" >> /etc/bash.bashrc
+
+echo 
+echo "{::} Installation Complete! {::}"
+echo 
+echo "Please log out then log back in to reload your environment, then start the node with:"
+echo "nodeset run"
