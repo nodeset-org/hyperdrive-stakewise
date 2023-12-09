@@ -2,7 +2,7 @@
 
 # check if bash
 if [ "$BASH_VERSION" = '' ]; then
-    printf "Please execute this with a bash-compatible shell.\nExample: sudo bash install"
+    printf "Please execute this with a bash-compatible shell.\nExample: sudo bash install-node.sh"
     exit
 fi
 
@@ -12,11 +12,12 @@ if [ "$(id -u)" -ne 0 ]; then
   exit
 fi
 
-SCRIPT_DIR=$( cd -- "$( realpath dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-usagemsg="Usage: install.sh [--data-directory|-d=DATA_DIRECTORY] [--mnemonic|-m=MNEMONIC] [--vault|-v=VAULT]\nSupported vaults: holesky, gravita\nExample: sudo bash install.sh -d "~/data" -m \"correct horse battery staple...\" -v=holesky"
+export SCRIPT_DIR=$( cd -- "$( dirname -- "$( realpath ${BASH_SOURCE[0]} )" )" &> /dev/null && pwd )
+usagemsg="Usage: node-install.sh [--data-directory|-d=DATA_DIRECTORY] [--mnemonic|-m=MNEMONIC] [--vault|-v=VAULT] [--remove|-r]\nSupported vaults: holesky, gravita\nExample: sudo bash node-install.sh -d "~/data" -m \"correct horse battery staple...\" -v=holesky"
 data_dir=""
 mnemonic=""
 vault=""
+remove=false
 if [ $SUDO_USER ]; then 
     callinguser=$SUDO_USER; 
 else 
@@ -24,7 +25,7 @@ else
 fi
 
 
-while getopts "hv:d:m:-:" option; do
+while getopts "hrv:d:m:-:" option; do
     case $option in
         -)
             case "${OPTARG}" in
@@ -49,6 +50,9 @@ while getopts "hv:d:m:-:" option; do
                 help)
                     printf "$usagemsg\n"
                     exit 0
+                    ;;
+                remove)
+                    remove=true
                     ;;
                 \?)
                     printf "$usagemsg\n"
@@ -87,6 +91,9 @@ while getopts "hv:d:m:-:" option; do
         v=*)
             vault=${OPTARG#*=}
             ;;
+        r)
+            remove=true
+            ;;
         \?)
             printf "$usagemsg\n"
             exit 1
@@ -104,33 +111,10 @@ while getopts "hv:d:m:-:" option; do
 done
 
 echo "{::} Welcome to the NodeSet node installer for StakeWise {::}"
+echo
 
-get_vault()
-{
-    echo 
-    echo "Which vault do you want to use?"
-    echo "1) NodeSet Holesky Test Vault"
-    echo "2) Gravita (mainnet)"
-    echo
-    read vault
-    if [ "$vault" = "1" ]; then
-        vault="holesky"
-    fi
-    if [ "$vault" = "2" ]; then
-        vault="gravita"
-    fi
-    if [ "$vault" != "holesky" ] && [ "$vault" != "gravita" ]; then
-        get_vault
-    fi
-}
-
-## determine vault
-if [ "$vault" = "" ]; then
-    get_vault
-elif [ "$vault" != "holesky" ] && [ "$vault" != "gravita" ]; then
-    echo "Error: incorrect vault name provided."
-    printf $usagemsg
-    exit 1
+if [ "$remove" = true ]; then
+    "$SCRIPT_DIR/remove.sh"
 fi
 
 ### set default data dir if not passed in
@@ -155,10 +139,39 @@ chmod 700 $data_dir/nimbus-data
 # v3-operator user is "nobody" for safety since keys are stored there
 # you will need to use root to access this directory
 chown nobody $data_dir/stakewise-data
-echo "script dir is $SCRIPT_DIR"
+
+### determine and install vault config
+get_vault()
+{
+    echo 
+    echo "Which vault do you want to use?"
+    echo "1) NodeSet Holesky Test Vault"
+    echo "2) Gravita (mainnet)"
+    echo
+    read vault
+    if [ "$vault" = "1" ]; then
+        vault="holesky"
+    fi
+    if [ "$vault" = "2" ]; then
+        vault="gravita"
+    fi
+    if [ "$vault" != "holesky" ] && [ "$vault" != "gravita" ]; then
+        get_vault
+    fi
+}
+
+if [ "$vault" = "" ]; then
+    get_vault
+elif [ "$vault" != "holesky" ] && [ "$vault" != "gravita" ]; then
+    echo "Error: incorrect vault name provided."
+    printf $usagemsg
+    exit 1
+fi
+
 cp "$SCRIPT_DIR/../vaults/$vault.env" "$data_dir/$vault.env"
 
-# set env based on vault installation
+
+### set env
 set -a 
 source "$data_dir/$vault.env"
 set +a
@@ -172,6 +185,7 @@ if [ ! -e ./tmp/jwtsecret ]; then
     sleep 3
     chown $callinguser $data_dir/tmp/jwtsecret
 fi
+
 
 ### setup stakewise operator
 echo "Pulling latest StakeWise operator binary..."
@@ -202,11 +216,17 @@ echo "Please note that you must have enough Ether in this node wallet to registe
 printf "Each validator takes approximately 0.01 ETH to create when gas is 30 gwei. We recommend depositing AT LEAST 0.1 ETH.\nYou can withdraw this ETH at any time. For more information, see: http://nodeset.io/docs/stakewise\n"
 display_funding_message
 
-# move this to bashrc
+### set bashrc
+# todo: move this to bashrc
 sudo echo "alias nodeset='bash nodeset.sh'" >> /etc/bash.bashrc
 
+
+### complete
 echo 
 echo "{::} Installation Complete! {::}"
 echo 
-echo "Please log out then log back in to reload your environment, then start the node with:"
+echo "We recommend that you verify the configuration file in your installation directory looks correct:"
+echo $data_dir/$vault.env
+echo
+echo "Please log out, then log back in to reload your environment, then start the node with:"
 echo "nodeset run"

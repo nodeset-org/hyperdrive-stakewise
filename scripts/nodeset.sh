@@ -14,27 +14,26 @@ if [ "$(id -u)" -ne 0 ]; then
   exit
 fi
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=$( cd -- "$( dirname -- "$( realpath ${BASH_SOURCE[0]} )" )" &> /dev/null && pwd )
 usagemsg="Usage: nodeset [COMMAND] \nCommands:\nremove -- Completely deletes the existing installation\nrun [--data-dir|-d=DATA_DIRECTORY]"
 reset=false
 shutdown=false
-data_dir=/home/${ whoami }/node-data
-
-# check if installation
-if [ "$1" = "install" ]
-    sudo bash install.sh
+data_dir=""
+if [ $SUDO_USER ]; then 
+    callinguser=$SUDO_USER; 
+else 
+    callinguser=`whoami`
 fi
 
-while getopts "hd:-:" option; do
+# check if installation
+if [ "$1" = "install" ]; then
+    "sudo $SCRIPT_DIR/node-install.sh"
+fi
+
+while getopts "h-:" option; do
     case $option in
         -)
             case "${OPTARG}" in
-                data-directory=*)
-                    data_dir=${OPTARG#*=}
-                    ;;
-                data-directory)
-                    data_dir="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    ;;
                 help)
                     printf "$usagemsg\n"
                     exit 0
@@ -53,9 +52,6 @@ while getopts "hd:-:" option; do
                     exit 1
                     ;;
             esac
-            ;;
-        d)
-            data_dir=${OPTARG}
             ;;
         h)
             printf "$usagemsg\n"
@@ -79,9 +75,15 @@ done
 shift $(( OPTIND - 1 ))
 
 
-
-# if no, exit with "you must install first error"
-echo "No installation found. Please run the installer using `bash install.sh` or check to make sure the correct data directory was provided."
+if [ -d "$data_dir" ]; then
+    if [ -f "$data_dir/*.env")" ]; then  
+        
+    fi
+else
+    echo "No existing installation found. Exiting."
+    exit
+fi
+echo "No installation found. Please run the installer using `bash node-install.sh` or check to make sure the correct data directory was provided."
 # if yes, get vault config automatically
 
 
@@ -105,11 +107,11 @@ esac
 
 # set env based on vault installation
 set -a 
-source $data_dir/${1}.env
+source $data_dir/$vault.env
 set +a
 
 if [ "$shutdown" = true ]; then
-    remove_containers
+    "$SCRIPT_DIR/shutdown.sh"
     exit
 fi
 
@@ -140,5 +142,5 @@ if [ "$reset" = true ]; then
             exit
         fi
     fi
-    sudo bash reset.sh
+    "$SCRIPT_DIR/remove.sh"
 fi
