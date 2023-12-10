@@ -136,8 +136,30 @@ remove()
             echo Cancelled
             exit
         fi
-    fi
+    else
+        read_input()
+        {
+            echo "Are you sure you want to delete your previous configuration completely? (y/n)"
+            read confirm
+        }
 
+        confirm()
+        {
+            if [ "$confirm" != "y" ] && [ "$confirm" != "n" ]; then
+                read_input
+                confirm
+            elif [ "$confirm" = "n" ]; then
+                echo "Cancelled"
+                exit 2
+            fi
+        }
+
+        # if data directory already exists and isn't empty, confirm deletion
+        if [ -d "$DATA_DIR" ] && [ -n "$(ls -A "$DATA_DIR")" ]; then
+            confirm
+        fi
+    fi
+    
     "$SCRIPT_DIR/remove.sh"
 }
 
