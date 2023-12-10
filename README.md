@@ -18,17 +18,10 @@ This script also assumes you have a systemd-based environment to support automat
 
 First, clone this repository into the target location with `git clone git@github.com:nodeset-org/stakewise-reference.git`. Each vault should have its own isolated environment
 
-Next, check the settings in the vault env file (`holesky.env` or `gravita.env`) to ensure they match your needs.
+To set up the environment, simply run the install script as root:
+`sudo bash install-node.sh`
 
-To set up the environment, simply run the script as described in the `-h` or `--help` output:
-
-Usage: `init-node.sh VAULT [--reset|-r] [--mnemomnic|-m=MNEMONIC]`
-
-Supported vaults: `holesky`, `gravita`
-
-Example: `sh init-node.sh holesky` will initialize a node for [NodeSet's test vault on Holesky](https://app.stakewise.io/vault/0x01b353abc66a65c4c0ac9c2ecf82e693ce0303bc).
-
-Remember to forward your ports so you can find peers! Nimbus uses `9000` and Geth uses `30303` (both TCP & UDP). Note: for simplicity, the included EC configurations are open to all external http requests. You should NOT forward the port for the HTTP endpoint without first limiting the configuration further, otherwise your EC may be vulnerable to a DDOS attack.
+Remember to forward your ports so you can find peers! Nimbus uses `9000` and Geth uses `30303` (both TCP & UDP). Note: for simplicity, the included EC configurations are open to all external http requests. You should NOT forward the port for the HTTP endpoints without first limiting the configuration further, otherwise your node may be vulnerable to a DDOS attack.
 
 Once you run the script, logs will be shown. You may exit this view safely with `ctrl+c` and everything will continue running. To see the logs again, use `docker compose logs -f`.
 

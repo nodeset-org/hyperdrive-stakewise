@@ -223,8 +223,20 @@ echo "Please note that you must have enough Ether in this node wallet to registe
 printf "Each validator takes approximately 0.01 ETH to create when gas is 30 gwei. We recommend depositing AT LEAST 0.1 ETH.\nYou can withdraw this ETH at any time. For more information, see: http://nodeset.io/docs/stakewise\n"
 display_funding_message
 
+### checkpoint sync
+if [ "$NETWORK" != "mainnet" ]; then
+    if [ "$CCNAME" = "nimbus" ]; then 
+        echo "Performing checkpoint sync..."
+        docker compose -f "$APP_DIR/compose.yaml" run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false
+    fi
+fi
+
 ### set bashrc
 printf "\n\n# NodeSet\nalias nodeset='sudo bash \"$SCRIPT_DIR/nodeset.sh\" \"-d\" \"$DATA_DIR\"'\n" >> /etc/bash.bashrc
+
+## todo: 
+# systemd service here
+
 
 ### complete
 echo 

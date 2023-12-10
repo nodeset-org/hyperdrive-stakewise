@@ -156,8 +156,7 @@ case "$1" in
         exit
         ;;
     start)
-        echo "Starting node..."
-        docker compose -f "$SCRIPT_DIR/compose.yaml" up -d
+        "$SCRIPT_DIR/start.sh"
         ;;
     logs)
         docker compose -f "$SCRIPT_DIR/compose.yaml" logs -f
