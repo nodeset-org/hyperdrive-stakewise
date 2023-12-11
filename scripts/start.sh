@@ -7,4 +7,4 @@ echo "Pulling latest StakeWise operator binary..."
 docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
 
 # start containers
-docker compose -f "$SCRIPT_DIR/compose.yaml" up -d
+docker compose -f "$DATA_DIR/compose.yaml" up -d

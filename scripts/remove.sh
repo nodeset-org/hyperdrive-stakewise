@@ -49,13 +49,26 @@ else
     fi
 fi
 
-echo "Cleaning up previous configuration..."
+echo "Removing previous configuration..."
 
 # if a configuration exists, shut it down first
 if [ -f "$DATA_DIR/nodeset.env" ]; then
-    "$SCRIPT_DIR/nodeset.sh" "-d" "$DATA_DIR" "shutdown"
+    echo "Shutting down containers..."
+    docker compose -f "$DATA_DIR/compose.yaml" down -v
 fi
 
+
 # clear old data (if any)
-echo "Deleting previous configuration at $DATA_DIR"
-rm -rd "$DATA_DIR"
+if [ -d "$DATA_DIR" ]; then
+    echo "Deleting data in $DATA_DIR"...
+    rm -rd "$DATA_DIR"
+fi
+
+# remove systemd service
+if [ -f "/etc/systemd/system/nodeset.service" ]; then
+    systemctl stop nodeset.service
+    systemctl disable nodeset.service
+    rm "/etc/systemd/system/nodeset.service"
+fi
+
+echo "Finished removing previous configuration"

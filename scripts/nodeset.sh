@@ -14,8 +14,10 @@ if [ "$(id -u)" -ne 0 ]; then
   exit
 fi
 
-export SCRIPT_DIR=$( cd -- "$( dirname -- "$( realpath ${BASH_SOURCE[0]} )" )" &> /dev/null && pwd )
-export APP_DIR=$( cd -- "$SCRIPT_DIR/.." &> /dev/null && pwd )
+export SCRIPT_DIR=$( dirname -- "$( readlink -f -- "${BASH_SOURCE[0]}"; )"; )
+set -a
+source "$SCRIPT_DIR/scripts.env"
+set +a
 export DATA_DIR=""
 usagemsg="Usage: nodeset [--help|-h] [--data-dir|-d=DATA_DIRECTORY] [COMMAND] \nCommands:\nlogs\t\tShow node logs\nshutdown\tShuts down the node\nremove\t\tCompletely deletes the existing installation\nstart\t\tStarts the node\n"
 reset=false
@@ -24,11 +26,6 @@ if [ $SUDO_USER ]; then
     callinguser=$SUDO_USER; 
 else 
     callinguser=`whoami`
-fi
-
-# check if installation
-if [ "$1" = "install" ]; then
-    "sudo $SCRIPT_DIR/install-node.sh"
 fi
 
 while getopts "hd:-:" option; do
@@ -87,7 +84,7 @@ while getopts "hd:-:" option; do
 done
 shift $(( OPTIND - 1 ))
 
-if [ "$1" != remove ]; then
+if [ "$1" != "remove" ] && [ "$1" != "help" ]; then
     if [ ! -d "$DATA_DIR" ] || [ ! -f "$DATA_DIR/nodeset.env" ]; then
         echo "No installation found. Please run the installer using \"sudo bash install-node.sh\" or check to make sure the correct data directory was provided."
         exit
@@ -95,13 +92,12 @@ if [ "$1" != remove ]; then
 fi
 
 # set env based on installation config
-# only do this if not removing or displaying help down the node
-if [ "$1" != "remove" ] && [ "$1" != "help" ]; then
+if [ "$1" != "help" ]; then
     if [ -f "$DATA_DIR/nodeset.env" ]; then
         set -a 
         source "$DATA_DIR/nodeset.env"
         set +a
-    else
+    elif [ "$1" != "remove" ]; then # don't show an error if we're removing anyway
         echo "FATAL ERROR: Cannot find nodeset.env configuration file"
         echo "Are you sure this data directory is correct? If so, you must recover your configuration manually."
         echo "Given data directory: $DATA_DIR/nodeset.env"
@@ -119,14 +115,15 @@ case "$1" in
         "$SCRIPT_DIR/remove.sh"
         ;;
     shutdown)
-        "$SCRIPT_DIR/shutdown.sh"
+        echo "Shutting down containers..."
+        docker compose -f "$DATA_DIR/compose.yaml" down
         exit
         ;;
     start)
         "$SCRIPT_DIR/start.sh"
         ;;
     logs)
-        docker compose -f "$SCRIPT_DIR/compose.yaml" logs -f
+        docker compose -f "$DATA_DIR/compose.yaml" logs -f
         ;;
     *)
         printf "You must provide a command!\n\n"

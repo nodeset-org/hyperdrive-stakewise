@@ -1,6 +1,6 @@
 include:
-  - "$APP_DIR/clients/$ECNAME.yaml"
-  - "$APP_DIR/clients/$CCNAME.yaml"
+  - "$DATA_DIR/$ECNAME.yaml"
+  - "$DATA_DIR/$CCNAME.yaml"
 
 services:
   stakewise:

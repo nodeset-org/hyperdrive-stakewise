@@ -3,7 +3,7 @@ services:
     image: "statusim/nimbus-eth2:amd64-latest"
     command: -d=/home/user/data
       --network=$NETWORK
-      --web3-url="geth:8551"
+      --web3-url="$ECNAME:8551"
       --jwt-secret=/tmp/jwtsecret
       --log-level=info
       --enr-auto-update:true

@@ -1,0 +1,12 @@
+[Unit]
+Description=NodeSet node service for StakeWise
+After=network.target
+
+[Service]
+ExecStart=nodeset start
+Type=exec
+Restart=no
+
+[Install]
+WantedBy=default.target
+RequiredBy=network.target
