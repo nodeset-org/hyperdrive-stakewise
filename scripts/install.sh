@@ -125,7 +125,7 @@ echo
 if [ "$remove" = true ]; then
     "$SCRIPT_DIR/nodeset.sh" "-d" "$DATA_DIR" "remove" 
     if [ $? -ne 0 ]; then
-        exit
+        exit 2
     fi
 fi
 
@@ -139,8 +139,8 @@ if [ -d "$DATA_DIR" ]; then
         exit 1
     fi
 else
-    mkdir $DATA_DIR
-    chown $callinguser $DATA_DIR
+    mkdir "$DATA_DIR" || exit 1
+    chown $callinguser "$DATA_DIR"
 fi
 
 ### determine and install vault config
