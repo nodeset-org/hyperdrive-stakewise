@@ -3,7 +3,7 @@ services:
     image: "statusim/nimbus-eth2:amd64-latest"
     command: -d=/home/user/data
       --network=$NETWORK
-      --web3-url="$ECNAME:8551"
+      --web3-url="$ECNAME:$ECRPCPORT"
       --jwt-secret=/tmp/jwtsecret
       --log-level=info
       --enr-auto-update:true
@@ -17,8 +17,10 @@ services:
       - "$DATA_DIR/tmp:/tmp"
     ports:
       # external peering
-      - 9000/tcp
-      - 9000/udp
+      - "$CCPORT/tcp"
+      - "$CCPORT/udp"
       # API
-      - 5052/tcp
-      - 5052/udp
+      - "$CCAPIPORT/tcp"
+      - "$CCAPIPORT/udp"
+    depends_on:
+      - $ECNAME

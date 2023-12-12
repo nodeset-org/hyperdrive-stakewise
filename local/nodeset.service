@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 ExecStart=nodeset start
+ExecStart=nodeset shutdown
 Type=exec
 Restart=no
 

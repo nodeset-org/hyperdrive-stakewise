@@ -71,3 +71,15 @@ This project needs expansion! Here are some ways you can help out:
 - Testing and reporting bugs
 
 **NodeSet will reward your thoughtful contributions!**
+
+
+
+
+
+## TEMP
+
+`sudo bash install-node.sh` -- installs the node, can use `-r` to remove the previous configuration, use `-d` to pass your own data directory
+`nodeset remove` -- removes the installation
+`nodeset start` -- starts the node
+`nodeset logs` -- self-explanatory
+`nodeset shutdown` -- shuts down all the containers
