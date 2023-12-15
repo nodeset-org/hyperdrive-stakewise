@@ -20,6 +20,8 @@ VAULT_DIR="$APP_DIR/local/vaults"
 
 usagemsg="Usage: install-node.sh [--data-directory|-d=DATA_DIRECTORY] [--mnemonic|-m=MNEMONIC] [--vault|-v=VAULT] [--remove|-r]\nSupported vaults: holesky, gravita\nExample: sudo bash install-node.sh -d "~/data" -m \"correct horse battery staple...\" -v=holesky"
 export DATA_DIR=""
+eth1client=""
+eth2client=""
 mnemonic=""
 vault=""
 remove=false
@@ -29,15 +31,21 @@ else
     callinguser=`whoami`
 fi
 
-while getopts "hrv:d:m:-:" option; do
+while getopts "hrc:v:d:m:-:" option; do
     case $option in
         -)
             case "${OPTARG}" in
-                mnemonic=*)
-                    mnemonic=${OPTARG#*=}
+                eth1client=*)
+                    eth1client=${OPTARG#*=}
                     ;;
-                mnemonic)
-                    mnemonic="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                eth1client)
+                    eth1client="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                eth2client=*)
+                    eth2client=${OPTARG#*=}
+                    ;;
+                eth2client)
+                    eth2client="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
                 data-directory=*)
                     export DATA_DIR=${OPTARG#*=}
@@ -45,18 +53,24 @@ while getopts "hrv:d:m:-:" option; do
                 data-directory)
                     export DATA_DIR="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     ;;
+                help)
+                    printf "$usagemsg\n"
+                    exit 0
+                    ;;
+                mnemonic=*)
+                    mnemonic=${OPTARG#*=}
+                    ;;
+                mnemonic)
+                    mnemonic="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                remove)
+                    remove=true
+                    ;;
                 vault=*)
                     vault=${OPTARG#*=}
                     ;;
                 vault)
                     vault="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    ;;
-                help)
-                    printf "$usagemsg\n"
-                    exit 0
-                    ;;
-                remove)
-                    remove=true
                     ;;
                 \?)
                     printf "$usagemsg\n"
@@ -73,11 +87,23 @@ while getopts "hrv:d:m:-:" option; do
                     ;;
             esac
             ;;
+        c)
+            eth2client=${OPTARG}
+            ;;
+        c=*)
+            eth2client=${OPTARG#*=}
+            ;;
         d)
             export DATA_DIR=${OPTARG}
             ;;
         d=*)
             export DATA_DIR=${OPTARG#*=}
+            ;;
+        e)
+            eth1client=${OPTARG}
+            ;;
+        e=*)
+            eth1client=${OPTARG#*=}
             ;;
         h)
             printf "$usagemsg\n"
@@ -171,15 +197,69 @@ elif [ "$vault" != "holesky" ] && [ "$vault" != "holesky-dev" ] && [ "$vault" !=
     exit 1
 fi
 
+
+
+### install compose configs
+### determine and install client config
+get_eth1()
+{
+    echo 
+    echo "Which execution (eth1) client do you want to use?"
+    echo "1) Nethermind (recommended)"
+    echo "2) Geth"
+    echo
+    read choice
+    if [ "$choice" = "1" ] || [ "$choice" = "nethermind" ]; then
+        eth1client="nethermind"
+    fi
+    if [ "$choice" = "2" ] || [ "$choice" = "geth" ]; then
+        eth1client="geth"
+    fi
+    if [ "$eth1client" != "nethermind" ] && [ "$eth1client" != "geth" ]; then
+        get_eth1
+    fi
+}
+if [ "$eth1client" = "" ]; then
+    get_eth1
+elif [ "$eth1client" != "geth" ] && [ "$eth1client" != "nethermind" ]; then
+    echo "Error: incorrect eth1 client name provided."
+    printf $usagemsg
+    exit 1
+fi
+
+get_eth2()
+{
+    echo 
+    echo "Which consensus (eth2) client do you want to use?"
+    echo "1) Nimbus (recommended)"
+    echo
+    read choice
+    if [ "$choice" = "1" ] || [ "$choice" = "nimbus" ]; then
+        eth2client="nimbus"
+    fi
+    if [ "$eth2client" != "nimbus" ]; then
+        get_eth2
+    fi
+}
+if [ "$eth2client" = "" ]; then
+    get_eth2
+elif [ "$eth2client" != "nimbus" ]; then
+    echo "Error: incorrect eth2 client name provided."
+    printf $usagemsg
+    exit 1
+fi
+
 cp "$VAULT_DIR/$vault.env" "$DATA_DIR/nodeset.env"
+
+# replace default client names in installed configuration
+sed -i -e "s/ECNAME=.*/ECNAME=$eth2client/g" "$DATA_DIR/nodeset.env"
+sed -i -e "s/CCNAME=.*/CCNAME=$eth1client/g" "$DATA_DIR/nodeset.env"
 
 ### set local env
 set -a 
 source "$DATA_DIR/nodeset.env"
 set +a
 
-### install compose configs
-# todo: first ask which clients to install here
 mkdir $DATA_DIR/$CCNAME-data
 mkdir $DATA_DIR/stakewise-data
 chown $callinguser $DATA_DIR/$CCNAME-data
@@ -191,13 +271,13 @@ cp "$LOCAL_DIR/compose.yaml" "$DATA_DIR/compose.yaml"
 cp "$CLIENT_DIR/$ECNAME.yaml" "$DATA_DIR/$ECNAME.yaml"
 cp "$CLIENT_DIR/$CCNAME.yaml" "$DATA_DIR/$CCNAME.yaml"
 
-
 ### generate jwtsecret
 if [ ! -e ./tmp/jwtsecret ]; then
     echo "Generating jwtsecret..."
     # initialize EC, then wait a few seconds for it to create the jwtsecret
-    docker compose -f "$DATA_DIR/compose.yaml" up -d $ECNAME
-    sleep 3
+    docker compose -f "$DATA_DIR/compose.yaml" up $ECNAME
+    docker compose -f "$DATA_DIR/compose.yaml" logs $ECNAME
+    #sleep 3
     chown $callinguser $DATA_DIR/tmp/jwtsecret || exit 2
 fi
 
