@@ -354,7 +354,7 @@ echo
 echo "Your new node is started!"
 echo
 echo "We recommend that you check two things from here:"
-echo "1. Verify your node is syncing correctly and watch its progress with \"nodeset logs\""
+echo "1. Verify that your node is syncing correctly and watch its progress with \"nodeset logs\""
 echo "2. Verify the configuration file in your installation directory looks correct:"
 echo $DATA_DIR/nodeset.env
 echo
