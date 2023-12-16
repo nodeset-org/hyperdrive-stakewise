@@ -1,19 +1,18 @@
-      # --http.corsdomain=*
-      # --http.vhosts=*
-      # --http.api=web3,eth,net,engine
 services:
   nethermind:
     image: "nethermind/nethermind:latest"
     command: -c $NETWORK
       -dd "/root/.$ECNAME"
-      --Network.DiscoveryPort $ECPORT
-      --Network.P2PPort $ECPORT
-      --JsonRpc.EngineHost 0.0.0.0
-      --JsonRpc.EnginePort $ECRPCPORT
-      --JsonRpc.Enabled
-      --JsonRpc.Host 0.0.0.0
-      --JsonRpc.Port $ECAPIPORT
-      --JsonRpc.JwtSecretFile /tmp/jwtsecret
+      --Pruning.Mode=Hybrid 
+      --Pruning.FullPruningTrigger=VolumeFreeSpace
+      --Network.DiscoveryPort=$ECPORT
+      --Network.P2PPort=$ECPORT
+      --JsonRpc.EngineHost="0.0.0.0"
+      --JsonRpc.EnginePort=$ECRPCPORT
+      --JsonRpc.Enabled=true
+      --JsonRpc.Host="0.0.0.0"
+      --JsonRpc.Port=$ECAPIPORT
+      --JsonRpc.JwtSecretFile=/tmp/jwtsecret
     env_file: "$DATA_DIR/nodeset.env"
     volumes:
       - "$DATA_DIR/tmp:/tmp"

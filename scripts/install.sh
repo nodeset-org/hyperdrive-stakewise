@@ -174,7 +174,7 @@ get_vault()
 {
     echo 
     echo "Which vault do you want to use?"
-    echo "1) NodeSet Holesky Test Vault"
+    echo "1) NodeSet Test Vault (holesky)"
     echo "2) Gravita (mainnet)"
     echo
     read vault
@@ -252,8 +252,8 @@ fi
 cp "$VAULT_DIR/$vault.env" "$DATA_DIR/nodeset.env"
 
 # replace default client names in installed configuration
-sed -i -e "s/ECNAME=.*/ECNAME=$eth2client/g" "$DATA_DIR/nodeset.env"
-sed -i -e "s/CCNAME=.*/CCNAME=$eth1client/g" "$DATA_DIR/nodeset.env"
+sed -i -e "s/ECNAME=.*/ECNAME=$eth1client/g" "$DATA_DIR/nodeset.env"
+sed -i -e "s/CCNAME=.*/CCNAME=$eth2client/g" "$DATA_DIR/nodeset.env"
 
 ### set local env
 set -a 
@@ -275,9 +275,18 @@ cp "$CLIENT_DIR/$CCNAME.yaml" "$DATA_DIR/$CCNAME.yaml"
 if [ ! -e ./tmp/jwtsecret ]; then
     echo "Generating jwtsecret..."
     # initialize EC, then wait a few seconds for it to create the jwtsecret
-    docker compose -f "$DATA_DIR/compose.yaml" up $ECNAME
-    docker compose -f "$DATA_DIR/compose.yaml" logs $ECNAME
-    #sleep 3
+    docker compose -f "$DATA_DIR/compose.yaml" up -d $ECNAME
+    i=6
+    until [ -f "$DATA_DIR/tmp/jwtsecret" ] || [ $i = 0 ]; do
+        echo "Waiting for jwtsecret..."
+        sleep 5
+        i=i-1
+    done
+    if [ ! -f "$DATA_DIR/tmp/jwtsecret" ]; then
+        echo "ERROR: Could not generate jwtsecret before timeout!"
+        exit 2
+    fi
+
     chown $callinguser $DATA_DIR/tmp/jwtsecret || exit 2
 fi
 
