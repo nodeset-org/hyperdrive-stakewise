@@ -292,10 +292,12 @@ fi
 
 ### checkpoint sync
 if [ "$NETWORK" != "mainnet" ]; then
-    if [ "$CCNAME" = "nimbus" ]; then 
-        echo "Performing checkpoint sync..."
-        docker compose -f "$DATA_DIR/compose.yaml" run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false
-    fi
+    case $CCNAME in
+        nimbus) 
+            echo "Performing checkpoint sync..."
+            docker compose -f "$DATA_DIR/compose.yaml" run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false
+            ;;
+    esac
 fi
 
 ### set bashrc
