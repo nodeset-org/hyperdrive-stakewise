@@ -112,6 +112,10 @@ case "$1" in
         printf "$usagemsg"
         exit
         ;;
+    message)
+        "$SCRIPT_DIR/generate-exit-msg.sh"
+        exit $?
+        ;;
     remove)
         "$SCRIPT_DIR/remove.sh"
         exit $?

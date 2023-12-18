@@ -1,3 +1,4 @@
-docker exec ethdo validator exit --account=Wallet/Account --offline
+#!/usr/bin/env bash 
 
-./ethdo validator exit --validator=/validator_keys/keystore-m_12381_3600_1_0_0-1677445363.json --offline
+echo "Generating exit messages..."
+docker compose -f "$DATA_DIR/compose.yaml" run ethdo validator exit --validator=$DATA_DIR/stakewise-data/$VAULT/keystore-m_12381_3600_0_0_0-1702688242.json --offline
