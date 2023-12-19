@@ -5,7 +5,8 @@ After=network.target
 [Service]
 ExecStart=nodeset start
 ExecStop=nodeset shutdown
-Type=exec
+Type=oneshot
+RemainAfterExit=yes
 Restart=no
 
 [Install]
