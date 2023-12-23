@@ -232,18 +232,22 @@ get_eth2()
     echo 
     echo "Which consensus (eth2) client do you want to use?"
     echo "1) Nimbus (recommended)"
+    echo "2) Teku"
     echo
     read choice
     if [ "$choice" = "1" ] || [ "$choice" = "nimbus" ]; then
         eth2client="nimbus"
     fi
-    if [ "$eth2client" != "nimbus" ]; then
+    if [ "$choice" = "2" ] || [ "$choice" = "teku" ]; then
+        eth2client="teku"
+    fi
+    if [ "$eth2client" != "nimbus" ] && [ "$eth2client" != "teku" ]; then
         get_eth2
     fi
 }
 if [ "$eth2client" = "" ]; then
     get_eth2
-elif [ "$eth2client" != "nimbus" ]; then
+elif [ "$eth2client" != "nimbus" ] && [ "$eth2client" != "teku" ]; then
     echo "Error: incorrect eth2 client name provided."
     printf $usagemsg
     exit 1
