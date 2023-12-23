@@ -6,6 +6,12 @@ if [ "$BASH_VERSION" = '' ]; then
     exit
 fi
 
+# check for docker
+if ! docker -v > /dev/null || ! docker compose version > /dev/null; then
+    echo "Error: Dependencies are missing! Please ensure you have docker and docker compose installed."
+    exit 2
+fi
+
 export SCRIPT_DIR=$( dirname -- "$( readlink -f -- "${BASH_SOURCE[0]}"; )"; )
 APP_DIR="$SCRIPT_DIR/.."
 LOCAL_DIR="$APP_DIR/local"
@@ -67,7 +73,7 @@ while getopts "hre:c:v:d:m:-:" option; do
                     exit 1
                     ;;
                 :)
-                    printf "ERROR: Option -$option requires an argument\n\n"
+                    printf "Error: Option -$option requires an argument\n\n"
                     printf "$usagemsg\n"
                     exit 1
                     ;;
@@ -119,7 +125,7 @@ while getopts "hre:c:v:d:m:-:" option; do
             exit 1
             ;;
         :)
-            printf "ERROR: Option -$option requires an argument\n\n"
+            printf "Error: Option -$option requires an argument\n\n"
             printf "$usagemsg\n"
             exit 1
             ;;
@@ -153,15 +159,16 @@ echo
 
 if [ "$remove" = true ]; then
     "$SCRIPT_DIR/nodeset.sh" "-d" "$DATA_DIR" "remove" 
-    if [ $? -ne 0 ]; then
-        exit 2
+    c=$?
+    if [ $c -ne 0 ]; then
+        exit $c
     fi
 fi
 
 ### create data directory
 if [ -d "$DATA_DIR" ]; then
     if [ -n "$(ls -A "$DATA_DIR")" ]; then  
-        echo "Data directory exists and is not empty."
+        echo "Error: Data directory exists and is not empty."
         echo "To remove your existing installation, use the -r or --remove option"
         echo
         echo "Given data directory: $DATA_DIR"
@@ -289,11 +296,11 @@ if [ ! -e ./tmp/jwtsecret ]; then
         i=i-1
     done
     if [ ! -f "$DATA_DIR/tmp/jwtsecret" ]; then
-        echo "ERROR: Could not generate jwtsecret before timeout!"
-        exit 2
+        echo "Error: Could not generate jwtsecret before timeout!"
+        exit 3
     fi
 
-    chown $callinguser $DATA_DIR/tmp/jwtsecret || exit 2
+    chown $callinguser $DATA_DIR/tmp/jwtsecret || exit 3
 fi
 
 ### checkpoint sync
