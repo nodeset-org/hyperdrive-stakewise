@@ -12,6 +12,8 @@ services:
       --rest-port="$CCAPIPORT"
       --rest-address="0.0.0.0"
       --rest-allow-origin=*
+      --tcp-port=$CCPORT
+      --udp-port=$CCPORT
     env_file: "$DATA_DIR/nodeset.env"
     volumes:
       - "$DATA_DIR/nimbus-data:/home/user/data"
