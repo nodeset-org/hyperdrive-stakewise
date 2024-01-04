@@ -21,6 +21,7 @@ version=$(< "$SCRIPT_DIR/version.txt")
 help=$(< "$SCRIPT_DIR/install-help.txt")
 usagemsg="\n"${help/VERSION/"v"$version}"\n\n"
 export DATA_DIR=""
+useExtClients=""
 eth1client=""
 eth2client=""
 mnemonic=""
@@ -34,15 +35,22 @@ while getopts "hre:c:v:d:m:-:" option; do
             case "${OPTARG}" in
                 eth1client=*)
                     eth1client=${OPTARG#*=}
+                    useExtClients=false
                     ;;
                 eth1client)
                     eth1client="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    useExtClients=false
                     ;;
                 eth2client=*)
                     eth2client=${OPTARG#*=}
+                    useExtClients=false
                     ;;
                 eth2client)
                     eth2client="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    useExtClients=false
+                    ;;
+                use-external-clients)
+                    useExtClients=true
                     ;;
                 data-directory=*)
                     export DATA_DIR=${OPTARG#*=}
@@ -89,12 +97,14 @@ while getopts "hre:c:v:d:m:-:" option; do
             ;;
         c)
             eth2client=${OPTARG}
+            useExtClients=false
             ;;
         d)
             export DATA_DIR=${OPTARG}
             ;;
         e)
             eth1client=${OPTARG}
+            useExtClients=false
             ;;
         h)
             printf "$usagemsg\n"
@@ -109,6 +119,8 @@ while getopts "hre:c:v:d:m:-:" option; do
         r)
             remove=true
             ;;
+        x)
+            useExtClients=true
         \?)
             printf "$usagemsg\n"
             exit 1
@@ -124,6 +136,14 @@ while getopts "hre:c:v:d:m:-:" option; do
             ;;
     esac
 done
+
+### ensure options are correct
+if [[ $useExtClients = true && ( $eth2client != "" || $eth1client != "" ) ]]; then
+    echo "You cannot specify a client when using an external configuration!"
+    echo
+    printf "$usagemsg\n"
+    exit 1
+fi
 
 ### ensure root access
 if [ "$(id -u)" -ne 0 ]; then
@@ -196,66 +216,93 @@ elif [ "$vault" != "holesky" ] && [ "$vault" != "holesky-dev" ] && [ "$vault" !=
     exit 1
 fi
 
-### determine and install client config
-get_eth1()
+### determine and (if needed) install client config
+get_external()
 {
+    echo "How do you want to manage your client configuration?"
+    echo "1) External (recommended)"
+    echo "2) Internal"
     echo 
-    echo "Which execution (eth1) client do you want to use?"
-    echo "1) Nethermind (recommended)"
-    echo "2) Geth"
-    echo
     read choice
-    if [ "$choice" = "1" ] || [ "$choice" = "nethermind" ]; then
-        eth1client="nethermind"
-    fi
-    if [ "$choice" = "2" ] || [ "$choice" = "geth" ]; then
-        eth1client="geth"
-    fi
-    if [ "$eth1client" != "nethermind" ] && [ "$eth1client" != "geth" ]; then
-        get_eth1
+    if [ "$choice" = "1" ] || [ "$choice" = "external" ]; then
+        useExtClients=true
+    elif [ "$choice" = "2" ] || [ "$choice" = "internal" ]; then
+        useExtClients=false
+    else
+        get_external
     fi
 }
-if [ "$eth1client" = "" ]; then
-    get_eth1
-elif [ "$eth1client" != "geth" ] && [ "$eth1client" != "nethermind" ]; then
-    echo "Error: incorrect eth1 client name provided."
-    printf $usagemsg
-    exit 1
+if [ "$useExtClients" == "" ]; then
+    get_external
 fi
 
-get_eth2()
-{
-    echo 
-    echo "Which consensus (eth2) client do you want to use?"
-    echo "1) Nimbus (recommended)"
-    echo
-    read choice
-    if [ "$choice" = "1" ] || [ "$choice" = "nimbus" ]; then
-        eth2client="nimbus"
+if [ -n $useExtClients ]; then
+    get_eth1()
+    {
+        
+        echo 
+        echo "Which execution (eth1) client do you want to use?"
+        echo "1) Nethermind (recommended)"
+        echo "2) Geth"
+        echo
+        read choice
+        if [ "$choice" = "1" ] || [ "$choice" = "nethermind" ]; then
+            eth1client="nethermind"
+        fi
+        if [ "$choice" = "2" ] || [ "$choice" = "geth" ]; then
+            eth1client="geth"
+        fi
+        if [ "$eth1client" != "nethermind" ] && [ "$eth1client" != "geth" ]; then
+            get_eth1
+        fi
+    }
+    if [ "$eth1client" = "" ]; then
+        get_eth1
+    elif [ "$eth1client" != "geth" ] && [ "$eth1client" != "nethermind" ]; then
+        echo "Error: incorrect eth1 client name provided."
+        printf $usagemsg
+        exit 1
     fi
-    if [ "$eth2client" != "nimbus" ]; then
+
+    get_eth2()
+    {
+        echo 
+        echo "Which consensus (eth2) client do you want to use?"
+        echo "1) Nimbus (recommended)"
+        echo
+        read choice
+        if [ "$choice" = "1" ] || [ "$choice" = "nimbus" ]; then
+            eth2client="nimbus"
+        fi
+        if [ "$eth2client" != "nimbus" ]; then
+            get_eth2
+        fi
+    }
+    if [ "$eth2client" = "" ]; then
         get_eth2
+    elif [ "$eth2client" != "nimbus" ]; then
+        echo "Error: incorrect eth2 client name provided."
+        printf $usagemsg
+        exit 1
     fi
-}
-if [ "$eth2client" = "" ]; then
-    get_eth2
-elif [ "$eth2client" != "nimbus" ]; then
-    echo "Error: incorrect eth2 client name provided."
-    printf $usagemsg
-    exit 1
 fi
 
 # install default vault config
 cp "$VAULT_DIR/$vault.env" "$DATA_DIR/nodeset.env"
 
-# replace default client names in installed configuration
-sed -i -e "s/ECNAME=.*/ECNAME=$eth1client/g" "$DATA_DIR/nodeset.env"
-sed -i -e "s/CCNAME=.*/CCNAME=$eth2client/g" "$DATA_DIR/nodeset.env"
+if [ -n $useExtClients ]; then
+    # replace default client names in installed configuration
+    sed -i -e "s/ECNAME=.*/ECNAME=$eth1client/g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s/CCNAME=.*/CCNAME=$eth2client/g" "$DATA_DIR/nodeset.env"
+fi
 
 ### set local env
 set -a 
 source "$DATA_DIR/nodeset.env"
 set +a
+
+## TODO: left off here checking for internal vs external config
+
 
 ### prep data directory
 mkdir $DATA_DIR/$CCNAME-data
@@ -289,7 +336,7 @@ if [ ! -e ./tmp/jwtsecret ]; then
 fi
 
 ### checkpoint sync
-if [ $checkpoint = true ] && [ "$NETWORK" != "mainnet" ]; then
+if [[ $checkpoint = true && $externalconfig = "" && "$NETWORK" != "mainnet" ]]; then
     case $CCNAME in
         nimbus) 
             echo "Performing checkpoint sync..."

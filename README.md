@@ -21,27 +21,33 @@ First, clone this repository with `git clone https://github.com/nodeset-org/hype
 To set up the environment, simply run the install script as root:
 `sudo bash install-node.sh`
 
-To see full documentation for the installation script, use the "-h" or "--help" option: `sudo bash install-node.sh --help`
+> [!NOTE]  
+> To see full documentation for the installation script, use the "-h" or "--help" option: `sudo bash install-node.sh --help`
+
+### External vs Internal Client Configuration
+
+#### External (recommended)
+
+For ease of installation and maintenance, we recommend you set up an external and isolated environment for your eth1 (execution) and eth2 (consensus) clients, preferrably on another piece of hardware completely. Please ensure any external clients are fully configured before installing this tool.
+
+#### Internal
+
+If you prefer to run a self-contained node with the eth1 and eth2 clients running side-by-side with your NodeSet+StakeWise configuration, you can select an internal client configuration during installation or use the `--eth1client` and `--eth2client` options.
 
 Remember to forward ports on your router so you can find peers! CL clients use `9000` and EL clients use `30303` (both TCP & UDP) for peering by default. Note that the node is configured to accept all REST API requests by default, so you should NOT forward the port used for this (`5052` by default), as this poses a security risk.
 
 After installation, the node will start syncing immediately. You will not be able to use any `nodeset` commands until after you first reload your environment (it's easiest to log out and log back in again).
 
-### Wait for Sync
+### Maintenance and Upgrades
 
-You can use `nodeset logs` to check the output logs for the node. Although testnets may be faster, it can take a long time to sync a mainnet node (12-48 hours depending on peering).
+To bring down the node (e.g. for maintenance), use `nodeset shutdown`. You can restart the node using `nodeset start` (or simply reboot the machine as long as the systemd service was installed correctly).
 
-### Updating Your Node
+Any time the node is started (either on OS boot or via `nodeset start`), it will automatically pull any updates for the stakewise operator binary and EL & CL clients. However, upgrading your OS and this utility must be done manually.
 
-Any time the node is started (either on OS boot or via `nodeset start`), it will automatically pull any updates for the stakewise operator binary and EL & CL clients. However, upgrading your OS and this utility must be done manually. 
+To update this utility, simply delete the `hyperdrive-stakewise` application directory, then clone the repository again into the same location. As long as you clone it into the same location as your old application directory, everything should continue to work normally. If you move your application directory, you must manually edit the `nodeset` alias in `/etc/bash.bashrc`.
 
-To update this utility, simply delete the hyperdrive-stakewise application directory, then clone the repository again into the same location. As long as you clone it into the same location as your old application directory, everything should continue to work normally.
-
-DO NOT delete your installation directory (default is `~/.node-data`) or you will have to reinstall and resync your node!
-
-### Maintenance
-
-To bring down the node (e.g. for maintenance), use `nodeset shutdown`. You can restart the node using `nodeset start` (or simply reboot the machine).
+> [!CAUTION]
+> DO NOT delete your installation directory (default is `~/.node-data`) or you will have to reinstall your node (including a full resync if you use an internal client config)!
 
 ## Environment Details
 

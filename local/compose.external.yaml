@@ -1,0 +1,6 @@
+services:
+  stakewise:
+    command: src/main.py start
+      --vault=$VAULT
+      --consensus-endpoints="$CCURL"
+      --execution-endpoints="$ECURL"

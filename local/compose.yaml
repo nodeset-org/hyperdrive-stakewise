@@ -1,15 +1,7 @@
-include:
-  - "$DATA_DIR/$ECNAME.yaml"
-  - "$DATA_DIR/$CCNAME.yaml"
-
 services:
   stakewise:
     image: "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master"
     container_name: v3-operator
-    command: src/main.py start
-      --vault=$VAULT
-      --consensus-endpoints="http://$CCNAME:$CCAPIPORT"
-      --execution-endpoints="http://$ECNAME:$ECAPIPORT"
     volumes:
       - "$DATA_DIR/stakewise-data:/data"
     environment:
