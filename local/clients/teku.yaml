@@ -5,7 +5,7 @@ services:
     image: "consensys/teku:latest"
     command: --network=$NETWORK
       --data-base-path=/var/lib/teku/data
-      --ee-jwt-secret-file=/tmp/jwtsecret
+      --ee-jwt-secret-file=/jwtsecret/jwtsecret
       --p2p-port=$CCPORT
       --validators-proposer-default-fee-recipient=$FEERECIPIENT
       --ee-endpoint="http://$ECNAME:$ECRPCPORT"
@@ -17,7 +17,7 @@ services:
     env_file: "$DATA_DIR/nodeset.env"
     volumes:
       - "$DATA_DIR/teku-data:/var/lib/teku/data"
-      - "$DATA_DIR/tmp:/tmp"
+      - "$DATA_DIR/jwtsecret:/jwtsecret"
     ports:
       # external peering
       - "$CCPORT/tcp"

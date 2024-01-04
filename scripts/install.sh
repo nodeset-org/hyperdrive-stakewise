@@ -285,22 +285,22 @@ cp "$CLIENT_DIR/$ECNAME.yaml" "$DATA_DIR/$ECNAME.yaml"
 cp "$CLIENT_DIR/$CCNAME.yaml" "$DATA_DIR/$CCNAME.yaml"
 
 ### generate jwtsecret
-if [ ! -e ./tmp/jwtsecret ]; then
+if [ ! -e ./jwtsecret/jwtsecret ]; then
     echo "Generating jwtsecret..."
     # initialize EC, then wait a few seconds for it to create the jwtsecret
     docker compose -f "$DATA_DIR/compose.yaml" up -d $ECNAME
     i=6
-    until [ -f "$DATA_DIR/tmp/jwtsecret" ] || [ $i = 0 ]; do
+    until [ -f "$DATA_DIR/jwtsecret/jwtsecret" ] || [ $i = 0 ]; do
         echo "Waiting for jwtsecret..."
         sleep 5
         i=i-1
     done
-    if [ ! -f "$DATA_DIR/tmp/jwtsecret" ]; then
+    if [ ! -f "$DATA_DIR/jwtsecret/jwtsecret" ]; then
         echo "Error: Could not generate jwtsecret before timeout!"
         exit 3
     fi
 
-    chown $callinguser $DATA_DIR/tmp/jwtsecret || exit 3
+    chown $callinguser $DATA_DIR/jwtsecret/jwtsecret || exit 3
 fi
 
 ### checkpoint sync

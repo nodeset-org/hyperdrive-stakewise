@@ -12,10 +12,10 @@ services:
       --JsonRpc.Enabled=true
       --JsonRpc.Host="0.0.0.0"
       --JsonRpc.Port=$ECAPIPORT
-      --JsonRpc.JwtSecretFile=/tmp/jwtsecret
+      --JsonRpc.JwtSecretFile=/jwtsecret/jwtsecret
     env_file: "$DATA_DIR/nodeset.env"
     volumes:
-      - "$DATA_DIR/tmp:/tmp"
+      - "$DATA_DIR/jwtsecret:/jwtsecret"
       - "$DATA_DIR/$ECNAME-data:/root/.$ECNAME"
     ports:
       # external peering
