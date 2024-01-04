@@ -2,6 +2,10 @@ services:
   stakewise:
     image: "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master"
     container_name: v3-operator
+    command: src/main.py start
+      --vault=$VAULT
+      --consensus-endpoints="$CCURL:$CCAPIPORT"
+      --execution-endpoints="$ECURL:$ECAPIPORT"
     volumes:
       - "$DATA_DIR/stakewise-data:/data"
     environment:

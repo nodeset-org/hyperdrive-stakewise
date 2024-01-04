@@ -21,7 +21,7 @@ version=$(< "$SCRIPT_DIR/version.txt")
 help=$(< "$SCRIPT_DIR/install-help.txt")
 usagemsg="\n"${help/VERSION/"v"$version}"\n\n"
 export DATA_DIR=""
-useExtClients=""
+INTERNALCLIENTS=""
 eth1client=""
 eth2client=""
 mnemonic=""
@@ -35,22 +35,22 @@ while getopts "hre:c:v:d:m:-:" option; do
             case "${OPTARG}" in
                 eth1client=*)
                     eth1client=${OPTARG#*=}
-                    useExtClients=false
+                    INTERNALCLIENTS=true
                     ;;
                 eth1client)
                     eth1client="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    useExtClients=false
+                    INTERNALCLIENTS=true
                     ;;
                 eth2client=*)
                     eth2client=${OPTARG#*=}
-                    useExtClients=false
+                    INTERNALCLIENTS=true
                     ;;
                 eth2client)
                     eth2client="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    useExtClients=false
+                    INTERNALCLIENTS=true
                     ;;
                 use-external-clients)
-                    useExtClients=true
+                    INTERNALCLIENTS=false
                     ;;
                 data-directory=*)
                     export DATA_DIR=${OPTARG#*=}
@@ -97,14 +97,14 @@ while getopts "hre:c:v:d:m:-:" option; do
             ;;
         c)
             eth2client=${OPTARG}
-            useExtClients=false
+            INTERNALCLIENTS=true
             ;;
         d)
             export DATA_DIR=${OPTARG}
             ;;
         e)
             eth1client=${OPTARG}
-            useExtClients=false
+            INTERNALCLIENTS=true
             ;;
         h)
             printf "$usagemsg\n"
@@ -120,7 +120,7 @@ while getopts "hre:c:v:d:m:-:" option; do
             remove=true
             ;;
         x)
-            useExtClients=true
+            INTERNALCLIENTS=false
         \?)
             printf "$usagemsg\n"
             exit 1
@@ -138,7 +138,7 @@ while getopts "hre:c:v:d:m:-:" option; do
 done
 
 ### ensure options are correct
-if [[ $useExtClients = true && ( $eth2client != "" || $eth1client != "" ) ]]; then
+if [[ ! $INTERNALCLIENTS && ( $eth2client != "" || $eth1client != "" ) ]]; then
     echo "You cannot specify a client when using an external configuration!"
     echo
     printf "$usagemsg\n"
@@ -225,18 +225,18 @@ get_external()
     echo 
     read choice
     if [ "$choice" = "1" ] || [ "$choice" = "external" ]; then
-        useExtClients=true
+        INTERNALCLIENTS=false
     elif [ "$choice" = "2" ] || [ "$choice" = "internal" ]; then
-        useExtClients=false
+        INTERNALCLIENTS=true
     else
         get_external
     fi
 }
-if [ "$useExtClients" == "" ]; then
+if [ "$INTERNALCLIENTS" == "" ]; then
     get_external
 fi
 
-if [ -n $useExtClients ]; then
+if [ $INTERNALCLIENTS ]; then
     get_eth1()
     {
         
@@ -290,7 +290,7 @@ fi
 # install default vault config
 cp "$VAULT_DIR/$vault.env" "$DATA_DIR/nodeset.env"
 
-if [ -n $useExtClients ]; then
+if [ $INTERNALCLIENTS ]; then
     # replace default client names in installed configuration
     sed -i -e "s/ECNAME=.*/ECNAME=$eth1client/g" "$DATA_DIR/nodeset.env"
     sed -i -e "s/CCNAME=.*/CCNAME=$eth2client/g" "$DATA_DIR/nodeset.env"
@@ -313,8 +313,15 @@ chmod 700 $DATA_DIR/$CCNAME-data
 # you will need to use root to access this directory
 chown nobody $DATA_DIR/stakewise-data
 cp "$LOCAL_DIR/compose.yaml" "$DATA_DIR/compose.yaml"
-cp "$CLIENT_DIR/$ECNAME.yaml" "$DATA_DIR/$ECNAME.yaml"
-cp "$CLIENT_DIR/$CCNAME.yaml" "$DATA_DIR/$CCNAME.yaml"
+if [ $INTERNALCLIENTS ]; then
+    cp "$CLIENT_DIR/compose.internal.yaml"
+    cp "$CLIENT_DIR/$ECNAME.yaml" "$DATA_DIR/$ECNAME.yaml"
+    cp "$CLIENT_DIR/$CCNAME.yaml" "$DATA_DIR/$CCNAME.yaml"
+else
+    
+fi
+# copy compose extension
+cp "$CLIENT_DIR/compose.external.yaml"
 
 ### generate jwtsecret
 if [ ! -e ./tmp/jwtsecret ]; then

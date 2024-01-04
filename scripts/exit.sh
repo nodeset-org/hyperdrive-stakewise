@@ -45,6 +45,10 @@ else
 fi
 
 # if validators are active 
-docker compose -f "$DATA_DIR/compose.yaml" run stakewise src/main.py validators-exit --vault "$VAULT" --consensus-endpoints="http://$CCNAME:$CCAPIPORT"
+if [ $INTERNALCLIENTS ]; then
+    docker compose -f "$DATA_DIR/compose.yaml" -f "$DATA_DIR/compose.internal.yaml" run stakewise src/main.py validators-exit --vault "$VAULT" --consensus-endpoints="$CCURL:$CCAPIPORT"
+else
+    docker compose -f "$DATA_DIR/compose.yaml" run stakewise src/main.py validators-exit --vault "$VAULT" --consensus-endpoints="$CCURL:$CCAPIPORT"
+fi
 # else
 # tell NodeSet to remove them from deposit queue

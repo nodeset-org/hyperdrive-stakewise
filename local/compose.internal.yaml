@@ -4,10 +4,6 @@ include:
 
 services:
   stakewise:
-    command: src/main.py start
-      --vault=$VAULT
-      --consensus-endpoints="http://$CCNAME:$CCAPIPORT"
-      --execution-endpoints="http://$ECNAME:$ECAPIPORT"
     depends_on:
       - $ECNAME
       - $CCNAME

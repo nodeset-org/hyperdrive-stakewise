@@ -56,7 +56,11 @@ echo "Removing previous configuration..."
 # if a configuration exists, shut it down first
 if [ -f "$DATA_DIR/nodeset.env" ]; then
     echo "Shutting down containers..."
-    docker compose -f "$DATA_DIR/compose.yaml" down -v
+    if [ $INTERNALCLIENTS ]; then
+        docker compose -f "$DATA_DIR/compose.yaml" -f "$DATA_DIR/compose.internal.yaml" down -v   
+    else
+        docker compose -f "$DATA_DIR/compose.yaml" down -v
+    fi
 fi
 
 
