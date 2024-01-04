@@ -24,6 +24,7 @@ export DATA_DIR=""
 INTERNALCLIENTS=""
 eth1client=""
 eth2client=""
+eth2client=""
 mnemonic=""
 checkpoint=true
 vault=""
@@ -41,6 +42,14 @@ while getopts "hre:c:v:d:m:-:" option; do
                     eth1client="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     INTERNALCLIENTS=true
                     ;;
+                eth1url=*)
+                    ECURL=${OPTARG#*=}
+                    INTERNALCLIENTS=false
+                    ;;
+                eth1url)
+                    ECURL="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    INTERNALCLIENTS=false
+                    ;;
                 eth2client=*)
                     eth2client=${OPTARG#*=}
                     INTERNALCLIENTS=true
@@ -49,7 +58,12 @@ while getopts "hre:c:v:d:m:-:" option; do
                     eth2client="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     INTERNALCLIENTS=true
                     ;;
-                use-external-clients)
+                eth2url=*)
+                    CCURL=${OPTARG#*=}
+                    INTERNALCLIENTS=false
+                    ;;
+                eth2url)
+                    CCURL="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
                     INTERNALCLIENTS=false
                     ;;
                 data-directory=*)
@@ -119,8 +133,6 @@ while getopts "hre:c:v:d:m:-:" option; do
         r)
             remove=true
             ;;
-        x)
-            INTERNALCLIENTS=false
         \?)
             printf "$usagemsg\n"
             exit 1
@@ -236,7 +248,7 @@ if [ "$INTERNALCLIENTS" == "" ]; then
     get_external
 fi
 
-if [ $INTERNALCLIENTS ]; then
+if $INTERNALCLIENTS; then
     get_eth1()
     {
         
@@ -290,19 +302,53 @@ fi
 # install default vault config
 cp "$VAULT_DIR/$vault.env" "$DATA_DIR/nodeset.env"
 
-if [ $INTERNALCLIENTS ]; then
-    # replace default client names in installed configuration
+if $INTERNALCLIENTS; then
+    # insert client names in installed configuration
     sed -i -e "s/ECNAME=.*/ECNAME=$eth1client/g" "$DATA_DIR/nodeset.env"
     sed -i -e "s/CCNAME=.*/CCNAME=$eth2client/g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s/ECURL=.*/ECURL=http://$eth1client/g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s/CCURL=.*/CCURL=http://$eth2client/g" "$DATA_DIR/nodeset.env"
+else
+    get_eth1url()
+    {
+        echo 
+        echo "Please enter your eth1 (execution) client URL, excluding ports. E.g. http://123.0.0.1"
+        echo
+        read eth1url
+        if [ "$eth1url" = "" ]; then
+            get_eth1url
+        fi
+    }
+    if [ "$eth1url" = "" ]; then
+        get_eth1url
+    fi
+
+    get_eth2url()
+    {
+        echo 
+        echo "Please enter your eth1 (execution) client URL, excluding ports. E.g. http://123.0.0.1"
+        echo
+        read eth1url
+        if [ "$eth2url" = "" ]; then
+            get_eth2url
+        fi
+    }
+    if [ "$eth2url" = "" ]; then
+        get_eth2url
+    fi
+    
+    # insert client names in installed configuration
+    sed -i -e "s/ECNAME=.*/ECNAME=external/g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s/CCNAME=.*/CCNAME=external/g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s/ECURL=.*/ECURL=http://$eth1url/g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s/CCURL=.*/CCURL=http://$eth2url/g" "$DATA_DIR/nodeset.env"
 fi
+
 
 ### set local env
 set -a 
 source "$DATA_DIR/nodeset.env"
 set +a
-
-## TODO: left off here checking for internal vs external config
-
 
 ### prep data directory
 mkdir $DATA_DIR/$CCNAME-data
@@ -313,43 +359,41 @@ chmod 700 $DATA_DIR/$CCNAME-data
 # you will need to use root to access this directory
 chown nobody $DATA_DIR/stakewise-data
 cp "$LOCAL_DIR/compose.yaml" "$DATA_DIR/compose.yaml"
-if [ $INTERNALCLIENTS ]; then
+
+### setup internal clients
+if $INTERNALCLIENTS; then
     cp "$CLIENT_DIR/compose.internal.yaml"
     cp "$CLIENT_DIR/$ECNAME.yaml" "$DATA_DIR/$ECNAME.yaml"
     cp "$CLIENT_DIR/$CCNAME.yaml" "$DATA_DIR/$CCNAME.yaml"
-else
-    
-fi
-# copy compose extension
-cp "$CLIENT_DIR/compose.external.yaml"
 
-### generate jwtsecret
-if [ ! -e ./tmp/jwtsecret ]; then
-    echo "Generating jwtsecret..."
-    # initialize EC, then wait a few seconds for it to create the jwtsecret
-    docker compose -f "$DATA_DIR/compose.yaml" up -d $ECNAME
-    i=6
-    until [ -f "$DATA_DIR/tmp/jwtsecret" ] || [ $i = 0 ]; do
-        echo "Waiting for jwtsecret..."
-        sleep 5
-        i=$((i-1))
-    done
-    if [ ! -f "$DATA_DIR/tmp/jwtsecret" ]; then
-        echo "Error: Could not generate jwtsecret before timeout!"
-        exit 3
+    ### generate jwtsecret
+    if [ ! -e ./tmp/jwtsecret ]; then
+        echo "Generating jwtsecret..."
+        # initialize EC, then wait a few seconds for it to create the jwtsecret
+        docker compose -f "$DATA_DIR/compose.yaml" up -d $ECNAME
+        i=6
+        until [ -f "$DATA_DIR/tmp/jwtsecret" ] || [ $i = 0 ]; do
+            echo "Waiting for jwtsecret..."
+            sleep 5
+            i=$((i-1))
+        done
+        if [ ! -f "$DATA_DIR/tmp/jwtsecret" ]; then
+            echo "Error: Could not generate jwtsecret before timeout!"
+            exit 3
+        fi
+
+        chown $callinguser $DATA_DIR/tmp/jwtsecret || exit 3
     fi
 
-    chown $callinguser $DATA_DIR/tmp/jwtsecret || exit 3
-fi
-
-### checkpoint sync
-if [[ $checkpoint = true && $externalconfig = "" && "$NETWORK" != "mainnet" ]]; then
-    case $CCNAME in
-        nimbus) 
-            echo "Performing checkpoint sync..."
-            docker compose -f "$DATA_DIR/compose.yaml" run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false
-            ;;
-    esac
+    ### checkpoint sync
+    if [[ $checkpoint = true && $externalconfig = "" && "$NETWORK" != "mainnet" ]]; then
+        case $CCNAME in
+            nimbus) 
+                echo "Performing checkpoint sync..."
+                docker compose -f "$DATA_DIR/compose.yaml" run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false
+                ;;
+        esac
+    fi
 fi
 
 ### set bashrc
@@ -379,6 +423,12 @@ fi
 echo "Pulling latest StakeWise operator binary..."
 docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
 
+if $INTERNALCLIENTS; then
+    composeFile="-f \"$DATA_DIR/compose.yaml\" -f \"$DATA_DIR/compose.internal.yaml\""
+else
+    composeFile="-f \"$DATA_DIR/compose.yaml\""
+fi
+
 if [ "$mnemonic" != "" ]; then
     echo "supplying a mnemonic is not yet supported, please check back later!"
     exit
@@ -386,13 +436,13 @@ if [ "$mnemonic" != "" ]; then
     echo "Recreating StakeWise configuration using existing mnemonic..."
     # todo: recover setup using deposit data downloaded from NodeSet API
     #docker compose run stakewise src/main.py get-validators-root --deposit-data-file=<DEPOSIT DATA FILE>
-    docker compose -f "$DATA_DIR/compose.yaml" run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --consensus-endpoints="http://$CCNAME:$CCAPIPORT" --execution-endpoints="http://$ECNAME:$ECAPIPORT" --mnemonic="$mnemonic"
-    docker compose -f "$DATA_DIR/compose.yaml" run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
+    docker compose $composeFile run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --consensus-endpoints="$CCURL:$CCAPIPORT" --execution-endpoints="$ECURL:$ECAPIPORT" --mnemonic="$mnemonic"
+    docker compose $composeFile run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
 else
     echo "Initializing new StakeWise configuration..."
-    docker compose -f "$DATA_DIR/compose.yaml" run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
-    docker compose -f "$DATA_DIR/compose.yaml" run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
-    docker compose -f "$DATA_DIR/compose.yaml" run stakewise src/main.py create-wallet --vault="$VAULT"
+    docker compose $composeFile run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
+    docker compose $composeFile run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
+    docker compose $composeFile run stakewise src/main.py create-wallet --vault="$VAULT"
 fi
 
 display_funding_message()
