@@ -5,7 +5,7 @@ services:
       --suggested-fee-recipient=$FEERECIPIENT
       --network=$NETWORK
       --web3-url="$ECNAME:$ECRPCPORT"
-      --jwt-secret=/tmp/jwtsecret
+      --jwt-secret=/jwtsecret/jwtsecret
       --log-level=info
       --enr-auto-update:true
       --rest
@@ -17,7 +17,7 @@ services:
     env_file: "$DATA_DIR/nodeset.env"
     volumes:
       - "$DATA_DIR/nimbus-data:/home/user/data"
-      - "$DATA_DIR/tmp:/tmp"
+      - "$DATA_DIR/jwtsecret:/jwtsecret"
     ports:
       # external peering
       - "$CCPORT/tcp"

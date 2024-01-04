@@ -1,0 +1,29 @@
+services:
+  teku:
+    environment:
+      - "JAVA_OPTS=-Xmx4g"
+    image: "consensys/teku:latest"
+    command: --network=$NETWORK
+      --data-base-path=/var/lib/teku/data
+      --ee-jwt-secret-file=/jwtsecret/jwtsecret
+      --p2p-port=$CCPORT
+      --validators-proposer-default-fee-recipient=$FEERECIPIENT
+      --ee-endpoint="http://$ECNAME:$ECRPCPORT"
+      --rest-api-enabled=true
+      --rest-api-cors-origins=stakewise
+      --rest-api-port="$CCAPIPORT"
+      --rest-api-interface="0.0.0.0"
+      --rest-api-host-allowlist="0.0.0.0"
+    env_file: "$DATA_DIR/nodeset.env"
+    volumes:
+      - "$DATA_DIR/teku-data:/var/lib/teku/data"
+      - "$DATA_DIR/jwtsecret:/jwtsecret"
+    ports:
+      # external peering
+      - "$CCPORT/tcp"
+      - "$CCPORT/udp"
+      # API
+      - "$CCAPIPORT/tcp"
+      - "$CCAPIPORT/udp"
+    depends_on:
+      - $ECNAME
