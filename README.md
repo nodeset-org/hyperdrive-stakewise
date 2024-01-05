@@ -4,11 +4,7 @@ A bash-based utility for operating NodeSet nodes for StakeWise vaults.
 
 ## Dependencies
 
-Each node corresponds to a single vault and should have its own isolated environment, which must have docker and docker compose already installed. We recommend a fresh and updated Debian installation. For Debian, you can install these dependencies with the following commands:
-
-`sudo apt-get update`
-
-`sudo apt-get install -y docker docker-compose`
+Each node corresponds to a single vault and should have its own isolated environment, which must have [docker and docker compose](https://docs.docker.com/engine/install/) already installed. We recommend a fresh and updated Debian installation.
 
 This project also assumes you have a systemd-based environment to support automatically restarting the container services on boot and a graceful shutdown process. If you use another init system, you must provide your own automation using `nodeset start` for and `nodeset shutdown` for a graceful boot and shutdown.
 
