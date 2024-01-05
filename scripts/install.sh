@@ -369,7 +369,7 @@ cp "$LOCAL_DIR/compose.yaml" "$DATA_DIR/compose.yaml"
 
 ### setup internal clients
 if $INTERNALCLIENTS; then
-    cp "$CLIENT_DIR/compose.internal.yaml"
+    cp "$LOCAL_DIR/compose.internal.yaml" "$DATA_DIR/compose.internal.yaml"
     cp "$CLIENT_DIR/$ECNAME.yaml" "$DATA_DIR/$ECNAME.yaml"
     cp "$CLIENT_DIR/$CCNAME.yaml" "$DATA_DIR/$CCNAME.yaml"
 
@@ -377,7 +377,7 @@ if $INTERNALCLIENTS; then
     if [ ! -e ./jwtsecret/jwtsecret ]; then
         echo "Generating jwtsecret..."
         # initialize EC, then wait a few seconds for it to create the jwtsecret
-        docker compose -f "$DATA_DIR/compose.yaml" up -d $ECNAME
+        docker compose -f "$DATA_DIR/compose.yaml" -f "$DATA_DIR/compose.internal.yaml" up -d $ECNAME
         i=6
         until [ -f "$DATA_DIR/jwtsecret/jwtsecret" ] || [ $i = 0 ]; do
             echo "Waiting for jwtsecret..."
@@ -431,9 +431,9 @@ echo "Pulling latest StakeWise operator binary..."
 docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
 
 if $INTERNALCLIENTS; then
-    composeFile="-f \"$DATA_DIR/compose.yaml\" -f \"$DATA_DIR/compose.internal.yaml\""
-else
     composeFile="-f \"$DATA_DIR/compose.yaml\""
+else
+    composeFile="-f \"$DATA_DIR/compose.yaml\" -f \"$DATA_DIR/compose.internal.yaml\""
 fi
 
 echo "composeFile=$composeFile"
@@ -449,6 +449,7 @@ if [ "$mnemonic" != "" ]; then
     docker compose $composeFile run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
 else
     echo "Initializing new StakeWise configuration..."
+    echo docker compose $composeFile run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
     docker compose $composeFile run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
     docker compose $composeFile run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
     docker compose $composeFile run stakewise src/main.py create-wallet --vault="$VAULT"
@@ -464,7 +465,6 @@ display_funding_message()
         display_funding_message
     fi
 }
-
 echo
 echo "Please note that you must have enough Ether in this node wallet to register validators."
 printf "Each validator takes approximately 0.01 ETH to create when gas is 30 gwei. We recommend depositing AT LEAST 0.1 ETH.\nYou can withdraw this ETH at any time. For more information, see: http://nodeset.io/docs/stakewise\n"
