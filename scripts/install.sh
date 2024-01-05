@@ -314,8 +314,8 @@ if $INTERNALCLIENTS; then
     # insert client names in installed configuration
     sed -i -e "s/ECNAME=.*/ECNAME=$eth1client/g" "$DATA_DIR/nodeset.env"
     sed -i -e "s/CCNAME=.*/CCNAME=$eth2client/g" "$DATA_DIR/nodeset.env"
-    sed -i -e "s/ECURL=.*/ECURL=http://$eth1client/g" "$DATA_DIR/nodeset.env"
-    sed -i -e "s/CCURL=.*/CCURL=http://$eth2client/g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s/ECURL=.*/ECURL=\"http://$eth1client\"/g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s/CCURL=.*/CCURL=\"http://$eth2client\"/g" "$DATA_DIR/nodeset.env"
 else
     get_eth1url()
     {
@@ -334,9 +334,9 @@ else
     get_eth2url()
     {
         echo 
-        echo "Please enter your eth1 (execution) client URL, excluding ports. E.g. http://123.0.0.1"
+        echo "Please enter your eth2 (consensus) client URL, excluding ports. E.g. http://123.0.0.1"
         echo
-        read eth1url
+        read eth2url
         if [ "$eth2url" = "" ]; then
             get_eth2url
         fi
@@ -348,10 +348,9 @@ else
     # insert client names in installed configuration
     sed -i -e "s/ECNAME=.*/ECNAME=external/g" "$DATA_DIR/nodeset.env"
     sed -i -e "s/CCNAME=.*/CCNAME=external/g" "$DATA_DIR/nodeset.env"
-    sed -i -e "s/ECURL=.*/ECURL=http://$eth1url/g" "$DATA_DIR/nodeset.env"
-    sed -i -e "s/CCURL=.*/CCURL=http://$eth2url/g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s|ECURL=.*|ECURL=\"$eth1url\"|g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s|CCURL=.*|CCURL=\"$eth2url\"|g" "$DATA_DIR/nodeset.env"
 fi
-
 
 ### set local env
 set -a 
@@ -398,7 +397,7 @@ if $INTERNALCLIENTS; then
         case $CCNAME in
             nimbus) 
                 echo "Performing checkpoint sync..."
-                docker compose -f "$DATA_DIR/compose.yaml" run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false
+                docker compose -f "$DATA_DIR/compose.yaml" -f "$DATA_DIR/compose.internal.yaml" run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false
                 ;;
         esac
     fi
@@ -436,6 +435,8 @@ if $INTERNALCLIENTS; then
 else
     composeFile="-f \"$DATA_DIR/compose.yaml\""
 fi
+
+echo "composeFile=$composeFile"
 
 if [ "$mnemonic" != "" ]; then
     echo "supplying a mnemonic is not yet supported, please check back later!"
