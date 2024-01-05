@@ -431,9 +431,9 @@ echo "Pulling latest StakeWise operator binary..."
 docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
 
 if $INTERNALCLIENTS; then
-    composeFile="-f \"$DATA_DIR/compose.yaml\""
-else
     composeFile="-f \"$DATA_DIR/compose.yaml\" -f \"$DATA_DIR/compose.internal.yaml\""
+else
+    composeFile="-f \"$DATA_DIR/compose.yaml\""
 fi
 
 echo "composeFile=$composeFile"
@@ -449,7 +449,7 @@ if [ "$mnemonic" != "" ]; then
     docker compose $composeFile run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
 else
     echo "Initializing new StakeWise configuration..."
-    echo docker compose $composeFile run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
+    echo "docker compose $composeFile run stakewise src/main.py init --network=\"$NETWORK\" --vault=\"$VAULT\" --language=english"
     docker compose $composeFile run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
     docker compose $composeFile run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
     docker compose $composeFile run stakewise src/main.py create-wallet --vault="$VAULT"
@@ -467,7 +467,7 @@ display_funding_message()
 }
 echo
 echo "Please note that you must have enough Ether in this node wallet to register validators."
-printf "Each validator takes approximately 0.01 ETH to create when gas is 30 gwei. We recommend depositing AT LEAST 0.1 ETH.\nYou can withdraw this ETH at any time. For more information, see: http://nodeset.io/docs/stakewise\n"
+printf "Each validator takes approximately 0.01 ETH to create when gas is 30 gwei. We recommend depositing AT LEAST 0.1 ETH.\nYou can withdraw this ETH at any time. For more information, see: http://docs.nodeset.io/stakewise\n"
 display_funding_message
 
 ### start node

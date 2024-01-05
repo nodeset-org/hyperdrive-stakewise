@@ -11,9 +11,6 @@ services:
     environment:
       DATA_DIR: /data
     env_file: "$DATA_DIR/nodeset.env"
-    depends_on:
-      - $ECNAME
-      - $CCNAME
   ethdo:
     image: "wealdtech/ethdo"
     env_file: "$DATA_DIR/nodeset.env"
