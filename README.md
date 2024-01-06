@@ -63,9 +63,9 @@ If you want to run a command on any specific container, you must first source th
 
 E.g. `source /home/myuser/.node-data/nodeset.env`
 
-Then, you can use docker compose to send the command:
+Then, you can use docker compose to send the command, making sure to merge in the internal compose file if you are running an internal client configuration:
 
-E.g. `docker compose -f "/home/myuser/compose.yaml" run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false`
+E.g. `docker compose -f "/home/myuser/compose.yaml" -f "/home/myuser/compose.internal.yaml" run nimbus trustedNodeSync -d=/home/user/data --network=$NETWORK --trusted-node-url=https://checkpoint-sync.holesky.ethpandaops.io --backfill=false`
 
 Keep in mind that any commands run this way will be executed inside the container, so any paths should be relative to the mounted volumes specified in the compose files located in your data directory (not to your wrapping environment).
 
@@ -73,8 +73,7 @@ Keep in mind that any commands run this way will be executed inside the containe
 
 This project needs expansion! Here are some ways you can help out:
 
-- Adding more EL and CL client compatibility
-- Adding more first-class support for referencing external EL/CL clients
+- Adding more EL and CL client compatibility for internal configurations
 - Testing and reporting bugs
 
 **NodeSet will reward thoughtful contributions!**

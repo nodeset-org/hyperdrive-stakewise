@@ -21,7 +21,7 @@ version=$(< "$SCRIPT_DIR/version.txt")
 help=$(< "$SCRIPT_DIR/install-help.txt")
 usagemsg="\n"${help/VERSION/"v"$version}"\n\n"
 export DATA_DIR=""
-INTERNALCLIENTS=""
+useInternalClients=""
 eth1client=""
 eth2client=""
 eth2client=""
@@ -36,35 +36,35 @@ while getopts "hre:c:v:d:m:-:" option; do
             case "${OPTARG}" in
                 eth1client=*)
                     eth1client=${OPTARG#*=}
-                    INTERNALCLIENTS=true
+                    useInternalClients=true
                     ;;
                 eth1client)
                     eth1client="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    INTERNALCLIENTS=true
+                    useInternalClients=true
                     ;;
                 eth1url=*)
                     ECURL=${OPTARG#*=}
-                    INTERNALCLIENTS=false
+                    useInternalClients=false
                     ;;
                 eth1url)
                     ECURL="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    INTERNALCLIENTS=false
+                    useInternalClients=false
                     ;;
                 eth2client=*)
                     eth2client=${OPTARG#*=}
-                    INTERNALCLIENTS=true
+                    useInternalClients=true
                     ;;
                 eth2client)
                     eth2client="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    INTERNALCLIENTS=true
+                    useInternalClients=true
                     ;;
                 eth2url=*)
                     CCURL=${OPTARG#*=}
-                    INTERNALCLIENTS=false
+                    useInternalClients=false
                     ;;
                 eth2url)
                     CCURL="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
-                    INTERNALCLIENTS=false
+                    useInternalClients=false
                     ;;
                 data-directory=*)
                     export DATA_DIR=${OPTARG#*=}
@@ -111,14 +111,14 @@ while getopts "hre:c:v:d:m:-:" option; do
             ;;
         c)
             eth2client=${OPTARG}
-            INTERNALCLIENTS=true
+            useInternalClients=true
             ;;
         d)
             export DATA_DIR=${OPTARG}
             ;;
         e)
             eth1client=${OPTARG}
-            INTERNALCLIENTS=true
+            useInternalClients=true
             ;;
         h)
             printf "$usagemsg\n"
@@ -150,7 +150,7 @@ while getopts "hre:c:v:d:m:-:" option; do
 done
 
 ### ensure options are correct
-if [[ ! $INTERNALCLIENTS && ( $eth2client != "" || $eth1client != "" ) ]]; then
+if [[ ! $useInternalClients && ( $eth2client != "" || $eth1client != "" ) ]]; then
     echo "You cannot specify a client when using an external configuration!"
     echo
     printf "$usagemsg\n"
@@ -238,18 +238,18 @@ get_external()
     echo 
     read choice
     if [ "$choice" = "1" ] || [ "$choice" = "external" ]; then
-        INTERNALCLIENTS=false
+        useInternalClients=false
     elif [ "$choice" = "2" ] || [ "$choice" = "internal" ]; then
-        INTERNALCLIENTS=true
+        useInternalClients=true
     else
         get_external
     fi
 }
-if [ "$INTERNALCLIENTS" == "" ]; then
+if [ "$useInternalClients" == "" ]; then
     get_external
 fi
 
-if $INTERNALCLIENTS; then
+if $useInternalClients; then
     get_eth1()
     {
         echo 
@@ -310,12 +310,12 @@ fi
 # install default vault config
 cp "$VAULT_DIR/$vault.env" "$DATA_DIR/nodeset.env"
 
-if $INTERNALCLIENTS; then
+if $useInternalClients; then
     # insert client names in installed configuration
     sed -i -e "s/ECNAME=.*/ECNAME=$eth1client/g" "$DATA_DIR/nodeset.env"
     sed -i -e "s/CCNAME=.*/CCNAME=$eth2client/g" "$DATA_DIR/nodeset.env"
-    sed -i -e "s/ECURL=.*/ECURL=\"http://$eth1client\"/g" "$DATA_DIR/nodeset.env"
-    sed -i -e "s/CCURL=.*/CCURL=\"http://$eth2client\"/g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s|ECURL=.*|ECURL=\"http://$eth1client\"|g" "$DATA_DIR/nodeset.env"
+    sed -i -e "s|CCURL=.*|CCURL=\"http://$eth2client\"|g" "$DATA_DIR/nodeset.env"
 else
     get_eth1url()
     {
@@ -368,7 +368,7 @@ chown nobody $DATA_DIR/stakewise-data
 cp "$LOCAL_DIR/compose.yaml" "$DATA_DIR/compose.yaml"
 
 ### setup internal clients
-if $INTERNALCLIENTS; then
+if $useInternalClients; then
     cp "$LOCAL_DIR/compose.internal.yaml" "$DATA_DIR/compose.internal.yaml"
     cp "$CLIENT_DIR/$ECNAME.yaml" "$DATA_DIR/$ECNAME.yaml"
     cp "$CLIENT_DIR/$CCNAME.yaml" "$DATA_DIR/$CCNAME.yaml"
@@ -430,10 +430,10 @@ fi
 echo "Pulling latest StakeWise operator binary..."
 docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
 
-if $INTERNALCLIENTS; then
-    composeFile="-f \"$DATA_DIR/compose.yaml\" -f \"$DATA_DIR/compose.internal.yaml\""
+if $useInternalClients; then
+    composeFile=("$DATA_DIR/compose.yaml" "$DATA_DIR/compose.internal.yaml")
 else
-    composeFile="-f \"$DATA_DIR/compose.yaml\""
+    composeFile=("$DATA_DIR/compose.yaml")
 fi
 
 echo "composeFile=$composeFile"
@@ -445,14 +445,13 @@ if [ "$mnemonic" != "" ]; then
     echo "Recreating StakeWise configuration using existing mnemonic..."
     # todo: recover setup using deposit data downloaded from NodeSet API
     #docker compose run stakewise src/main.py get-validators-root --deposit-data-file=<DEPOSIT DATA FILE>
-    docker compose $composeFile run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --consensus-endpoints="$CCURL:$CCAPIPORT" --execution-endpoints="$ECURL:$ECAPIPORT" --mnemonic="$mnemonic"
-    docker compose $composeFile run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
+    docker compose -f "$composeFile" run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --consensus-endpoints="$CCURL:$CCAPIPORT" --execution-endpoints="$ECURL:$ECAPIPORT" --mnemonic="$mnemonic"
+    docker compose -f "$composeFile" run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
 else
     echo "Initializing new StakeWise configuration..."
-    echo "docker compose $composeFile run stakewise src/main.py init --network=\"$NETWORK\" --vault=\"$VAULT\" --language=english"
-    docker compose $composeFile run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
-    docker compose $composeFile run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
-    docker compose $composeFile run stakewise src/main.py create-wallet --vault="$VAULT"
+    docker compose -f "$composeFile" run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
+    docker compose -f "$composeFile" run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
+    docker compose -f "$composeFile" run stakewise src/main.py create-wallet --vault="$VAULT"
 fi
 
 display_funding_message()
@@ -478,11 +477,9 @@ sudo bash $SCRIPT_DIR/nodeset.sh -d "$DATA_DIR" start
 echo 
 echo "{::} Installation Complete! {::}"
 echo
-echo "Your new node is started!"
-echo
 echo "We recommend that you check two things from here:"
 echo "1. Verify that your node is syncing correctly and watch its progress with \"nodeset logs\""
-echo "2. Verify the configuration file in your installation directory looks correct:"
+echo "2. Verify the configuration file in your installation directory fits your needs:"
 echo $DATA_DIR/nodeset.env
 echo
 echo "Note that you must reload your environment (exit and log in again) to enable the \"nodeset\" commands."
