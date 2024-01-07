@@ -125,11 +125,11 @@ case "$1" in
         exit $?
         ;;
     restart)
-        nodeset shutdown
+        "$SCRIPT_DIR/nodeset.sh" -d "$DATA_DIR" shutdown
         if [ $? != 0 ]; then
             exit $?
         fi
-        nodeset start
+        "$SCRIPT_DIR/nodeset.sh" -d "$DATA_DIR" start
         exit $?
         ;;
     shutdown)
