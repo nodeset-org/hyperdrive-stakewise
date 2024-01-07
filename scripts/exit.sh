@@ -3,7 +3,7 @@
 if [ "$NETWORK" = "mainnet" ]; then
 
     # todo: also check if there are any active validators before giving this warning
-    # i.e. docker compose up geth "check validators request"
+    # i.e. docker compose up nimbus "check if validators exist"
     echo "DANGER: You are attempting to exit your mainnet validators!"
     echg "You should ONLY do this if you are sure that you don't want to run these validators anymore."
     echo "Once you do this, you must pay the initialization gas fees again if you want to run more validators for this vault."

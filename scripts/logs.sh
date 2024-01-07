@@ -1,13 +1,13 @@
 #!/usr/bin/env bash 
 
 if [ $ECNAME != "external" ]; then
-    composeFile=("$DATA_DIR/compose.yaml" "$DATA_DIR/compose.internal.yaml")
+    composeFile=(-f "$DATA_DIR/compose.yaml" -f "$DATA_DIR/compose.internal.yaml")
 else
-    composeFile=("$DATA_DIR/compose.yaml")
+    composeFile=(-f "$DATA_DIR/compose.yaml")
 fi
 
 if [ "$1" = "" ]; then
-    docker compose -f "$composeFile" logs -f
+    docker compose ${composeFile[@]} logs -f
     exit
 fi
 
@@ -20,4 +20,4 @@ if [ "$1" != "$ECNAME" ] && [ "$1" != "$CCNAME" ] && [ "$1" != "stakewise" ] && 
     fi
 fi
 
-docker compose -f "$composeFile" logs "$1" -f
+docker compose ${composeFile[@]} logs "$1" -f

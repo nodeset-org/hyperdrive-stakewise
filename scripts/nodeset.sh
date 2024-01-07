@@ -105,9 +105,9 @@ if [ "$1" != "help" ]; then
 fi
 
 if [ $ECNAME != "external" ]; then
-    composeFile=("$DATA_DIR/compose.yaml" "$DATA_DIR/compose.internal.yaml")
+    composeFile=(-f "$DATA_DIR/compose.yaml" -f "$DATA_DIR/compose.internal.yaml")
 else
-    composeFile=("$DATA_DIR/compose.yaml")
+    composeFile=(-f "$DATA_DIR/compose.yaml")
 fi
 
 # check command name makes sense
@@ -124,7 +124,7 @@ case "$1" in
         "$SCRIPT_DIR/remove.sh"
         exit $?
         ;;
-    reset)
+    restart)
         nodeset shutdown
         if [ $? != 0 ]; then
             exit $?
@@ -141,10 +141,10 @@ case "$1" in
             if [[ $answer != "y" && $answer != "yes" ]]; then
                 exit
             else
-                docker compose -f "$composeFile" down --remove-orphans
+                docker compose ${composeFile[@]} down --remove-orphans
             fi
         else
-            docker compose -f "$composeFile" down
+            docker compose ${composeFile[@]} down
         fi
         exit $?
         ;;

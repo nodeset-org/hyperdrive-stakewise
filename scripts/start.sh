@@ -3,15 +3,15 @@
 echo "Starting node..."
 
 if [ $ECNAME != "external" ]; then
-    composeFile=("$DATA_DIR/compose.yaml" "$DATA_DIR/compose.internal.yaml")
+    composeFile=(-f "$DATA_DIR/compose.yaml" -f "$DATA_DIR/compose.internal.yaml")
 else
-    composeFile=("$DATA_DIR/compose.yaml")
+    composeFile=(-f "$DATA_DIR/compose.yaml")
 fi
 
 # pull latest container images
 echo "Updating..."
-docker compose -f "$composeFile" pull
-docker compose -f "$composeFile" up -d
+docker compose ${composeFile[@]} pull
+docker compose ${composeFile[@]} up -d
 
 echo
 echo "{::} Node Started! {::}"

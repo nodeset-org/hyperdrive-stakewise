@@ -431,12 +431,10 @@ echo "Pulling latest StakeWise operator binary..."
 docker pull europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:master
 
 if $useInternalClients; then
-    composeFile=("$DATA_DIR/compose.yaml" "$DATA_DIR/compose.internal.yaml")
+    composeFile=(-f "$DATA_DIR/compose.yaml" -f "$DATA_DIR/compose.internal.yaml")
 else
-    composeFile=("$DATA_DIR/compose.yaml")
+    composeFile=(-f "$DATA_DIR/compose.yaml")
 fi
-
-echo "composeFile=$composeFile"
 
 if [ "$mnemonic" != "" ]; then
     echo "supplying a mnemonic is not yet supported, please check back later!"
@@ -445,13 +443,13 @@ if [ "$mnemonic" != "" ]; then
     echo "Recreating StakeWise configuration using existing mnemonic..."
     # todo: recover setup using deposit data downloaded from NodeSet API
     #docker compose run stakewise src/main.py get-validators-root --deposit-data-file=<DEPOSIT DATA FILE>
-    docker compose -f "$composeFile" run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --consensus-endpoints="$CCURL:$CCAPIPORT" --execution-endpoints="$ECURL:$ECAPIPORT" --mnemonic="$mnemonic"
-    docker compose -f "$composeFile" run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
+    docker compose ${composeFile[@]} run stakewise src/main.py recover --network="$NETWORK" --vault="$VAULT" --consensus-endpoints="$CCURL:$CCAPIPORT" --execution-endpoints="$ECURL:$ECAPIPORT" --mnemonic="$mnemonic"
+    docker compose ${composeFile[@]} run stakewise src/main.py create-wallet --vault="$VAULT" --mnemonic="$mnemonic"
 else
     echo "Initializing new StakeWise configuration..."
-    docker compose -f "$composeFile" run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
-    docker compose -f "$composeFile" run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
-    docker compose -f "$composeFile" run stakewise src/main.py create-wallet --vault="$VAULT"
+    docker compose ${composeFile[@]} run stakewise src/main.py init --network="$NETWORK" --vault="$VAULT" --language=english
+    docker compose ${composeFile[@]} run stakewise src/main.py create-keys --vault="$VAULT" --count="$NUMKEYS"
+    docker compose ${composeFile[@]} run stakewise src/main.py create-wallet --vault="$VAULT"
 fi
 
 display_funding_message()
