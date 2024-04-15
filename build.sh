@@ -16,7 +16,6 @@ fail() {
 }
 
 
-
 # Builds the Stakewise daemon image and pushes it to Docker Hub
 # NOTE: You must install qemu first; e.g. sudo apt-get install -y qemu qemu-user-static
 build_daemon() {
@@ -45,7 +44,7 @@ build_daemon() {
 # Tags the 'latest' Docker Hub image
 tag_latest() {
     echo -n "Tagging 'latest' Docker image... "
-    docker tag nodeset/hyperdrive:$VERSION nodeset/hyperdrive-stakewise:latest
+    docker tag nodeset/hyperdrive-stakewise:$VERSION nodeset/hyperdrive-stakewise:latest
     echo "done!"
 
     if [ "$UPLOAD" = true ]; then
@@ -64,7 +63,7 @@ usage() {
     echo "This script assumes it is in the hyperdrive-stakewise repository directory."
     echo "Options:"
     echo $'\t-a\tBuild all of the artifacts'
-    echo $'\t-s\tBuild the Hyperdrive Stakewise daemon image, and push it to Docker Hub'
+    echo $'\t-d\tBuild the Hyperdrive Stakewise daemon image and Docker container'
     echo $'\t-l\tTag the given version as "latest" on Docker Hub'
     echo $'\t-u\tWhen passed with a build, upload the resulting image tags to Docker Hub'
     exit 0
@@ -76,10 +75,10 @@ usage() {
 # =================
 
 # Parse arguments
-while getopts "asluv:" FLAG; do
+while getopts "adluv:" FLAG; do
     case "$FLAG" in
         a) DAEMON=true ;;
-        s) DAEMON=true ;;
+        d) DAEMON=true ;;
         l) LATEST=true ;;
         u) UPLOAD=true ;;
         v) VERSION="$OPTARG" ;;
@@ -98,7 +97,7 @@ mkdir -p build/$VERSION
 docker buildx create --name multiarch-builder --driver docker-container --use > /dev/null 2>&1
 
 # Build the artifacts
-if [ "$SW_DAEMON" = true ]; then
+if [ "$DAEMON" = true ]; then
     build_daemon
 fi
 if [ "$LATEST" = true ]; then
