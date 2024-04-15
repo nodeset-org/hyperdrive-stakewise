@@ -1,10 +1,10 @@
 package swconfig
 
 import (
+	"github.com/nodeset-org/hyperdrive-daemon/shared"
+	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
+	hdids "github.com/nodeset-org/hyperdrive-daemon/shared/config/ids"
 	"github.com/nodeset-org/hyperdrive-stakewise/shared/config/ids"
-	"github.com/nodeset-org/hyperdrive/shared"
-	hdconfig "github.com/nodeset-org/hyperdrive/shared/config"
-	hdids "github.com/nodeset-org/hyperdrive/shared/config/ids"
 	"github.com/rocket-pool/node-manager-core/config"
 )
 
