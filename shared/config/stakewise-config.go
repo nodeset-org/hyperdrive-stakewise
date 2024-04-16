@@ -1,16 +1,16 @@
 package swconfig
 
 import (
-	"github.com/nodeset-org/hyperdrive-daemon/shared"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	hdids "github.com/nodeset-org/hyperdrive-daemon/shared/config/ids"
+	"github.com/nodeset-org/hyperdrive-stakewise/shared"
 	"github.com/nodeset-org/hyperdrive-stakewise/shared/config/ids"
 	"github.com/rocket-pool/node-manager-core/config"
 )
 
 const (
 	// Tags
-	daemonTag   string = "nodeset/hyperdrive-stakewise:v" + shared.HyperdriveVersion
+	daemonTag   string = "nodeset/hyperdrive-stakewise:v" + shared.StakewiseVersion
 	operatorTag string = "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:v1.1.0"
 )
 
