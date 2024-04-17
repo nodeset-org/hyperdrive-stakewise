@@ -10,9 +10,9 @@ require (
 	github.com/goccy/go-json v0.10.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v0.0.0-20240415231824-bdb6041e2a20
+	github.com/nodeset-org/hyperdrive-daemon v0.4.1-dev
 	github.com/rocket-pool/batch-query v1.0.0
-	github.com/rocket-pool/node-manager-core v0.2.1-0.20240414212301-586ea27e9ef4
+	github.com/rocket-pool/node-manager-core v0.2.1-0.20240417132624-0e7d87e82ec8
 	github.com/urfave/cli/v2 v2.27.1
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.4.1

@@ -24,4 +24,5 @@ go.work
 build/
 
 # Binaries
-stakewise-daemon/stakewise-daemon
+hyperdrive-stakewise
+logs/
