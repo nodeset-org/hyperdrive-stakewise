@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	batch "github.com/rocket-pool/batch-query"
 	"github.com/rocket-pool/node-manager-core/eth"
 )
 
@@ -57,6 +58,14 @@ func NewSplitMain(address common.Address, ec eth.IExecutionClient, txMgr *eth.Tr
 // =============
 // === Calls ===
 // =============
+
+func (c *SplitMain) GetEthBalance(mc *batch.MultiCaller, out **big.Int, account common.Address) {
+	eth.AddCallToMulticaller(mc, c.contract, out, "getETHBalance", account)
+}
+
+func (c *SplitMain) GetErc20Balance(mc *batch.MultiCaller, out **big.Int, account common.Address, token common.Address) {
+	eth.AddCallToMulticaller(mc, c.contract, out, "getERC20Balance", account, token)
+}
 
 // ====================
 // === Transactions ===
