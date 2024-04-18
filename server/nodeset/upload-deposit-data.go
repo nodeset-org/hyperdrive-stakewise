@@ -17,6 +17,7 @@ import (
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/eth"
 	"github.com/rocket-pool/node-manager-core/utils/input"
+	"github.com/rocket-pool/node-manager-core/wallet"
 	eth2types "github.com/wealdtech/go-eth2-types/v2"
 )
 
@@ -53,7 +54,7 @@ type nodesetUploadDepositDataContext struct {
 	bypassBalanceCheck bool
 }
 
-func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadDepositDataData, opts *bind.TransactOpts) (types.ResponseStatus, error) {
+func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadDepositDataData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	ddMgr := sp.GetDepositDataManager()
 	nc := sp.GetNodesetClient()

@@ -15,6 +15,7 @@ import (
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/node/validator"
 	"github.com/rocket-pool/node-manager-core/utils/input"
+	"github.com/rocket-pool/node-manager-core/wallet"
 	eth2types "github.com/wealdtech/go-eth2-types/v2"
 )
 
@@ -60,7 +61,7 @@ type validatorExitContext struct {
 	noBroadcast bool
 }
 
-func (c *validatorExitContext) PrepareData(data *api.ValidatorExitData, opts *bind.TransactOpts) (types.ResponseStatus, error) {
+func (c *validatorExitContext) PrepareData(data *api.ValidatorExitData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	bc := sp.GetBeaconClient()
 	w := sp.GetWallet()

@@ -115,7 +115,10 @@ func (t *UpdateDepositDataTask) verifyDepositsRoot(depositData []types.ExtendedD
 	t.logger.Info("Computed Merkle root", slog.String("root", localRoot.Hex()))
 
 	// Get the Merkle root from the vault
-	vault, err := swcontracts.NewStakewiseVault(res.Vault, ec, txMgr)
+	if res.Vault == nil {
+		return false, fmt.Errorf("no Stakewise Vault address has been set yet")
+	}
+	vault, err := swcontracts.NewStakewiseVault(*res.Vault, ec, txMgr)
 	if err != nil {
 		return false, fmt.Errorf("error creating Stakewise Vault binding: %w", err)
 	}

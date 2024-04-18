@@ -14,6 +14,7 @@ import (
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/utils/input"
+	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
 // ===============
@@ -51,7 +52,7 @@ type walletGenerateKeysContext struct {
 	restartVc bool
 }
 
-func (c *walletGenerateKeysContext) PrepareData(data *api.WalletGenerateKeysData, opts *bind.TransactOpts) (types.ResponseStatus, error) {
+func (c *walletGenerateKeysContext) PrepareData(data *api.WalletGenerateKeysData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	client := sp.GetHyperdriveClient()
 	wallet := sp.GetWallet()

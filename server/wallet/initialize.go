@@ -12,6 +12,7 @@ import (
 	api "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/api/types"
+	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
 // ===============
@@ -43,7 +44,7 @@ type walletInitializeContext struct {
 	handler *WalletHandler
 }
 
-func (c *walletInitializeContext) PrepareData(data *api.WalletInitializeData, opts *bind.TransactOpts) (types.ResponseStatus, error) {
+func (c *walletInitializeContext) PrepareData(data *api.WalletInitializeData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	client := sp.GetHyperdriveClient()
 

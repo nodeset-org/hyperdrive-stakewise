@@ -9,6 +9,7 @@ import (
 	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
+	"github.com/rocket-pool/node-manager-core/wallet"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
@@ -45,7 +46,7 @@ type statusGetValidatorsStatusesContext struct {
 	handler *StatusHandler
 }
 
-func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorStatusData, opts *bind.TransactOpts) (types.ResponseStatus, error) {
+func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorStatusData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	bc := sp.GetBeaconClient()
 	w := sp.GetWallet()
