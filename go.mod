@@ -12,7 +12,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/nodeset-org/hyperdrive-daemon v0.4.1-dev.0.20240418210934-78d66847e70f
 	github.com/rocket-pool/batch-query v1.0.0
-	github.com/rocket-pool/node-manager-core v0.2.1-0.20240418193006-0a0b0e02ffe4
+	github.com/rocket-pool/node-manager-core v0.2.1-0.20240418215337-afbebe2831dd
 	github.com/urfave/cli/v2 v2.27.1
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.4.1

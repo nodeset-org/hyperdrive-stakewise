@@ -17,6 +17,8 @@ type WalletGenerateKeysData struct {
 }
 
 type WalletClaimRewardsData struct {
+	TokenName          string               `json:"tokenName"`
+	TokenSymbol        string               `json:"tokenSymbol"`
 	DistributableToken *big.Int             `json:"distributableToken"`
 	DistributableEth   *big.Int             `json:"distributableEth"`
 	WithdrawableToken  *big.Int             `json:"withdrawableToken"`

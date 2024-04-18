@@ -12,6 +12,7 @@ import (
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	batch "github.com/rocket-pool/batch-query"
 	"github.com/rocket-pool/node-manager-core/api/types"
+	"github.com/rocket-pool/node-manager-core/eth/contracts"
 	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
@@ -69,11 +70,18 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 		return types.ResponseStatus_InvalidChainState, fmt.Errorf("no Stakewise Vault address has been set yet")
 	}
 
+	// Create bindings
 	logger.Debug("Preparing data for claim reward")
 	splitMainContract, err := swcontracts.NewSplitMain(*res.SplitMain, ec, txMgr)
 	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error creating Stakewise Vault binding: %w", err)
+		return types.ResponseStatus_Error, fmt.Errorf("error creating SplitMain binding: %w", err)
 	}
+	token, err := contracts.NewErc20Contract(*res.Vault, ec, qMgr, txMgr, nil)
+	if err != nil {
+		return types.ResponseStatus_Error, fmt.Errorf("error creating Stakewise token binding: %w", err)
+	}
+	data.TokenName = token.Name()
+	data.TokenSymbol = token.Symbol()
 
 	// Get the claimable rewards
 	err = qMgr.Query(func(mc *batch.MultiCaller) error {
