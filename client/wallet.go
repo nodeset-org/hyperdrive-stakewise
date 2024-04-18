@@ -37,8 +37,8 @@ func (r *WalletRequester) GenerateKeys(count uint64, restartVc bool) (*types.Api
 	return client.SendGetRequest[swapi.WalletGenerateKeysData](r, "generate-keys", "GenerateKeys", args)
 }
 
-func (r *WalletRequester) ClaimRewards() (*types.ApiResponse[types.TxInfoData], error) {
-	return client.SendGetRequest[types.TxInfoData](r, "claim-rewards", "ClaimRewards", nil)
+func (r *WalletRequester) ClaimRewards() (*types.ApiResponse[swapi.WalletClaimRewardsData], error) {
+	return client.SendGetRequest[swapi.WalletClaimRewardsData](r, "claim-rewards", "ClaimRewards", nil)
 }
 
 // Export the wallet in encrypted ETH key format
