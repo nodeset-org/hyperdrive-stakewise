@@ -71,6 +71,6 @@ func (c *SplitMain) GetErc20Balance(mc *batch.MultiCaller, out **big.Int, accoun
 // === Transactions ===
 // ====================
 
-func (c *SplitMain) Withdraw(address common.Address, ethAmountWithdraw big.Int, claimTokenList []common.Address, opts *bind.TransactOpts) (*eth.TransactionInfo, error) {
-	return c.txMgr.CreateTransactionInfo(c.contract, "withdraw", opts, address, &ethAmountWithdraw, claimTokenList)
+func (c *SplitMain) Withdraw(address common.Address, ethAmountWithdraw *big.Int, claimTokenList []common.Address, opts *bind.TransactOpts) (*eth.TransactionInfo, error) {
+	return c.txMgr.CreateTransactionInfo(c.contract, "withdraw", opts, address, ethAmountWithdraw, claimTokenList)
 }

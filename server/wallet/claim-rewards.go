@@ -2,10 +2,12 @@ package swwallet
 
 import (
 	"fmt"
+	"math/big"
 	"net/url"
 	_ "time/tzdata"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
 	swcontracts "github.com/nodeset-org/hyperdrive-stakewise/common/contracts"
@@ -93,7 +95,12 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 		return types.ResponseStatus_Error, fmt.Errorf("error querying claimable rewards: %w", err)
 	}
 
-	data.TxInfo, err = splitMainContract.Withdraw(*res.Vault, *res.ClaimEthAmount, res.ClaimTokenList, opts)
+	ethFlag := big.NewInt(0)
+	if data.WithdrawableEth.Cmp(common.Big0) > 0 {
+		// Only withdraw ETH if there is a balance
+		ethFlag.Add(ethFlag, common.Big1)
+	}
+	data.TxInfo, err = splitMainContract.Withdraw(nodeAddress, ethFlag, []common.Address{*res.Vault}, opts)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error creating Withdraw TX: %w", err)
 	}

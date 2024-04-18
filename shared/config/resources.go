@@ -2,7 +2,6 @@ package swconfig
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
@@ -34,12 +33,6 @@ type StakewiseResources struct {
 	// The address of the SplitMain contract, see https://docs.splits.org/core/split for details.
 	// All node op rewards will live here; to claim them, call `Withdraw`.
 	SplitMain *common.Address
-
-	// The amount of ETH to claim
-	ClaimEthAmount *big.Int
-
-	// The list of token addresses to claim
-	ClaimTokenList []common.Address
 }
 
 // Creates a new resource collection for the given network
@@ -52,8 +45,6 @@ func newStakewiseResources(network config.Network) *StakewiseResources {
 		FeeRecipient:     nil,
 		SplitWallet:      nil,
 		SplitMain:        nil,
-		ClaimEthAmount:   big.NewInt(0),      // 0 => claim all
-		ClaimTokenList:   []common.Address{}, // TODO: Get list from Wander
 	}
 
 	// Holesky
@@ -64,8 +55,6 @@ func newStakewiseResources(network config.Network) *StakewiseResources {
 		FeeRecipient:     config.HexToAddressPtr("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
 		SplitWallet:      config.HexToAddressPtr("0x6fa066F4A6439B8a1537F2D300809f23bFF7d37D"),
 		SplitMain:        config.HexToAddressPtr("0xfC8a305728051367797DADE6Aa0344E0987f5286"),
-		ClaimEthAmount:   big.NewInt(0),      // 0 => claim all
-		ClaimTokenList:   []common.Address{}, // TODO: Get list from Wander
 	}
 
 	// Holesky Dev
@@ -76,8 +65,6 @@ func newStakewiseResources(network config.Network) *StakewiseResources {
 		FeeRecipient:     config.HexToAddressPtr("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
 		SplitWallet:      nil,
 		SplitMain:        config.HexToAddressPtr("0xfC8a305728051367797DADE6Aa0344E0987f5286"),
-		ClaimEthAmount:   big.NewInt(0),      // 0 => claim all
-		ClaimTokenList:   []common.Address{}, // THIS NEEDS TO BE THE VAULT ADDRESS SINCE THAT'S THE ERC20
 	}
 	holeskyDevResources.Network = hdconfig.Network_HoleskyDev
 
