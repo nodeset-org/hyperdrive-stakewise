@@ -61,6 +61,11 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	w := sp.GetWallet()
 	ec := sp.GetEthClient()
 	ctx := c.handler.ctx
+	fmt.Printf("!!! Wallet Preparing Data\n")
+	err := sp.RequireStakewiseWalletReady(walletStatus)
+	if err != nil {
+		return types.ResponseStatus_Error, err
+	}
 
 	// Get the list of registered validators
 	registeredPubkeyMap := map[beacon.ValidatorPubkey]bool{}

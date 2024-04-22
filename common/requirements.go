@@ -1,6 +1,8 @@
 package swcommon
 
 import (
+	"fmt"
+
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	"github.com/rocket-pool/node-manager-core/wallet"
 )
@@ -11,7 +13,12 @@ func (sp *StakewiseServiceProvider) RequireStakewiseWalletReady(status wallet.Wa
 	if err != nil {
 		return err
 	}
-	// Check if stakewise wallet is on disk (i.e. implement sp.GetWallet())
-	// If wallet does not exist, imeplement wallet init
+	w := sp.GetWallet()
+	if w == nil {
+		// TODO: Implement wallet init
+		fmt.Printf("!!!Wallet not initialized\n")
+		return nil
+	}
+	fmt.Printf("!!!Wallet is ready\n")
 	return nil
 }
