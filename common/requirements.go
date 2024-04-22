@@ -37,6 +37,7 @@ type WalletData struct {
 // Creates a new Nodeset client
 func (sp *StakewiseServiceProvider) RequireStakewiseWalletReady(status wallet.WalletStatus) error {
 	err := services.CheckIfWalletReady(status)
+	// No wallet initialized for Hyperdrive
 	if err != nil {
 		return err
 	}
@@ -47,13 +48,25 @@ func (sp *StakewiseServiceProvider) RequireStakewiseWalletReady(status wallet.Wa
 	fmt.Printf("!!! wallet status: %v\n", status)
 	w := getWalletFromPath(walletPath)
 	fmt.Printf("!!! wallet: %v\n", w)
+	// If wallet is not initialized for SW, just initialize it
 	if w == nil {
-		// TODO: Implement wallet init
+		client := sp.GetHyperdriveClient()
+		ethkeyResponse, err := client.Wallet.ExportEthKey()
+		if err != nil {
+			return err
+		}
+		// Write the wallet to disk
+		err = os.WriteFile(walletPath, ethkeyResponse.Data.EthKeyJson, 0600)
+		if err != nil {
+			return err
+		}
+		passwordPath := filepath.Join(moduleDir, swconfig.PasswordFilename)
+		err = os.WriteFile(passwordPath, []byte(ethkeyResponse.Data.Password), 0600)
+		if err != nil {
+			return err
+		}
 		fmt.Printf("!!!Wallet not initialized\n")
-		return nil
 	}
-
-	fmt.Printf("!!!Wallet is ready\n")
 	return nil
 }
 
