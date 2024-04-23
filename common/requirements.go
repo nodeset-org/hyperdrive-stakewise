@@ -10,7 +10,6 @@ import (
 	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
-// Creates a new Nodeset client
 func (sp *StakewiseServiceProvider) RequireStakewiseWalletReady(status wallet.WalletStatus) error {
 	err := services.CheckIfWalletReady(status)
 	// No wallet initialized for Hyperdrive
