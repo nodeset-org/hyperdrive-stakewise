@@ -67,12 +67,17 @@ func (c *validatorExitContext) PrepareData(data *api.ValidatorExitData, walletSt
 	w := sp.GetWallet()
 	ctx := c.handler.ctx
 
+	err := sp.RequireStakewiseWalletReady(walletStatus)
+	if err != nil {
+		return types.ResponseStatus_WalletNotReady, err
+	}
+
 	if len(c.pubkeys) == 0 {
 		return types.ResponseStatus_Success, nil
 	}
 
 	// Requirements
-	err := sp.RequireBeaconClientSynced(ctx)
+	err = sp.RequireBeaconClientSynced(ctx)
 	if err != nil {
 		return types.ResponseStatus_ClientsNotSynced, err
 	}

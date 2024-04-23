@@ -61,10 +61,11 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	w := sp.GetWallet()
 	ec := sp.GetEthClient()
 	ctx := c.handler.ctx
-	fmt.Printf("!!! Wallet Preparing Data\n")
+
+	// Requirements
 	err := sp.RequireStakewiseWalletReady(walletStatus)
 	if err != nil {
-		return types.ResponseStatus_Error, err
+		return types.ResponseStatus_WalletNotReady, err
 	}
 
 	// Get the list of registered validators
