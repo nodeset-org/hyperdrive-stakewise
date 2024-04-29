@@ -48,6 +48,12 @@ func (c *walletInitializeContext) PrepareData(data *api.WalletInitializeData, wa
 	sp := c.handler.serviceProvider
 	client := sp.GetHyperdriveClient()
 
+	// Requirements
+	err := sp.RequireStakewiseWalletReady(walletStatus)
+	if err != nil {
+		return types.ResponseStatus_WalletNotReady, err
+	}
+
 	// Get the wallet status
 	response, err := client.Wallet.Status()
 	if err != nil {
@@ -57,14 +63,6 @@ func (c *walletInitializeContext) PrepareData(data *api.WalletInitializeData, wa
 	if !status.Wallet.IsLoaded {
 		return types.ResponseStatus_WalletNotReady, fmt.Errorf("hyperdrive does not currently have a wallet ready")
 	}
-
-	// Requirements
-	/*
-		err = sp.RequireWalletReady()
-		if err != nil {
-			return err
-		}
-	*/
 
 	// Get the Geth keystore in JSON format
 	ethkeyResponse, err := client.Wallet.ExportEthKey()
