@@ -53,6 +53,12 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 	nc := sp.GetNodesetClient()
 	ctx := c.handler.ctx
 
+	// Requirements
+	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
+	if err != nil {
+		return types.ResponseStatus_WalletNotReady, err
+	}
+
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting nodeset statuses: %w", err)

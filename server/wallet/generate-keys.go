@@ -56,20 +56,12 @@ func (c *walletGenerateKeysContext) PrepareData(data *api.WalletGenerateKeysData
 	sp := c.handler.serviceProvider
 	client := sp.GetHyperdriveClient()
 	wallet := sp.GetWallet()
+	ctx := c.handler.ctx
 
-	err := sp.RequireStakewiseWalletReady(walletStatus)
+	// Requirements
+	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
-	}
-
-	// Get the wallet status
-	response, err := client.Wallet.Status()
-	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error getting wallet status: %w", err)
-	}
-	status := response.Data.WalletStatus
-	if !status.Wallet.IsLoaded {
-		return types.ResponseStatus_WalletNotReady, fmt.Errorf("hyperdrive does not currently have a wallet ready")
 	}
 
 	// Generate and save the keys

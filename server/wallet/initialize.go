@@ -3,14 +3,11 @@ package swwallet
 import (
 	"fmt"
 	"net/url"
-	"os"
-	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
 	api "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
-	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/wallet"
 )
@@ -47,21 +44,12 @@ type walletInitializeContext struct {
 func (c *walletInitializeContext) PrepareData(data *api.WalletInitializeData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	client := sp.GetHyperdriveClient()
+	w := sp.GetWallet()
 
 	// Requirements
-	err := sp.RequireStakewiseWalletReady(walletStatus)
+	err := sp.RequireWalletReady(walletStatus)
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
-	}
-
-	// Get the wallet status
-	response, err := client.Wallet.Status()
-	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error getting wallet status: %w", err)
-	}
-	status := response.Data.WalletStatus
-	if !status.Wallet.IsLoaded {
-		return types.ResponseStatus_WalletNotReady, fmt.Errorf("hyperdrive does not currently have a wallet ready")
 	}
 
 	// Get the Geth keystore in JSON format
@@ -72,21 +60,12 @@ func (c *walletInitializeContext) PrepareData(data *api.WalletInitializeData, wa
 	ethKey := ethkeyResponse.Data.EthKeyJson
 	password := ethkeyResponse.Data.Password
 
-	// Write the wallet to disk
-	moduleDir := sp.GetModuleDir()
-	walletPath := filepath.Join(moduleDir, swconfig.WalletFilename)
-	err = os.WriteFile(walletPath, ethKey, 0600)
+	// Write the Stakewise wallet files to disk
+	err = w.SaveStakewiseWallet(ethKey, password)
 	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error saving wallet keystore to disk: %w", err)
+		return types.ResponseStatus_Error, err
 	}
 
-	// Write the password to disk
-	passwordPath := filepath.Join(moduleDir, swconfig.PasswordFilename)
-	err = os.WriteFile(passwordPath, []byte(password), 0600)
-	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error saving wallet password to disk: %w", err)
-	}
-
-	data.AccountAddress = status.Wallet.WalletAddress
+	data.AccountAddress = walletStatus.Wallet.WalletAddress
 	return types.ResponseStatus_Success, nil
 }

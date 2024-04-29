@@ -45,6 +45,17 @@ func (t *TaskLoop) Run() error {
 	updateDepositData := NewUpdateDepositDataTask(t.ctx, t.sp, t.logger)
 	sendExitData := NewSendExitData(t.ctx, t.sp, t.logger)
 
+	// Initialize the Stakewise wallet if it's not ready
+	response, err := t.sp.GetHyperdriveClient().Wallet.Status()
+	if err != nil {
+		t.logger.Warn("Couldn't check Hyperdrive wallet status", log.Err(err))
+	} else {
+		err = t.sp.RequireStakewiseWalletReady(t.ctx, response.Data.WalletStatus)
+		if err != nil {
+			t.logger.Warn("Couldn't initialize Stakewise wallet", log.Err(err))
+		}
+	}
+
 	// Run the loop
 	t.wg.Add(1)
 	go func() {

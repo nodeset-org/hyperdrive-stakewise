@@ -60,12 +60,7 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 	nodeAddress := walletStatus.Address.NodeAddress
 
 	// Requirements
-	err := sp.RequireStakewiseWalletReady(walletStatus)
-	if err != nil {
-		return types.ResponseStatus_WalletNotReady, err
-	}
-
-	err = sp.RequireNodeAddress(walletStatus)
+	err := sp.RequireNodeAddress(walletStatus)
 	if err != nil {
 		return types.ResponseStatus_AddressNotPresent, err
 	}

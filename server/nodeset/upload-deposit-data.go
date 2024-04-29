@@ -63,7 +63,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	ctx := c.handler.ctx
 
 	// Requirements
-	err := sp.RequireStakewiseWalletReady(walletStatus)
+	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
 	}

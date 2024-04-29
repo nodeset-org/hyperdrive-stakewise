@@ -54,8 +54,10 @@ func (c *nodesetSetValidatorsRootContext) PrepareData(data *types.TxInfoData, wa
 	ec := sp.GetEthClient()
 	res := sp.GetResources()
 	txMgr := sp.GetTransactionManager()
+	ctx := c.handler.ctx
 
-	err := sp.RequireStakewiseWalletReady(walletStatus)
+	// Requirements
+	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
 	}
