@@ -74,7 +74,7 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 
 	// Create bindings
 	logger.Debug("Preparing data for claim reward")
-	splitMainContract, err := swcontracts.NewSplitMain(*res.SplitMain, ec, txMgr)
+	splitMainContract, err := swcontracts.NewSplitMain1_1(*res.SplitMain, ec, txMgr) // NOTE: need to parse the actual contract version once event support is added
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error creating SplitMain binding: %w", err)
 	}
