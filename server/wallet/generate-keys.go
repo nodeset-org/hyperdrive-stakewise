@@ -14,6 +14,7 @@ import (
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/utils/input"
+	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
 // ===============
@@ -51,28 +52,17 @@ type walletGenerateKeysContext struct {
 	restartVc bool
 }
 
-func (c *walletGenerateKeysContext) PrepareData(data *api.WalletGenerateKeysData, opts *bind.TransactOpts) (types.ResponseStatus, error) {
+func (c *walletGenerateKeysContext) PrepareData(data *api.WalletGenerateKeysData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	client := sp.GetHyperdriveClient()
 	wallet := sp.GetWallet()
-
-	// Get the wallet status
-	response, err := client.Wallet.Status()
-	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error getting wallet status: %w", err)
-	}
-	status := response.Data.WalletStatus
-	if !status.Wallet.IsLoaded {
-		return types.ResponseStatus_WalletNotReady, fmt.Errorf("hyperdrive does not currently have a wallet ready")
-	}
+	ctx := c.handler.ctx
 
 	// Requirements
-	/*
-		err = sp.RequireWalletReady()
-		if err != nil {
-			return err
-		}
-	*/
+	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
+	if err != nil {
+		return types.ResponseStatus_WalletNotReady, err
+	}
 
 	// Generate and save the keys
 	pubkeys := make([]beacon.ValidatorPubkey, c.count)

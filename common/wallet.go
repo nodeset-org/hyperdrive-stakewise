@@ -12,6 +12,7 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	"github.com/nodeset-org/hyperdrive-daemon/shared"
 	"github.com/nodeset-org/hyperdrive-daemon/shared/config"
+	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/node/validator"
 	eth2types "github.com/wealdtech/go-eth2-types/v2"
@@ -32,10 +33,12 @@ type stakewiseWalletData struct {
 
 // Wallet manager for the Stakewise daemon
 type Wallet struct {
-	validatorManager         *validator.ValidatorManager
-	stakewiseKeystoreManager *stakewiseKeystoreManager
-	data                     stakewiseWalletData
-	sp                       *services.ServiceProvider
+	validatorManager          *validator.ValidatorManager
+	stakewiseWalletFilePath   string
+	stakewisePasswordFilePath string
+	stakewiseKeystoreManager  *stakewiseKeystoreManager
+	data                      stakewiseWalletData
+	sp                        *services.ServiceProvider
 }
 
 // Create a new wallet
@@ -43,8 +46,10 @@ func NewWallet(sp *services.ServiceProvider) (*Wallet, error) {
 	moduleDir := sp.GetModuleDir()
 	validatorPath := filepath.Join(moduleDir, config.ValidatorsDirectory)
 	wallet := &Wallet{
-		sp:               sp,
-		validatorManager: validator.NewValidatorManager(validatorPath),
+		sp:                        sp,
+		validatorManager:          validator.NewValidatorManager(validatorPath),
+		stakewiseWalletFilePath:   filepath.Join(moduleDir, swconfig.WalletFilename),
+		stakewisePasswordFilePath: filepath.Join(moduleDir, swconfig.PasswordFilename),
 	}
 
 	// Check if the wallet data exists
@@ -192,6 +197,43 @@ func (w *Wallet) SetLatestDepositDataVersion(version int) error {
 	return w.saveData()
 }
 
+// Saves the Stakewise wallet and password files
+func (w *Wallet) SaveStakewiseWallet(ethKey []byte, password string) error {
+	// Write the wallet to disk
+	err := os.WriteFile(w.stakewiseWalletFilePath, ethKey, fileMode)
+	if err != nil {
+		return fmt.Errorf("error saving wallet keystore to disk: %w", err)
+	}
+
+	// Write the password to disk
+	err = os.WriteFile(w.stakewisePasswordFilePath, []byte(password), fileMode)
+	if err != nil {
+		return fmt.Errorf("error saving wallet password to disk: %w", err)
+	}
+	return nil
+}
+
+// Check if the Stakewise wallet and password files exist
+func (w *Wallet) CheckIfStakewiseWalletExists() (bool, error) {
+	// Check the wallet file
+	_, err := os.Stat(w.stakewiseWalletFilePath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	} else if err != nil {
+		return false, fmt.Errorf("error checking status of Stakewise wallet file [%s]: %w", w.stakewiseWalletFilePath, err)
+	}
+
+	// Check the password file
+	_, err = os.Stat(w.stakewisePasswordFilePath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	} else if err != nil {
+		return false, fmt.Errorf("error checking status of Stakewise password file [%s]: %w", w.stakewisePasswordFilePath, err)
+	}
+
+	return true, nil
+}
+
 // Write the wallet data to disk
 func (w *Wallet) saveData() error {
 	// Serialize it
@@ -202,7 +244,7 @@ func (w *Wallet) saveData() error {
 	}
 
 	// Save it
-	err = os.WriteFile(dataPath, bytes, 0600)
+	err = os.WriteFile(dataPath, bytes, fileMode)
 	if err != nil {
 		return fmt.Errorf("error saving wallet data: %w", err)
 	}

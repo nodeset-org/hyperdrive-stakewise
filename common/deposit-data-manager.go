@@ -18,6 +18,7 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/shared/types"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/beacon"
+	"github.com/rocket-pool/node-manager-core/beacon/ssz_types"
 	"github.com/rocket-pool/node-manager-core/node/validator"
 	eth2types "github.com/wealdtech/go-eth2-types/v2"
 )
@@ -60,8 +61,12 @@ func NewDepositDataManager(sp *StakewiseServiceProvider) (*DepositDataManager, e
 func (m *DepositDataManager) GenerateDepositData(keys []*eth2types.BLSPrivateKey) ([]*types.ExtendedDepositData, error) {
 	resources := m.sp.GetResources()
 
+	if resources.Vault == nil {
+		return nil, fmt.Errorf("stakewise vault address not set")
+	}
+
 	// Stakewise uses the same withdrawal creds for each validator
-	withdrawalCreds := validator.GetWithdrawalCredsFromAddress(resources.Vault)
+	withdrawalCreds := validator.GetWithdrawalCredsFromAddress(*resources.Vault)
 
 	// Create the new aggregated deposit data for all generated keys
 	dataList := make([]*types.ExtendedDepositData, len(keys))
@@ -196,7 +201,7 @@ func (m *DepositDataManager) ComputeMerkleRoot(data []types.ExtendedDepositData)
 
 // Regenerate the deposit data hash root from a deposit data object instead of explicitly relying on the deposit data root provided in the EDD
 func (m *DepositDataManager) regenerateDepositDataRoot(dd types.ExtendedDepositData) (common.Hash, error) {
-	var depositData = beacon.DepositData{
+	var depositData = ssz_types.DepositData{
 		PublicKey:             dd.PublicKey,
 		WithdrawalCredentials: dd.WithdrawalCredentials,
 		Amount:                StakewiseDepositAmount, // Note: hardcoded here because Stakewise ignores the actual amount in the deposit data and hardcodes it in their tree generation

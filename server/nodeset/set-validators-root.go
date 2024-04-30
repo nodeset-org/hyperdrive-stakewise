@@ -13,6 +13,7 @@ import (
 	"github.com/rocket-pool/node-manager-core/api/server"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/utils/input"
+	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
 // ===============
@@ -48,13 +49,24 @@ type nodesetSetValidatorsRootContext struct {
 	root    common.Hash
 }
 
-func (c *nodesetSetValidatorsRootContext) PrepareData(data *types.TxInfoData, opts *bind.TransactOpts) (types.ResponseStatus, error) {
+func (c *nodesetSetValidatorsRootContext) PrepareData(data *types.TxInfoData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	ec := sp.GetEthClient()
 	res := sp.GetResources()
 	txMgr := sp.GetTransactionManager()
+	ctx := c.handler.ctx
 
-	vault, err := swcontracts.NewStakewiseVault(res.Vault, ec, txMgr)
+	// Requirements
+	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
+	if err != nil {
+		return types.ResponseStatus_WalletNotReady, err
+	}
+
+	if res.Vault == nil {
+		return types.ResponseStatus_InvalidChainState, fmt.Errorf("no Stakewise Vault address has been set yet")
+	}
+
+	vault, err := swcontracts.NewStakewiseVault(*res.Vault, ec, txMgr)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error creating Stakewise Vault binding: %w", err)
 	}
