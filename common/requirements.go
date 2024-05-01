@@ -3,18 +3,15 @@ package swcommon
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
-	"github.com/nodeset-org/hyperdrive-stakewise/shared/keys"
 	"github.com/rocket-pool/node-manager-core/log"
-	"github.com/rocket-pool/node-manager-core/utils"
 	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
 const (
-	walletReadyCheckInterval = time.Duration(15) * time.Second
+	walletReadyCheckInterval time.Duration = 15 * time.Second
 )
 
 func (sp *StakewiseServiceProvider) RequireStakewiseWalletReady(ctx context.Context, status wallet.WalletStatus) error {
@@ -43,36 +40,11 @@ func (sp *StakewiseServiceProvider) RequireStakewiseWalletReady(ctx context.Cont
 }
 
 func (sp *StakewiseServiceProvider) WaitForStakewiseWallet(ctx context.Context) error {
-	// Get the logger
-	logger, exists := log.FromContext(ctx)
-	if !exists {
-		panic("context didn't have a logger!")
+	err := sp.WaitForWallet(ctx)
+	if err != nil {
+		return err
 	}
-
-	var hdWalletReady bool
-	for {
-		// Get the HD wallet if it's ready
-		if !hdWalletReady {
-			hdWalletStatus, err := sp.GetHyperdriveClient().Wallet.Status()
-			if err != nil {
-				return fmt.Errorf("error getting Hyperdrive wallet status: %w", err)
-			}
-
-			if services.CheckIfWalletReady(hdWalletStatus.Data.WalletStatus) == nil {
-				hdWalletReady = true
-			} else {
-				logger.Info("Hyperdrive wallet not ready yet",
-					slog.Duration(keys.RetryKey, walletReadyCheckInterval),
-				)
-				if utils.SleepWithCancel(ctx, walletReadyCheckInterval) {
-					return nil
-				}
-				continue
-			}
-		}
-
-		return sp.initializeStakewiseWallet(ctx)
-	}
+	return sp.initializeStakewiseWallet(ctx)
 }
 
 func (sp *StakewiseServiceProvider) initializeStakewiseWallet(ctx context.Context) error {

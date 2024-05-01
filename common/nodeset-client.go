@@ -27,7 +27,6 @@ const (
 	authHeader string = "Authorization"
 
 	// API paths
-	devPath         string = "dev"
 	depositDataPath string = "deposit-data"
 	metaPath        string = "meta"
 	validatorsPath  string = "validators"
@@ -133,7 +132,7 @@ func (c *NodesetClient) UploadSignedExitData(ctx context.Context, exitData []Exi
 		"network": c.res.EthNetworkName,
 	}
 	// Submit the PATCH request with the serialized JSON
-	response, err := c.submitRequest(ctx, http.MethodPatch, bytes.NewBuffer(jsonData), params, devPath, validatorsPath)
+	response, err := c.submitRequest(ctx, http.MethodPatch, bytes.NewBuffer(jsonData), params, validatorsPath)
 	if err != nil {
 		return nil, fmt.Errorf("error submitting exit data: %w", err)
 	}
@@ -186,7 +185,7 @@ func (c *NodesetClient) GetRegisteredValidators(ctx context.Context) ([]Validato
 	queryParams := map[string]string{
 		"network": c.res.EthNetworkName,
 	}
-	response, err := c.submitRequest(ctx, http.MethodGet, nil, queryParams, devPath, validatorsPath)
+	response, err := c.submitRequest(ctx, http.MethodGet, nil, queryParams, validatorsPath)
 	if err != nil {
 		return nil, fmt.Errorf("error getting registered validators: %w", err)
 	}
