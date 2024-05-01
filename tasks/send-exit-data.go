@@ -18,7 +18,7 @@ const (
 )
 
 // Send exit data task
-type SendExitData struct {
+type SendExitDataTask struct {
 	logger *log.Logger
 	ctx    context.Context
 	sp     *swcommon.StakewiseServiceProvider
@@ -28,8 +28,8 @@ type SendExitData struct {
 }
 
 // Create Exit data task
-func NewSendExitData(ctx context.Context, sp *swcommon.StakewiseServiceProvider, logger *log.Logger) *SendExitData {
-	return &SendExitData{
+func NewSendExitDataTask(ctx context.Context, sp *swcommon.StakewiseServiceProvider, logger *log.Logger) *SendExitDataTask {
+	return &SendExitDataTask{
 		logger: logger,
 		ctx:    ctx,
 		sp:     sp,
@@ -40,7 +40,7 @@ func NewSendExitData(ctx context.Context, sp *swcommon.StakewiseServiceProvider,
 }
 
 // Update Exit data
-func (t *SendExitData) Run() error {
+func (t *SendExitDataTask) Run() error {
 	t.logger.Info("Checking for missing signed exit data...")
 
 	// Get registered validators
