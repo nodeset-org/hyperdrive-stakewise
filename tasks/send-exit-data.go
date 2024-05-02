@@ -63,7 +63,6 @@ func (t *SendExitDataTask) Run() error {
 			continue
 		}
 		missingExitPubkeys = append(missingExitPubkeys, v.Pubkey)
-		t.logger.Info("Validator is missing a signed exit message.", slog.String(PubkeyKey, v.Pubkey.HexWithPrefix()))
 	}
 	if len(missingExitPubkeys) == 0 {
 		return nil
@@ -92,11 +91,11 @@ func (t *SendExitDataTask) Run() error {
 		key, err := t.w.GetPrivateKeyForPubkey(pubkey)
 		if err != nil {
 			// Print message and continue because we don't want to stop the loop
-			t.logger.Debug("Error getting private key", slog.String(PubkeyKey, pubkey.HexWithPrefix()), log.Err(err))
+			t.logger.Warn("Error getting private key", slog.String(PubkeyKey, pubkey.HexWithPrefix()), log.Err(err))
 			continue
 		}
 		if key == nil {
-			t.logger.Debug("Private key not found", slog.String(PubkeyKey, pubkey.HexWithPrefix()))
+			t.logger.Warn("Private key not found", slog.String(PubkeyKey, pubkey.HexWithPrefix()))
 			continue
 		}
 		index := statuses[pubkey].Index
@@ -106,6 +105,7 @@ func (t *SendExitDataTask) Run() error {
 			continue
 		}
 
+		t.logger.Info("Validator has been added to the Beacon queue but is missing a signed exit message.", slog.String(PubkeyKey, pubkey.HexWithPrefix()))
 		signature, err := validator.GetSignedExitMessage(key, index, epoch, signatureDomain)
 		if err != nil {
 			// Print message and continue because we don't want to stop the loop

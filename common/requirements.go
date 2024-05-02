@@ -31,25 +31,35 @@ func (sp *StakewiseServiceProvider) RequireStakewiseWalletReady(ctx context.Cont
 		return fmt.Errorf("hyperdrive wallet not initialized, can't initialize stakewise wallet yet")
 	}
 
-	return sp.initializeStakewiseWallet(ctx)
+	return sp.initializeStakewiseWallet(logger)
 }
 
 func (sp *StakewiseServiceProvider) WaitForStakewiseWallet(ctx context.Context) error {
-	err := sp.WaitForWallet(ctx)
-	if err != nil {
-		return err
-	}
-	return sp.initializeStakewiseWallet(ctx)
-}
-
-func (sp *StakewiseServiceProvider) initializeStakewiseWallet(ctx context.Context) error {
 	// Get the logger
 	logger, exists := log.FromContext(ctx)
 	if !exists {
 		panic("context didn't have a logger!")
 	}
 
-	// If wallet is not initialized for SW, just initialize it
+	// Check if the wallet files exist
+	exists, err := sp.wallet.CheckIfStakewiseWalletExists()
+	if exists {
+		return nil
+	}
+	if err != nil {
+		logger.Error("Error checking if Stakewise wallet exists", log.Err(err))
+	}
+
+	// Wait for the Hyperdrive wallet first, then initialize the Stakewise one
+	err = sp.WaitForWallet(ctx)
+	if err != nil {
+		return err
+	}
+	return sp.initializeStakewiseWallet(logger)
+}
+
+func (sp *StakewiseServiceProvider) initializeStakewiseWallet(logger *log.Logger) error {
+	// Get the wallet from Hyperdrive
 	logger.Warn("Stakewise wallet not found, initializing now")
 	ethkeyResponse, err := sp.GetHyperdriveClient().Wallet.ExportEthKey()
 	if err != nil {
