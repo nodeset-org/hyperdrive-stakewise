@@ -18,7 +18,7 @@ const (
 )
 
 // Send exit data task
-type SendExitData struct {
+type SendExitDataTask struct {
 	logger *log.Logger
 	ctx    context.Context
 	sp     *swcommon.StakewiseServiceProvider
@@ -28,8 +28,8 @@ type SendExitData struct {
 }
 
 // Create Exit data task
-func NewSendExitData(ctx context.Context, sp *swcommon.StakewiseServiceProvider, logger *log.Logger) *SendExitData {
-	return &SendExitData{
+func NewSendExitDataTask(ctx context.Context, sp *swcommon.StakewiseServiceProvider, logger *log.Logger) *SendExitDataTask {
+	return &SendExitDataTask{
 		logger: logger,
 		ctx:    ctx,
 		sp:     sp,
@@ -40,7 +40,7 @@ func NewSendExitData(ctx context.Context, sp *swcommon.StakewiseServiceProvider,
 }
 
 // Update Exit data
-func (t *SendExitData) Run() error {
+func (t *SendExitDataTask) Run() error {
 	t.logger.Info("Checking for missing signed exit data...")
 
 	// Get registered validators
@@ -63,7 +63,6 @@ func (t *SendExitData) Run() error {
 			continue
 		}
 		missingExitPubkeys = append(missingExitPubkeys, v.Pubkey)
-		t.logger.Info("Validator is missing a signed exit message.", slog.String(PubkeyKey, v.Pubkey.HexWithPrefix()))
 	}
 	if len(missingExitPubkeys) == 0 {
 		return nil
@@ -89,23 +88,23 @@ func (t *SendExitData) Run() error {
 	// Get signed exit messages
 	exitData := []swcommon.ExitData{}
 	for _, pubkey := range missingExitPubkeys {
+		index := statuses[pubkey].Index
+		if index == "" {
+			t.logger.Debug("Validator doesn't have an index yet", slog.String(PubkeyKey, pubkey.HexWithPrefix()))
+			continue
+		}
+
+		t.logger.Info("Validator has been added to the Beacon queue but is missing a signed exit message.", slog.String(PubkeyKey, pubkey.HexWithPrefix()))
 		key, err := t.w.GetPrivateKeyForPubkey(pubkey)
 		if err != nil {
 			// Print message and continue because we don't want to stop the loop
-			t.logger.Debug("Error getting private key", slog.String(PubkeyKey, pubkey.HexWithPrefix()), log.Err(err))
+			t.logger.Warn("Error getting private key", slog.String(PubkeyKey, pubkey.HexWithPrefix()), log.Err(err))
 			continue
 		}
 		if key == nil {
-			t.logger.Debug("Private key not found", slog.String(PubkeyKey, pubkey.HexWithPrefix()))
+			t.logger.Warn("Private key not found", slog.String(PubkeyKey, pubkey.HexWithPrefix()))
 			continue
 		}
-		index := statuses[pubkey].Index
-
-		if index == "" {
-			t.logger.Debug("Validator index is empty", slog.String(PubkeyKey, pubkey.HexWithPrefix()))
-			continue
-		}
-
 		signature, err := validator.GetSignedExitMessage(key, index, epoch, signatureDomain)
 		if err != nil {
 			// Print message and continue because we don't want to stop the loop
