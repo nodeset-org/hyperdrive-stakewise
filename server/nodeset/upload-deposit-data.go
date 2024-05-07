@@ -34,7 +34,7 @@ func (f *nodesetUploadDepositDataContextFactory) Create(args url.Values) (*nodes
 		handler: f.handler,
 	}
 	inputErrs := []error{
-		server.ValidateArg("bypassBalanceCheck", args, input.ValidateBool, &c.bypassBalanceCheck),
+		server.ValidateArg("forceUpload", args, input.ValidateBool, &c.forceUpload),
 	}
 	return c, errors.Join(inputErrs...)
 }
@@ -50,8 +50,8 @@ func (f *nodesetUploadDepositDataContextFactory) RegisterRoute(router *mux.Route
 // ===============
 
 type nodesetUploadDepositDataContext struct {
-	handler            *NodesetHandler
-	bypassBalanceCheck bool
+	handler     *NodesetHandler
+	forceUpload bool
 }
 
 func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadDepositDataData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
@@ -107,20 +107,29 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 
 	// Make sure validator has enough funds to pay for the deposit
-	if !c.bypassBalanceCheck {
-		balance, err := ec.BalanceAt(ctx, opts.From, nil)
-		if err != nil {
-			return types.ResponseStatus_Error, fmt.Errorf("error getting balance: %w", err)
-		}
-		data.Balance = balance
+	balance, err := ec.BalanceAt(ctx, opts.From, nil)
+	if err != nil {
+		return types.ResponseStatus_Error, fmt.Errorf("error getting balance: %w", err)
+	}
+	data.Balance = balance
 
-		totalCost := big.NewInt(int64(len(unregisteredKeys)))
-		totalCost.Mul(totalCost, eth.EthToWei(0.01))
-		data.RequiredBalance = totalCost
+	totalCost := big.NewInt(int64(len(unregisteredKeys)))
+	totalCost.Mul(totalCost, eth.EthToWei(0.01))
+	data.RequiredBalance = totalCost
 
-		data.SufficientBalance = (totalCost.Cmp(balance) < 0)
-		if !data.SufficientBalance {
-			return types.ResponseStatus_Success, nil
+	data.SufficientBalance = (totalCost.Cmp(balance) < 0)
+
+	// If there isn't a sufficient balance, we need to remove keys from the list unless user forces the upload
+	if !data.SufficientBalance {
+		if !c.forceUpload {
+			// Remove keys from unregisteredKeys until we have sufficient balance
+			for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) >= 0 {
+				unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
+				newPubkeys = newPubkeys[:len(newPubkeys)-1]
+				totalCost.Sub(totalCost, eth.EthToWei(0.01))
+			}
+			data.UnregisteredPubkeys = newPubkeys
+			data.TotalCount = uint64(len(keys))
 		}
 	}
 

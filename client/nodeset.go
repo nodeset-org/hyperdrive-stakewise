@@ -38,9 +38,9 @@ func (r *NodesetRequester) SetValidatorsRoot(root common.Hash) (*types.ApiRespon
 }
 
 // Upload the aggregated deposit data file to NodeSet's servers
-func (r *NodesetRequester) UploadDepositData(bypassBalanceCheck bool) (*types.ApiResponse[swapi.NodesetUploadDepositDataData], error) {
+func (r *NodesetRequester) UploadDepositData(forceUpload bool) (*types.ApiResponse[swapi.NodesetUploadDepositDataData], error) {
 	args := map[string]string{
-		"bypassBalanceCheck": strconv.FormatBool(bypassBalanceCheck),
+		"forceUpload": strconv.FormatBool(forceUpload),
 	}
 	return client.SendGetRequest[swapi.NodesetUploadDepositDataData](r, "upload-deposit-data", "UploadDepositData", args)
 }
