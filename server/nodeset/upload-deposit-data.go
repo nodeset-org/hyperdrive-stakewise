@@ -12,11 +12,9 @@ import (
 	"github.com/gorilla/mux"
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
-	"github.com/rocket-pool/node-manager-core/api/server"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/eth"
-	"github.com/rocket-pool/node-manager-core/utils/input"
 	"github.com/rocket-pool/node-manager-core/wallet"
 	eth2types "github.com/wealdtech/go-eth2-types/v2"
 )
@@ -33,9 +31,7 @@ func (f *nodesetUploadDepositDataContextFactory) Create(args url.Values) (*nodes
 	c := &nodesetUploadDepositDataContext{
 		handler: f.handler,
 	}
-	inputErrs := []error{
-		server.ValidateArg("forceUpload", args, input.ValidateBool, &c.forceUpload),
-	}
+	inputErrs := []error{}
 	return c, errors.Join(inputErrs...)
 }
 
@@ -50,8 +46,7 @@ func (f *nodesetUploadDepositDataContextFactory) RegisterRoute(router *mux.Route
 // ===============
 
 type nodesetUploadDepositDataContext struct {
-	handler     *NodesetHandler
-	forceUpload bool
+	handler *NodesetHandler
 }
 
 func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadDepositDataData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
@@ -119,10 +114,8 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 
 	data.SufficientBalance = (totalCost.Cmp(balance) < 0)
 
-	// If there isn't a sufficient balance and we're not trying to force the upload,
-	// we need to remove keys from the list
-	if !data.SufficientBalance && !c.forceUpload {
-
+	// If there isn't a sufficient balance, we need to remove keys from the list
+	if !data.SufficientBalance {
 		// Remove keys from unregisteredKeys until we have sufficient balance
 		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) >= 0 {
 			unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
