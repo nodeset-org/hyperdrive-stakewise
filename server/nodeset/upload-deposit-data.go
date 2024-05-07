@@ -119,18 +119,18 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 
 	data.SufficientBalance = (totalCost.Cmp(balance) < 0)
 
-	// If there isn't a sufficient balance, we need to remove keys from the list unless user forces the upload
-	if !data.SufficientBalance {
-		if !c.forceUpload {
-			// Remove keys from unregisteredKeys until we have sufficient balance
-			for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) >= 0 {
-				unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
-				newPubkeys = newPubkeys[:len(newPubkeys)-1]
-				totalCost.Sub(totalCost, eth.EthToWei(0.01))
-			}
-			data.UnregisteredPubkeys = newPubkeys
-			data.TotalCount = uint64(len(keys))
+	// If there isn't a sufficient balance and we're not trying to force the upload,
+	// we need to remove keys from the list
+	if !data.SufficientBalance && !c.forceUpload {
+
+		// Remove keys from unregisteredKeys until we have sufficient balance
+		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) >= 0 {
+			unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
+			newPubkeys = newPubkeys[:len(newPubkeys)-1]
+			totalCost.Sub(totalCost, eth.EthToWei(0.01))
 		}
+		data.UnregisteredPubkeys = newPubkeys
+		data.TotalCount = uint64(len(keys))
 	}
 
 	// Get the deposit data for those pubkeys
