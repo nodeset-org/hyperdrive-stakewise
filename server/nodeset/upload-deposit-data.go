@@ -46,7 +46,9 @@ func (f *nodesetUploadDepositDataContextFactory) RegisterRoute(router *mux.Route
 // ===============
 
 type nodesetUploadDepositDataContext struct {
-	handler *NodesetHandler
+	handler         *NodesetHandler
+	sessionUploaded map[beacon.ValidatorPubkey]bool
+	lastBalance     *big.Int
 }
 
 func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadDepositDataData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
@@ -63,18 +65,19 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		return types.ResponseStatus_WalletNotReady, err
 	}
 
+	// Initialize the session map if not already initialized
+	if c.sessionUploaded == nil {
+		c.sessionUploaded = make(map[beacon.ValidatorPubkey]bool)
+	}
+
 	// Get the list of registered validators
 	registeredPubkeyMap := map[beacon.ValidatorPubkey]bool{}
 	pubkeyStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators: %w", err)
 	}
-	registeredPubkeys := []beacon.ValidatorPubkey{}
 	for _, pubkeyStatus := range pubkeyStatusResponse {
-		registeredPubkeys = append(registeredPubkeys, pubkeyStatus.Pubkey)
-	}
-	for _, pubkey := range registeredPubkeys {
-		registeredPubkeyMap[pubkey] = true
+		registeredPubkeyMap[pubkeyStatus.Pubkey] = true
 	}
 
 	// Get the list of this node's validator keys
@@ -89,8 +92,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	newPubkeys := []beacon.ValidatorPubkey{}
 	for _, key := range keys {
 		pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
-		_, exists := registeredPubkeyMap[pubkey]
-		if !exists {
+		if !registeredPubkeyMap[pubkey] && !c.sessionUploaded[pubkey] {
 			unregisteredKeys = append(unregisteredKeys, key)
 			newPubkeys = append(newPubkeys, pubkey)
 		}
@@ -108,25 +110,37 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 	data.Balance = balance
 
-	totalCost := big.NewInt(int64(len(unregisteredKeys)))
-	totalCost.Mul(totalCost, eth.EthToWei(0.01))
-	data.RequiredBalance = totalCost
-
-	data.SufficientBalance = (totalCost.Cmp(balance) < 0)
-
-	// If there isn't a sufficient balance, we need to remove keys from the list
-	if !data.SufficientBalance {
-		// Remove keys from unregisteredKeys until we have sufficient balance
-		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) >= 0 {
-			unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
-			newPubkeys = newPubkeys[:len(newPubkeys)-1]
-			totalCost.Sub(totalCost, eth.EthToWei(0.01))
-		}
-		data.UnregisteredPubkeys = newPubkeys
-		data.TotalCount = uint64(len(keys))
+	// Reset sessionUploaded if balance changes
+	if c.lastBalance == nil || balance.Cmp(c.lastBalance) != 0 {
+		c.sessionUploaded = make(map[beacon.ValidatorPubkey]bool)
+		c.lastBalance = balance
 	}
 
-	// Get the deposit data for those pubkeys
+	// Calculate the total deposit cost per validator
+	validatorDepositCost := eth.EthToWei(0.01)
+	totalCost := big.NewInt(int64(len(unregisteredKeys)))
+	totalCost.Mul(totalCost, validatorDepositCost)
+	data.RequiredBalance = totalCost
+
+	// Calculate sufficient balance based on the initial number of unregistered keys
+	data.SufficientBalance = (totalCost.Cmp(balance) <= 0)
+
+	// Remove excess keys if insufficient balance
+	if !data.SufficientBalance {
+		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) > 0 {
+			unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
+			newPubkeys = newPubkeys[:len(newPubkeys)-1]
+			totalCost.Sub(totalCost, validatorDepositCost)
+		}
+		data.UnregisteredPubkeys = newPubkeys
+		data.RequiredBalance = totalCost
+	}
+
+	// Get the deposit data for the remaining pubkeys
+	if len(unregisteredKeys) == 0 {
+		return types.ResponseStatus_Success, nil
+	}
+
 	depositData, err := ddMgr.GenerateDepositData(unregisteredKeys)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error generating deposit data: %w", err)
@@ -144,5 +158,11 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		return types.ResponseStatus_Error, err
 	}
 	data.ServerResponse = response
+
+	// Track newly uploaded keys in this session
+	for _, pubkey := range newPubkeys {
+		c.sessionUploaded[pubkey] = true
+	}
+
 	return types.ResponseStatus_Success, nil
 }
