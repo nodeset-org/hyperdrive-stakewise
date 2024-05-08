@@ -1,5 +1,5 @@
 package shared
 
 const (
-	StakewiseVersion string = "0.1.1"
+	StakewiseVersion string = "0.1.1-dev"
 )
