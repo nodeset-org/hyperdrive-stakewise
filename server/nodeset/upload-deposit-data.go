@@ -130,7 +130,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) > 0 {
 			unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
 			newPubkeys = newPubkeys[:len(newPubkeys)-1]
-			totalCost.Sub(totalCost, validatorDepositCost)
+			totalCost = totalCost.Sub(totalCost, validatorDepositCost)
 		}
 		data.UnregisteredPubkeys = newPubkeys
 		data.RequiredBalance = totalCost
