@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"math/big"
 	"net/url"
+	"os"
+	"path/filepath"
 
 	"github.com/goccy/go-json"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
+	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
@@ -44,6 +47,7 @@ func (f *nodesetUploadDepositDataContextFactory) RegisterRoute(router *mux.Route
 // ===============
 // === Context ===
 // ===============
+const stateFilePath = "upload_state.json"
 
 type nodesetUploadDepositDataContext struct {
 	handler         *NodesetHandler
@@ -51,8 +55,19 @@ type nodesetUploadDepositDataContext struct {
 	lastBalance     *big.Int
 }
 
+type uploadState struct {
+	LastBalance     *big.Int        `json:"last_balance"`
+	SessionUploaded map[string]bool `json:"session_uploaded"`
+}
+
 func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadDepositDataData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
+
+	// Load persisted state
+	if err := c.loadState(sp); err != nil {
+		return types.ResponseStatus_Error, fmt.Errorf("error loading state: %w", err)
+	}
+
 	ddMgr := sp.GetDepositDataManager()
 	nc := sp.GetNodesetClient()
 	w := sp.GetWallet()
@@ -164,5 +179,78 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		c.sessionUploaded[pubkey] = true
 	}
 
+	// Save the updated state
+	if err := c.saveState(sp); err != nil {
+		return types.ResponseStatus_Error, fmt.Errorf("error saving state: %w", err)
+	}
 	return types.ResponseStatus_Success, nil
+}
+
+func loadUploadState(sp *swcommon.StakewiseServiceProvider) (*uploadState, error) {
+	filePathString := filepath.Join(sp.GetModuleDir(), stateFilePath)
+	file, err := os.Open(filePathString)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &uploadState{
+				LastBalance:     big.NewInt(0),
+				SessionUploaded: make(map[string]bool),
+			}, nil // Return default if the file doesn't exist
+		}
+		return nil, err
+	}
+	defer file.Close()
+
+	state := &uploadState{}
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(state)
+	if err != nil {
+		return nil, err
+	}
+
+	return state, nil
+}
+
+// Save the upload state to the file
+func saveUploadState(sp *swcommon.StakewiseServiceProvider, state *uploadState) error {
+	filePathString := filepath.Join(sp.GetModuleDir(), stateFilePath)
+	file, err := os.Create(filePathString)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(state)
+}
+
+func (c *nodesetUploadDepositDataContext) loadState(sp *swcommon.StakewiseServiceProvider) error {
+	state, err := loadUploadState(sp)
+	if err != nil {
+		return err
+	}
+
+	c.lastBalance = new(big.Int).Set(state.LastBalance)
+
+	c.sessionUploaded = make(map[beacon.ValidatorPubkey]bool)
+	for keyStr, uploaded := range state.SessionUploaded {
+		pubkey := beacon.ValidatorPubkey([]byte(keyStr))
+		if err != nil {
+			return err
+		}
+		c.sessionUploaded[pubkey] = uploaded
+	}
+	return nil
+}
+
+func (c *nodesetUploadDepositDataContext) saveState(sp *swcommon.StakewiseServiceProvider) error {
+	state := &uploadState{
+		LastBalance:     new(big.Int).Set(c.lastBalance),
+		SessionUploaded: make(map[string]bool),
+	}
+	for pubkey, uploaded := range c.sessionUploaded {
+		fmt.Printf("pubkey: %s\n", pubkey.HexWithPrefix())
+		state.SessionUploaded[pubkey.HexWithPrefix()] = uploaded
+	}
+	return saveUploadState(sp, state)
 }
