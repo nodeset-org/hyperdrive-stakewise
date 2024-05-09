@@ -25,6 +25,9 @@ type StakewiseConfig struct {
 	// Toggle for verifying deposit data Merkle roots before saving
 	VerifyDepositsRoot config.Parameter[bool]
 
+	// The Docker Hub tag for the Stakewise daemon
+	DaemonContainerTag config.Parameter[string]
+
 	// The Docker Hub tag for the Stakewise operator
 	OperatorContainerTag config.Parameter[string]
 
@@ -92,6 +95,20 @@ func NewStakewiseConfig(hdCfg *hdconfig.HyperdriveConfig) *StakewiseConfig {
 			},
 		},
 
+		DaemonContainerTag: config.Parameter[string]{
+			ParameterCommon: &config.ParameterCommon{
+				ID:                 ids.DaemonContainerTagID,
+				Name:               "Daemon Container Tag",
+				Description:        "The tag name of Hyperdrive's Stakewise Daemon image to use. See https://github.com/stakewise/v3-operator#using-docker for more details.",
+				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon},
+				CanBeBlank:         false,
+				OverwriteOnUpgrade: true,
+			},
+			Default: map[config.Network]string{
+				config.Network_All: daemonTag,
+			},
+		},
+
 		OperatorContainerTag: config.Parameter[string]{
 			ParameterCommon: &config.ParameterCommon{
 				ID:                 ids.OperatorContainerTagID,
@@ -149,7 +166,9 @@ func (cfg *StakewiseConfig) GetTitle() string {
 func (cfg *StakewiseConfig) GetParameters() []config.IParameter {
 	return []config.IParameter{
 		&cfg.Enabled,
+		&cfg.ApiPort,
 		&cfg.VerifyDepositsRoot,
+		&cfg.DaemonContainerTag,
 		&cfg.OperatorContainerTag,
 		&cfg.AdditionalOpFlags,
 	}
