@@ -19,6 +19,9 @@ type StakewiseConfig struct {
 	// Toggle for enabling access to the root filesystem (for multiple disk usage metrics)
 	Enabled config.Parameter[bool]
 
+	// Port to run the Stakewise API server on
+	ApiPort config.Parameter[uint16]
+
 	// Toggle for verifying deposit data Merkle roots before saving
 	VerifyDepositsRoot config.Parameter[bool]
 
@@ -58,6 +61,20 @@ func NewStakewiseConfig(hdCfg *hdconfig.HyperdriveConfig) *StakewiseConfig {
 			},
 			Default: map[config.Network]bool{
 				config.Network_All: false,
+			},
+		},
+
+		ApiPort: config.Parameter[uint16]{
+			ParameterCommon: &config.ParameterCommon{
+				ID:                 ids.ApiPortID,
+				Name:               "Daemon API Port",
+				Description:        "The port that the Stakewise daemon's API server should run on. Note this is bound to the local machine only; it cannot be accessed by other machines.",
+				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon},
+				CanBeBlank:         false,
+				OverwriteOnUpgrade: false,
+			},
+			Default: map[config.Network]uint16{
+				config.Network_All: DefaultApiPort,
 			},
 		},
 

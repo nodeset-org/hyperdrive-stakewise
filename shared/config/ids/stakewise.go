@@ -3,6 +3,7 @@ package ids
 const (
 	// Param IDs
 	StakewiseEnableID      string = "enable"
+	ApiPortID              string = "apiPort"
 	OperatorContainerTagID string = "operatorContainerTag"
 	AdditionalOpFlagsID    string = "additionalOpFlags"
 	VerifyDepositRootsID   string = "verifyDepositRoots"

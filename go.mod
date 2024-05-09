@@ -10,9 +10,9 @@ require (
 	github.com/goccy/go-json v0.10.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v0.4.2-dev.0.20240505202557-6da147cd417c
+	github.com/nodeset-org/hyperdrive-daemon v0.4.2-dev.0.20240509213433-213850c1cd29
 	github.com/rocket-pool/batch-query v1.0.0
-	github.com/rocket-pool/node-manager-core v0.3.1-0.20240505144232-5b9a3ae77d47
+	github.com/rocket-pool/node-manager-core v0.3.1-0.20240507185958-ac96f93a88ec
 	github.com/urfave/cli/v2 v2.27.1
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.4.1
@@ -107,3 +107,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
+
+replace github.com/nodeset-org/hyperdrive-daemon => ../hyperdrive-daemon
