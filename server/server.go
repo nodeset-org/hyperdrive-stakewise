@@ -1,7 +1,8 @@
 package server
 
 import (
-	"path/filepath"
+	"fmt"
+	"sync"
 
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swnodeset "github.com/nodeset-org/hyperdrive-stakewise/server/nodeset"
@@ -12,39 +13,54 @@ import (
 	"github.com/rocket-pool/node-manager-core/api/server"
 )
 
-const (
-	CliOrigin string = "cli"
-	WebOrigin string = "net"
-)
-
-type StakewiseServer struct {
-	*server.ApiServer
-	socketPath string
+// ServerManager manages the API server run by the daemon
+type ServerManager struct {
+	// The server for clients to interact with
+	apiServer *server.NetworkSocketApiServer
 }
 
-func NewStakewiseServer(origin string, sp *swcommon.StakewiseServiceProvider) (*StakewiseServer, error) {
-	apiLogger := sp.GetApiLogger()
-	subLogger := apiLogger.CreateSubLogger(origin)
-	ctx := subLogger.CreateContextWithLogger(sp.GetBaseContext())
-
-	socketPath := filepath.Join(sp.GetUserDir(), swconfig.CliSocketFilename)
-	handlers := []server.IHandler{
-		swnodeset.NewNodesetHandler(subLogger, ctx, sp),
-		swvalidator.NewValidatorHandler(subLogger, ctx, sp),
-		swwallet.NewWalletHandler(subLogger, ctx, sp),
-		swstatus.NewStatusHandler(subLogger, ctx, sp),
+// Creates a new server manager
+func NewServerManager(sp *swcommon.StakewiseServiceProvider, ip string, port uint16, stopWg *sync.WaitGroup) (*ServerManager, error) {
+	// Start the API server
+	apiServer, err := createServer(sp, ip, port)
+	if err != nil {
+		return nil, fmt.Errorf("error creating API server: %w", err)
 	}
-	server, err := server.NewApiServer(subLogger.Logger, socketPath, handlers, swconfig.DaemonBaseRoute, swconfig.ApiVersion)
+	err = apiServer.Start(stopWg)
+	if err != nil {
+		return nil, fmt.Errorf("error starting API server: %w", err)
+	}
+	fmt.Printf("API server started on %s:%d\n", ip, port)
+
+	// Create the manager
+	mgr := &ServerManager{
+		apiServer: apiServer,
+	}
+	return mgr, nil
+}
+
+// Stops and shuts down the servers
+func (m *ServerManager) Stop() {
+	err := m.apiServer.Stop()
+	if err != nil {
+		fmt.Printf("WARNING: API server didn't shutdown cleanly: %s\n", err.Error())
+	}
+}
+
+// Creates a new Hyperdrive API server
+func createServer(sp *swcommon.StakewiseServiceProvider, ip string, port uint16) (*server.NetworkSocketApiServer, error) {
+	apiLogger := sp.GetApiLogger()
+	ctx := apiLogger.CreateContextWithLogger(sp.GetBaseContext())
+
+	handlers := []server.IHandler{
+		swnodeset.NewNodesetHandler(apiLogger, ctx, sp),
+		swvalidator.NewValidatorHandler(apiLogger, ctx, sp),
+		swwallet.NewWalletHandler(apiLogger, ctx, sp),
+		swstatus.NewStatusHandler(apiLogger, ctx, sp),
+	}
+	server, err := server.NewNetworkSocketApiServer(apiLogger.Logger, ip, port, handlers, swconfig.DaemonBaseRoute, swconfig.ApiVersion)
 	if err != nil {
 		return nil, err
 	}
-
-	return &StakewiseServer{
-		ApiServer:  server,
-		socketPath: socketPath,
-	}, nil
-}
-
-func (s *StakewiseServer) GetSocketPath() string {
-	return s.socketPath
+	return server, nil
 }

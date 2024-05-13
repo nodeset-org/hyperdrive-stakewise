@@ -10,10 +10,10 @@ import (
 )
 
 type ValidatorRequester struct {
-	context *client.RequesterContext
+	context client.IRequesterContext
 }
 
-func NewValidatorRequester(context *client.RequesterContext) *ValidatorRequester {
+func NewValidatorRequester(context client.IRequesterContext) *ValidatorRequester {
 	return &ValidatorRequester{
 		context: context,
 	}
@@ -25,7 +25,7 @@ func (r *ValidatorRequester) GetName() string {
 func (r *ValidatorRequester) GetRoute() string {
 	return "validator"
 }
-func (r *ValidatorRequester) GetContext() *client.RequesterContext {
+func (r *ValidatorRequester) GetContext() client.IRequesterContext {
 	return r.context
 }
 

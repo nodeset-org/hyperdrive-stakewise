@@ -10,10 +10,10 @@ import (
 )
 
 type NodesetRequester struct {
-	context *client.RequesterContext
+	context client.IRequesterContext
 }
 
-func NewNodesetRequester(context *client.RequesterContext) *NodesetRequester {
+func NewNodesetRequester(context client.IRequesterContext) *NodesetRequester {
 	return &NodesetRequester{
 		context: context,
 	}
@@ -25,7 +25,7 @@ func (r *NodesetRequester) GetName() string {
 func (r *NodesetRequester) GetRoute() string {
 	return "nodeset"
 }
-func (r *NodesetRequester) GetContext() *client.RequesterContext {
+func (r *NodesetRequester) GetContext() client.IRequesterContext {
 	return r.context
 }
 
