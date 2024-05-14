@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/goccy/go-json"
+	eth2types "github.com/wealdtech/go-eth2-types/v2"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
@@ -16,7 +17,6 @@ import (
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/eth"
 	"github.com/rocket-pool/node-manager-core/wallet"
-	eth2types "github.com/wealdtech/go-eth2-types/v2"
 )
 
 // ===============
@@ -44,16 +44,12 @@ func (f *nodesetUploadDepositDataContextFactory) RegisterRoute(router *mux.Route
 // ===============
 // === Context ===
 // ===============
-const stateFilePath = "upload_state.json"
-
 type nodesetUploadDepositDataContext struct {
-	handler     *NodesetHandler
-	lastBalance *big.Int
+	handler *NodesetHandler
 }
 
 func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadDepositDataData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
-
 	ddMgr := sp.GetDepositDataManager()
 	nc := sp.GetNodesetClient()
 	w := sp.GetWallet()
@@ -66,88 +62,95 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		return types.ResponseStatus_WalletNotReady, err
 	}
 
-	// Get the list of registered validators
-	registeredPubkeyMap := map[beacon.ValidatorPubkey]bool{}
-	pubkeyStatusResponse, err := nc.GetRegisteredValidators(ctx)
+	// Fetch private keys and derive public keys
+	privateKeys, err := w.GetAllPrivateKeys()
 	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators: %w", err)
+		return types.ResponseStatus_Error, fmt.Errorf("error getting private keys: %w", err)
 	}
-	for _, pubkeyStatus := range pubkeyStatusResponse {
-		registeredPubkeyMap[pubkeyStatus.Pubkey] = true
+	publicKeys, err := w.DerivePubKeys(privateKeys)
+	if err != nil {
+		return types.ResponseStatus_Error, fmt.Errorf("error deriving public keys: %w", err)
 	}
 
-	// Get the list of this node's validator keys
-	keys, err := w.GetAllPrivateKeys()
+	// Fetch status from Nodeset APIs
+	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error getting private validator keys: %w", err)
+		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
 	}
-	data.TotalCount = uint64(len(keys))
 
-	// Find the ones that haven't been uploaded yet
+	pubkeysUploadedtoNodeset := []beacon.ValidatorPubkey{}
+	for _, validator := range nodesetStatusResponse {
+		pubkeysUploadedtoNodeset = append(pubkeysUploadedtoNodeset, validator.Pubkey)
+	}
+
+	// Process public keys based on their status
 	unregisteredKeys := []*eth2types.BLSPrivateKey{}
+	data.TotalCount = uint64(len(publicKeys))
 	newPubkeys := []beacon.ValidatorPubkey{}
-	for _, key := range keys {
-		pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
-		if !registeredPubkeyMap[pubkey] {
-			unregisteredKeys = append(unregisteredKeys, key)
+
+	for i, pubkey := range publicKeys {
+		if !isUploadedToNodeset(pubkey, pubkeysUploadedtoNodeset) {
+			unregisteredKeys = append(unregisteredKeys, privateKeys[i])
 			newPubkeys = append(newPubkeys, pubkey)
 		}
 	}
-	data.UnregisteredPubkeys = newPubkeys
 
-	if len(unregisteredKeys) == 0 {
-		return types.ResponseStatus_Success, nil
-	}
-
-	// Make sure validator has enough funds to pay for the deposit
+	// Determine if sufficient balance is available for deposits
 	balance, err := ec.BalanceAt(ctx, opts.From, nil)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting balance: %w", err)
 	}
 	data.Balance = balance
 
-	// Calculate the total deposit cost per validator
 	validatorDepositCost := eth.EthToWei(0.01)
-	totalCost := big.NewInt(int64(len(unregisteredKeys)))
-	totalCost.Mul(totalCost, validatorDepositCost)
+	totalCost := big.NewInt(int64(len(unregisteredKeys))).Mul(big.NewInt(int64(len(unregisteredKeys))), validatorDepositCost)
 	data.RequiredBalance = totalCost
-
-	// Calculate sufficient balance based on the initial number of unregistered keys
 	data.SufficientBalance = (totalCost.Cmp(balance) <= 0)
 
-	// Remove excess keys if insufficient balance
 	if !data.SufficientBalance {
 		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) > 0 {
 			unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
 			newPubkeys = newPubkeys[:len(newPubkeys)-1]
-			totalCost = totalCost.Sub(totalCost, validatorDepositCost)
+			totalCost.Sub(totalCost, validatorDepositCost)
 		}
 		data.UnregisteredPubkeys = newPubkeys
 		data.RequiredBalance = totalCost
 	}
 
-	// Get the deposit data for the remaining pubkeys
-	if len(unregisteredKeys) == 0 {
-		return types.ResponseStatus_Success, nil
-	}
-
+	// Generate deposit data and submit
 	depositData, err := ddMgr.GenerateDepositData(unregisteredKeys)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error generating deposit data: %w", err)
 	}
-
-	// Serialize it
-	bytes, err := json.Marshal(depositData)
+	serializedData, err := json.Marshal(depositData)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error serializing deposit data: %w", err)
 	}
-
-	// Submit the upload
-	response, err := nc.UploadDepositData(ctx, bytes)
-	if err != nil {
+	if response, err := nc.UploadDepositData(ctx, serializedData); err != nil {
 		return types.ResponseStatus_Error, err
+	} else {
+		data.ServerResponse = response
 	}
-	data.ServerResponse = response
 
 	return types.ResponseStatus_Success, nil
 }
+
+// TODO: refactor into reusable functions
+func isUploadedToNodeset(pubKey beacon.ValidatorPubkey, registeredPubkeys []beacon.ValidatorPubkey) bool {
+	for _, registeredPubKey := range registeredPubkeys {
+		if registeredPubKey == pubKey {
+			return true
+		}
+	}
+	return false
+}
+
+// func isRegisteredToStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
+// 	// TODO: Implement
+// 	return false
+// }
+
+// func isUploadedStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
+// 	// TODO: Implement
+// 	return false
+// }
