@@ -55,6 +55,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	w := sp.GetWallet()
 	ec := sp.GetEthClient()
 	ctx := c.handler.ctx
+	validatorDepositCost := eth.EthToWei(0.01)
 
 	// Requirements
 	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
@@ -71,7 +72,6 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error deriving public keys: %w", err)
 	}
-	fmt.Printf("!!! publicKeys: %v\n", publicKeys)
 	// Fetch status from Nodeset APIs
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {
@@ -79,12 +79,14 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 
 	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
+	pendingPubkeysOnNodeset := []beacon.ValidatorPubkey{}
 	for _, validator := range nodesetStatusResponse {
 		if validator.Status != "PENDING" {
 			activePubkeysOnNodeset = append(activePubkeysOnNodeset, validator.Pubkey)
+		} else {
+			pendingPubkeysOnNodeset = append(pendingPubkeysOnNodeset, validator.Pubkey)
 		}
 	}
-	fmt.Printf("!!! activePubkeysOnNodeset: %v\n", activePubkeysOnNodeset)
 
 	// Process public keys based on their status
 	unregisteredKeys := []*eth2types.BLSPrivateKey{}
@@ -92,15 +94,12 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	// Used for displaying the unregistered keys in the response
 	unregisteredPubkeys := []beacon.ValidatorPubkey{}
 
-	fmt.Printf("!!! Looping over pubkeys...\n")
 	for i, pubkey := range publicKeys {
 		if !isUploadedToNodeset(pubkey, activePubkeysOnNodeset) {
 			unregisteredKeys = append(unregisteredKeys, privateKeys[i])
 			unregisteredPubkeys = append(unregisteredPubkeys, pubkey)
 		}
 	}
-	fmt.Printf("!!! unregisteredKeys: %v\n", unregisteredKeys)
-	fmt.Printf("!!! unregisteredPubkeys: %v\n", unregisteredPubkeys)
 
 	// Determine if sufficient balance is available for deposits
 	balance, err := ec.BalanceAt(ctx, opts.From, nil)
@@ -109,21 +108,30 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 	data.Balance = balance
 
-	validatorDepositCost := eth.EthToWei(0.01)
 	totalCost := big.NewInt(int64(len(unregisteredKeys))).Mul(big.NewInt(int64(len(unregisteredKeys))), validatorDepositCost)
+
+	// Total cost needs to account for pending validators since pending needs resources as well
+	for range pendingPubkeysOnNodeset {
+		totalCost = totalCost.Add(totalCost, validatorDepositCost)
+	}
+
 	data.RequiredBalance = totalCost
 	data.SufficientBalance = (totalCost.Cmp(balance) <= 0)
 
 	if !data.SufficientBalance {
 		fmt.Printf("!!! Insufficient balance for deposits: %v\n", balance)
+		fmt.Printf("!!! initial unregistered keys: %v\n", len(unregisteredPubkeys))
+		fmt.Printf("!!! initial total cost: %v\n", totalCost)
 		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) > 0 {
 			unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
 			unregisteredPubkeys = unregisteredPubkeys[:len(unregisteredPubkeys)-1]
 			totalCost = totalCost.Sub(totalCost, validatorDepositCost)
+			fmt.Printf("!!! interm values: %v, %v, %v\n", len(unregisteredKeys), len(unregisteredPubkeys), totalCost)
+
 		}
 		data.UnregisteredPubkeys = unregisteredPubkeys
 		data.RequiredBalance = totalCost
-		fmt.Printf("!!! New unregistered keys: %v\n", unregisteredPubkeys)
+		fmt.Printf("!!! final unregistered keys: %v\n", unregisteredPubkeys)
 	}
 
 	if len(unregisteredKeys) == 0 {
