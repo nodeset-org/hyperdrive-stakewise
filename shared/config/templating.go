@@ -35,8 +35,8 @@ func (c *StakewiseConfig) DepositDataFile() string {
 }
 
 // The tag for the daemon container
-func (cfg *StakewiseConfig) DaemonTag() string {
-	return daemonTag
+func (cfg *StakewiseConfig) GetDaemonContainerTag() string {
+	return cfg.DaemonContainerTag.Value
 }
 
 // Get the container tag of the selected VC
