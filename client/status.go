@@ -7,10 +7,10 @@ import (
 )
 
 type StatusRequester struct {
-	context *client.RequesterContext
+	context client.IRequesterContext
 }
 
-func NewStatusRequester(context *client.RequesterContext) *StatusRequester {
+func NewStatusRequester(context client.IRequesterContext) *StatusRequester {
 	return &StatusRequester{
 		context: context,
 	}
@@ -24,7 +24,7 @@ func (r *StatusRequester) GetRoute() string {
 	return "status"
 }
 
-func (r *StatusRequester) GetContext() *client.RequesterContext {
+func (r *StatusRequester) GetContext() client.IRequesterContext {
 	return r.context
 }
 

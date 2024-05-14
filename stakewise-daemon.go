@@ -1,12 +1,11 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
+	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
+	"strconv"
 	"sync"
 	"syscall"
 
@@ -49,25 +48,45 @@ func main() {
 		Usage:    "The path to the Stakewise module data directory",
 		Required: true,
 	}
+	hyperdriveUrlFlag := &cli.StringFlag{
+		Name:    "hyperdrive-url",
+		Aliases: []string{"hd"},
+		Usage:   "The URL of the Hyperdrive API",
+		Value:   "http://127.0.0.1:" + strconv.FormatUint(uint64(config.DefaultApiPort), 10),
+	}
+	ipFlag := &cli.StringFlag{
+		Name:    "ip",
+		Aliases: []string{"i"},
+		Usage:   "The IP address to bind the API server to",
+		Value:   "127.0.0.1",
+	}
+	portFlag := &cli.UintFlag{
+		Name:    "port",
+		Aliases: []string{"p"},
+		Usage:   "The port to bind the API server to",
+		Value:   uint(swconfig.DefaultApiPort),
+	}
 
 	app.Flags = []cli.Flag{
 		moduleDirFlag,
+		hyperdriveUrlFlag,
+		ipFlag,
+		portFlag,
 	}
 	app.Action = func(c *cli.Context) error {
-		// Get the config file
+		// Get the env vars
 		moduleDir := c.String(moduleDirFlag.Name)
-		hyperdriveSocketPath := filepath.Join(moduleDir, config.HyperdriveCliSocketFilename)
-		_, err := os.Stat(hyperdriveSocketPath)
-		if errors.Is(err, fs.ErrNotExist) {
-			fmt.Printf("Hyperdrive socket not found at [%s].", hyperdriveSocketPath)
-			os.Exit(1)
+		hdUrlString := c.String(hyperdriveUrlFlag.Name)
+		hyperdriveUrl, err := url.Parse(hdUrlString)
+		if err != nil {
+			return fmt.Errorf("error parsing Hyperdrive URL [%s]: %w", hdUrlString, err)
 		}
 
 		// Wait group to handle the API server (separate because of error handling)
 		stopWg := new(sync.WaitGroup)
 
 		// Create the service provider
-		sp, err := services.NewServiceProvider(moduleDir, swconfig.ModuleName, swconfig.ClientLogName, swconfig.NewStakewiseConfig, config.ClientTimeout)
+		sp, err := services.NewServiceProvider(hyperdriveUrl, moduleDir, swconfig.ModuleName, swconfig.ClientLogName, swconfig.NewStakewiseConfig, config.ClientTimeout)
 		if err != nil {
 			return fmt.Errorf("error creating service provider: %w", err)
 		}
@@ -76,23 +95,13 @@ func main() {
 			return fmt.Errorf("error creating Stakewise service provider: %w", err)
 		}
 
-		// Get the owner of the Hyperdrive socket
-		var hdSocketStat syscall.Stat_t
-		err = syscall.Stat(hyperdriveSocketPath, &hdSocketStat)
-		if err != nil {
-			return fmt.Errorf("error getting Hyperdrive socket file [%s] info: %w", hyperdriveSocketPath, err)
-		}
-
 		// Start the server
-		apiServer, err := server.NewStakewiseServer(server.CliOrigin, stakewiseSp)
+		ip := c.String(ipFlag.Name)
+		port := c.Uint64(portFlag.Name)
+		serverMgr, err := server.NewServerManager(stakewiseSp, ip, uint16(port), stopWg)
 		if err != nil {
 			return fmt.Errorf("error creating Stakewise server: %w", err)
 		}
-		err = apiServer.Start(stopWg, hdSocketStat.Uid, hdSocketStat.Gid)
-		if err != nil {
-			return fmt.Errorf("error starting API manager: %w", err)
-		}
-		fmt.Printf("Started daemon on %s.\n", apiServer.GetSocketPath())
 
 		// Start the task loop
 		taskLoop := swtasks.NewTaskLoop(stakewiseSp, stopWg)
@@ -101,8 +110,6 @@ func main() {
 			return fmt.Errorf("error starting task loop: %w", err)
 		}
 
-		// TODO: Metrics manager
-
 		// Handle process closures
 		termListener := make(chan os.Signal, 1)
 		signal.Notify(termListener, os.Interrupt, syscall.SIGTERM)
@@ -110,11 +117,7 @@ func main() {
 			<-termListener
 			fmt.Println("Shutting down daemon...")
 			stakewiseSp.CancelContextOnShutdown()
-			err := apiServer.Stop()
-			if err != nil {
-				fmt.Printf("WARNING: daemon didn't shutdown cleanly: %s\n", err.Error())
-				stopWg.Done()
-			}
+			serverMgr.Stop()
 		}()
 
 		// Run the daemon until closed

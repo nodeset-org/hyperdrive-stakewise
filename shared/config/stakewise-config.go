@@ -19,8 +19,14 @@ type StakewiseConfig struct {
 	// Toggle for enabling access to the root filesystem (for multiple disk usage metrics)
 	Enabled config.Parameter[bool]
 
+	// Port to run the Stakewise API server on
+	ApiPort config.Parameter[uint16]
+
 	// Toggle for verifying deposit data Merkle roots before saving
 	VerifyDepositsRoot config.Parameter[bool]
+
+	// The Docker Hub tag for the Stakewise daemon
+	DaemonContainerTag config.Parameter[string]
 
 	// The Docker Hub tag for the Stakewise operator
 	OperatorContainerTag config.Parameter[string]
@@ -61,6 +67,20 @@ func NewStakewiseConfig(hdCfg *hdconfig.HyperdriveConfig) *StakewiseConfig {
 			},
 		},
 
+		ApiPort: config.Parameter[uint16]{
+			ParameterCommon: &config.ParameterCommon{
+				ID:                 ids.ApiPortID,
+				Name:               "Daemon API Port",
+				Description:        "The port that the Stakewise daemon's API server should run on. Note this is bound to the local machine only; it cannot be accessed by other machines.",
+				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon},
+				CanBeBlank:         false,
+				OverwriteOnUpgrade: false,
+			},
+			Default: map[config.Network]uint16{
+				config.Network_All: DefaultApiPort,
+			},
+		},
+
 		VerifyDepositsRoot: config.Parameter[bool]{
 			ParameterCommon: &config.ParameterCommon{
 				ID:                 ids.VerifyDepositRootsID,
@@ -72,6 +92,20 @@ func NewStakewiseConfig(hdCfg *hdconfig.HyperdriveConfig) *StakewiseConfig {
 			},
 			Default: map[config.Network]bool{
 				config.Network_All: true,
+			},
+		},
+
+		DaemonContainerTag: config.Parameter[string]{
+			ParameterCommon: &config.ParameterCommon{
+				ID:                 ids.DaemonContainerTagID,
+				Name:               "Daemon Container Tag",
+				Description:        "The tag name of Hyperdrive's Stakewise Daemon image to use. See https://github.com/stakewise/v3-operator#using-docker for more details.",
+				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon},
+				CanBeBlank:         false,
+				OverwriteOnUpgrade: true,
+			},
+			Default: map[config.Network]string{
+				config.Network_All: daemonTag,
 			},
 		},
 
@@ -132,7 +166,9 @@ func (cfg *StakewiseConfig) GetTitle() string {
 func (cfg *StakewiseConfig) GetParameters() []config.IParameter {
 	return []config.IParameter{
 		&cfg.Enabled,
+		&cfg.ApiPort,
 		&cfg.VerifyDepositsRoot,
+		&cfg.DaemonContainerTag,
 		&cfg.OperatorContainerTag,
 		&cfg.AdditionalOpFlags,
 	}
