@@ -50,7 +50,7 @@ func main() {
 	}
 	hyperdriveUrlFlag := &cli.StringFlag{
 		Name:    "hyperdrive-url",
-		Aliases: []string{"h"},
+		Aliases: []string{"hd"},
 		Usage:   "The URL of the Hyperdrive API",
 		Value:   "http://127.0.0.1:" + strconv.FormatUint(uint64(config.DefaultApiPort), 10),
 	}
