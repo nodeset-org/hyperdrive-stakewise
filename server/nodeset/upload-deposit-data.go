@@ -71,29 +71,36 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error deriving public keys: %w", err)
 	}
-
+	fmt.Printf("!!! publicKeys: %v\n", publicKeys)
 	// Fetch status from Nodeset APIs
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
 	}
 
-	pubkeysUploadedtoNodeset := []beacon.ValidatorPubkey{}
+	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
 	for _, validator := range nodesetStatusResponse {
-		pubkeysUploadedtoNodeset = append(pubkeysUploadedtoNodeset, validator.Pubkey)
+		if validator.Status != "PENDING" {
+			activePubkeysOnNodeset = append(activePubkeysOnNodeset, validator.Pubkey)
+		}
 	}
+	fmt.Printf("!!! activePubkeysOnNodeset: %v\n", activePubkeysOnNodeset)
 
 	// Process public keys based on their status
 	unregisteredKeys := []*eth2types.BLSPrivateKey{}
 	data.TotalCount = uint64(len(publicKeys))
-	newPubkeys := []beacon.ValidatorPubkey{}
+	// Used for displaying the unregistered keys in the response
+	unregisteredPubkeys := []beacon.ValidatorPubkey{}
 
+	fmt.Printf("!!! Looping over pubkeys...\n")
 	for i, pubkey := range publicKeys {
-		if !isUploadedToNodeset(pubkey, pubkeysUploadedtoNodeset) {
+		if !isUploadedToNodeset(pubkey, activePubkeysOnNodeset) {
 			unregisteredKeys = append(unregisteredKeys, privateKeys[i])
-			newPubkeys = append(newPubkeys, pubkey)
+			unregisteredPubkeys = append(unregisteredPubkeys, pubkey)
 		}
 	}
+	fmt.Printf("!!! unregisteredKeys: %v\n", unregisteredKeys)
+	fmt.Printf("!!! unregisteredPubkeys: %v\n", unregisteredPubkeys)
 
 	// Determine if sufficient balance is available for deposits
 	balance, err := ec.BalanceAt(ctx, opts.From, nil)
@@ -108,15 +115,20 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	data.SufficientBalance = (totalCost.Cmp(balance) <= 0)
 
 	if !data.SufficientBalance {
+		fmt.Printf("!!! Insufficient balance for deposits: %v\n", balance)
 		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) > 0 {
 			unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
-			newPubkeys = newPubkeys[:len(newPubkeys)-1]
-			totalCost.Sub(totalCost, validatorDepositCost)
+			unregisteredPubkeys = unregisteredPubkeys[:len(unregisteredPubkeys)-1]
+			totalCost = totalCost.Sub(totalCost, validatorDepositCost)
 		}
-		data.UnregisteredPubkeys = newPubkeys
+		data.UnregisteredPubkeys = unregisteredPubkeys
 		data.RequiredBalance = totalCost
+		fmt.Printf("!!! New unregistered keys: %v\n", unregisteredPubkeys)
 	}
 
+	if len(unregisteredKeys) == 0 {
+		return types.ResponseStatus_Success, nil
+	}
 	// Generate deposit data and submit
 	depositData, err := ddMgr.GenerateDepositData(unregisteredKeys)
 	if err != nil {
