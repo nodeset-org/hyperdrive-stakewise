@@ -72,6 +72,11 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error deriving public keys: %w", err)
 	}
+	publicKeyMap := make(map[beacon.ValidatorPubkey]bool)
+	for _, pubkey := range publicKeys {
+		publicKeyMap[pubkey] = true
+	}
+
 	// Fetch status from Nodeset APIs
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {
@@ -81,12 +86,29 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
 	pendingPubkeysOnNodeset := []beacon.ValidatorPubkey{}
 	for _, validator := range nodesetStatusResponse {
-		if validator.Status != "PENDING" {
-			activePubkeysOnNodeset = append(activePubkeysOnNodeset, validator.Pubkey)
-		} else {
-			pendingPubkeysOnNodeset = append(pendingPubkeysOnNodeset, validator.Pubkey)
+		_, exists := publicKeyMap[validator.Pubkey]
+		if exists {
+			publicKeyMap[validator.Pubkey] = false
+
+			if validator.Status != "PENDING" {
+				activePubkeysOnNodeset = append(activePubkeysOnNodeset, validator.Pubkey)
+			} else {
+				pendingPubkeysOnNodeset = append(pendingPubkeysOnNodeset, validator.Pubkey)
+			}
 		}
 	}
+
+	newPublicKeys := []beacon.ValidatorPubkey{}
+	for pubkey, unprocessed := range publicKeyMap {
+		if unprocessed {
+			newPublicKeys = append(newPublicKeys, pubkey)
+		}
+	}
+	publicKeys = newPublicKeys
+	fmt.Printf("!!! len(publicKeys): %v\n", len(publicKeys))
+
+	fmt.Printf("!!! len(activePubkeysOnNodeset): %v\n", len(activePubkeysOnNodeset))
+	fmt.Printf("!!! len(pendingPubkeysOnNodeset): %v\n", len(pendingPubkeysOnNodeset))
 
 	// Process public keys based on their status
 	unregisteredKeys := []*eth2types.BLSPrivateKey{}
@@ -100,6 +122,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 			unregisteredPubkeys = append(unregisteredPubkeys, pubkey)
 		}
 	}
+	fmt.Printf("!!! len(unregisteredKeys): %v\n", len(unregisteredKeys))
 
 	// Determine if sufficient balance is available for deposits
 	balance, err := ec.BalanceAt(ctx, opts.From, nil)
@@ -127,8 +150,8 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		fmt.Printf("!!! initial unregistered keys: %v\n", len(unregisteredPubkeys))
 		fmt.Printf("!!! initial total cost: %v\n", totalCost)
 		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) > 0 {
-			unregisteredKeys = unregisteredKeys[:len(unregisteredKeys)-1]
-			unregisteredPubkeys = unregisteredPubkeys[:len(unregisteredPubkeys)-1]
+			unregisteredKeys = unregisteredKeys[1:]
+			unregisteredPubkeys = unregisteredPubkeys[1:]
 			totalCost = totalCost.Sub(totalCost, validatorDepositCost)
 			fmt.Printf("!!! interm values: %v, %v, %v\n", len(unregisteredKeys), len(unregisteredPubkeys), totalCost)
 
