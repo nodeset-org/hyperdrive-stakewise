@@ -11,12 +11,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
+	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
+
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/eth"
 	"github.com/rocket-pool/node-manager-core/wallet"
+)
+
+const (
+	pendingState         = "PENDING"
+	validatorDepositCost = 0.01
 )
 
 // ===============
@@ -55,7 +62,6 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	w := sp.GetWallet()
 	ec := sp.GetEthClient()
 	ctx := c.handler.ctx
-	validatorDepositCost := eth.EthToWei(0.01)
 
 	// Requirements
 	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
@@ -90,7 +96,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		if exists {
 			publicKeyMap[validator.Pubkey] = false
 
-			if validator.Status != "PENDING" {
+			if validator.Status != pendingState {
 				activePubkeysOnNodeset = append(activePubkeysOnNodeset, validator.Pubkey)
 			} else {
 				pendingPubkeysOnNodeset = append(pendingPubkeysOnNodeset, validator.Pubkey)
@@ -105,10 +111,6 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		}
 	}
 	publicKeys = newPublicKeys
-	fmt.Printf("!!! len(publicKeys): %v\n", len(publicKeys))
-
-	fmt.Printf("!!! len(activePubkeysOnNodeset): %v\n", len(activePubkeysOnNodeset))
-	fmt.Printf("!!! len(pendingPubkeysOnNodeset): %v\n", len(pendingPubkeysOnNodeset))
 
 	// Process public keys based on their status
 	unregisteredKeys := []*eth2types.BLSPrivateKey{}
@@ -117,12 +119,11 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	unregisteredPubkeys := []beacon.ValidatorPubkey{}
 
 	for i, pubkey := range publicKeys {
-		if !isUploadedToNodeset(pubkey, activePubkeysOnNodeset) {
+		if !swcommon.IsUploadedToNodeset(pubkey, activePubkeysOnNodeset) {
 			unregisteredKeys = append(unregisteredKeys, privateKeys[i])
 			unregisteredPubkeys = append(unregisteredPubkeys, pubkey)
 		}
 	}
-	fmt.Printf("!!! len(unregisteredKeys): %v\n", len(unregisteredKeys))
 
 	// Determine if sufficient balance is available for deposits
 	balance, err := ec.BalanceAt(ctx, opts.From, nil)
@@ -135,29 +136,23 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 
 	// Add deposit cost for each unregistered key
 	for range unregisteredKeys {
-		totalCost.Add(totalCost, validatorDepositCost)
+		totalCost.Add(totalCost, eth.EthToWei(validatorDepositCost))
 	}
 	// Total cost needs to account for pending validators
 	for range pendingPubkeysOnNodeset {
-		totalCost = totalCost.Add(totalCost, validatorDepositCost)
+		totalCost = totalCost.Add(totalCost, eth.EthToWei(validatorDepositCost))
 	}
 
-	fmt.Printf("!!! initial Total cost: %v\n", totalCost)
 	data.SufficientBalance = (totalCost.Cmp(balance) <= 0)
 
 	if !data.SufficientBalance {
-		fmt.Printf("!!! Insufficient balance for deposits: %v\n", balance)
-		fmt.Printf("!!! initial unregistered keys: %v\n", len(unregisteredPubkeys))
-		fmt.Printf("!!! initial total cost: %v\n", totalCost)
 		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) > 0 {
 			unregisteredKeys = unregisteredKeys[1:]
 			unregisteredPubkeys = unregisteredPubkeys[1:]
-			totalCost = totalCost.Sub(totalCost, validatorDepositCost)
-			fmt.Printf("!!! interm values: %v, %v, %v\n", len(unregisteredKeys), len(unregisteredPubkeys), totalCost)
+			totalCost = totalCost.Sub(totalCost, eth.EthToWei(validatorDepositCost))
 
 		}
 		data.UnregisteredPubkeys = unregisteredPubkeys
-		fmt.Printf("!!! final unregistered keys: %v\n", unregisteredPubkeys)
 	}
 
 	if len(unregisteredKeys) == 0 {
@@ -180,23 +175,3 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 
 	return types.ResponseStatus_Success, nil
 }
-
-// TODO: refactor into reusable functions
-func isUploadedToNodeset(pubKey beacon.ValidatorPubkey, registeredPubkeys []beacon.ValidatorPubkey) bool {
-	for _, registeredPubKey := range registeredPubkeys {
-		if registeredPubKey == pubKey {
-			return true
-		}
-	}
-	return false
-}
-
-// func isRegisteredToStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
-// 	// TODO: Implement
-// 	return false
-// }
-
-// func isUploadedStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
-// 	// TODO: Implement
-// 	return false
-// }

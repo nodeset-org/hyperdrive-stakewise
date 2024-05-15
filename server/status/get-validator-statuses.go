@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/url"
 
+	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
+
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/wallet"
@@ -100,11 +102,11 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 
 		// NodeSet status
 		switch {
-		case isRegisteredToStakewise(pubkey, beaconStatusResponse):
+		case swcommon.IsRegisteredToStakewise(pubkey, beaconStatusResponse):
 			state.NodesetStatus = swtypes.NodesetStatus_RegisteredToStakewise
-		case isUploadedStakewise(pubkey, beaconStatusResponse):
+		case swcommon.IsUploadedStakewise(pubkey, beaconStatusResponse):
 			state.NodesetStatus = swtypes.NodesetStatus_UploadedStakewise
-		case isUploadedToNodeset(pubkey, registeredPubkeys):
+		case swcommon.IsUploadedToNodeset(pubkey, registeredPubkeys):
 			state.NodesetStatus = swtypes.NodesetStatus_UploadedToNodeset
 		default:
 			state.NodesetStatus = swtypes.NodesetStatus_Generated
@@ -112,23 +114,4 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 	}
 
 	return types.ResponseStatus_Success, nil
-}
-
-func isRegisteredToStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
-	// TODO: Implement
-	return false
-}
-
-func isUploadedStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
-	// TODO: Implement
-	return false
-}
-
-func isUploadedToNodeset(pubKey beacon.ValidatorPubkey, registeredPubkeys []beacon.ValidatorPubkey) bool {
-	for _, registeredPubKey := range registeredPubkeys {
-		if registeredPubKey == pubKey {
-			return true
-		}
-	}
-	return false
 }
