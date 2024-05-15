@@ -12,12 +12,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
+	"github.com/rocket-pool/node-manager-core/eth"
 
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
-	"github.com/rocket-pool/node-manager-core/eth"
 	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
@@ -62,7 +62,6 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	w := sp.GetWallet()
 	ec := sp.GetEthClient()
 	ctx := c.handler.ctx
-
 	// Requirements
 	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
 	if err != nil {
@@ -91,6 +90,8 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 
 	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
 	pendingPubkeysOnNodeset := []beacon.ValidatorPubkey{}
+	newPublicKeys := []beacon.ValidatorPubkey{}
+
 	for _, validator := range nodesetStatusResponse {
 		_, exists := publicKeyMap[validator.Pubkey]
 		if exists {
@@ -101,13 +102,8 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 			} else {
 				pendingPubkeysOnNodeset = append(pendingPubkeysOnNodeset, validator.Pubkey)
 			}
-		}
-	}
-
-	newPublicKeys := []beacon.ValidatorPubkey{}
-	for pubkey, unprocessed := range publicKeyMap {
-		if unprocessed {
-			newPublicKeys = append(newPublicKeys, pubkey)
+		} else {
+			newPublicKeys = append(newPublicKeys, validator.Pubkey)
 		}
 	}
 	publicKeys = newPublicKeys
@@ -132,25 +128,21 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 	data.Balance = balance
 
-	totalCost := new(big.Int)
+	totalCost := big.NewInt(0)
+	costPerKey := eth.EthToWei(validatorDepositCost)
 
-	// Add deposit cost for each unregistered key
-	for range unregisteredKeys {
-		totalCost.Add(totalCost, eth.EthToWei(validatorDepositCost))
-	}
-	// Total cost needs to account for pending validators
-	for range pendingPubkeysOnNodeset {
-		totalCost = totalCost.Add(totalCost, eth.EthToWei(validatorDepositCost))
-	}
+	unregisteredKeysCount := len(unregisteredKeys)
+	pendingPubkeysOnNodesetCount := len(pendingPubkeysOnNodeset)
+
+	totalCost.Add(totalCost, new(big.Int).Mul(costPerKey, big.NewInt(int64(unregisteredKeysCount+pendingPubkeysOnNodesetCount))))
 
 	data.SufficientBalance = (totalCost.Cmp(balance) <= 0)
 
 	if !data.SufficientBalance {
-		for len(unregisteredKeys) > 0 && totalCost.Cmp(balance) > 0 {
+		for totalCost.Cmp(balance) > 0 {
 			unregisteredKeys = unregisteredKeys[1:]
 			unregisteredPubkeys = unregisteredPubkeys[1:]
-			totalCost = totalCost.Sub(totalCost, eth.EthToWei(validatorDepositCost))
-
+			totalCost = totalCost.Sub(totalCost, costPerKey)
 		}
 		data.UnregisteredPubkeys = unregisteredPubkeys
 	}
