@@ -108,14 +108,18 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 	data.Balance = balance
 
-	totalCost := big.NewInt(int64(len(unregisteredKeys))).Mul(big.NewInt(int64(len(unregisteredKeys))), validatorDepositCost)
+	totalCost := new(big.Int)
 
-	// Total cost needs to account for pending validators since pending needs resources as well
+	// Add deposit cost for each unregistered key
+	for range unregisteredKeys {
+		totalCost.Add(totalCost, validatorDepositCost)
+	}
+	// Total cost needs to account for pending validators
 	for range pendingPubkeysOnNodeset {
 		totalCost = totalCost.Add(totalCost, validatorDepositCost)
 	}
 
-	data.RequiredBalance = totalCost
+	fmt.Printf("!!! initial Total cost: %v\n", totalCost)
 	data.SufficientBalance = (totalCost.Cmp(balance) <= 0)
 
 	if !data.SufficientBalance {
@@ -130,7 +134,6 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 
 		}
 		data.UnregisteredPubkeys = unregisteredPubkeys
-		data.RequiredBalance = totalCost
 		fmt.Printf("!!! final unregistered keys: %v\n", unregisteredPubkeys)
 	}
 
