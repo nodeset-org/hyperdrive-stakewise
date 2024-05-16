@@ -22,8 +22,8 @@ import (
 )
 
 const (
-	pendingState         = "PENDING"
-	validatorDepositCost = 0.01
+	pendingState         string  = "PENDING"
+	validatorDepositCost float64 = 0.01
 )
 
 // ===============
@@ -165,5 +165,12 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		data.ServerResponse = response
 	}
 
+	remainingCost := new(big.Int).Sub(totalCost, balance)
+	if remainingCost.Sign() < 0 {
+		remainingCost.SetInt64(0)
+	}
+	data.RemainingEthRequired = eth.WeiToEth(remainingCost)
+
+	data.EthPerKey = validatorDepositCost
 	return types.ResponseStatus_Success, nil
 }
