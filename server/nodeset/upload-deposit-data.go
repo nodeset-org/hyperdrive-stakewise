@@ -87,13 +87,11 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 
 	privateKeyMap := make(map[beacon.ValidatorPubkey]*eth2types.BLSPrivateKey)
-	for i, publicKey := range publicKeys {
-		privateKeyMap[publicKey] = privateKeys[i]
-	}
-
 	publicKeyMap := make(map[beacon.ValidatorPubkey]bool)
-	for _, pubkey := range publicKeys {
+	for i, pubkey := range publicKeys {
 		publicKeyMap[pubkey] = true
+		privateKeyMap[pubkey] = privateKeys[i]
+
 	}
 
 	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
