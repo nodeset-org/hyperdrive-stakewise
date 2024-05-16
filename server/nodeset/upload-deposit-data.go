@@ -77,6 +77,9 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error deriving public keys: %w", err)
 	}
+	if len(publicKeys) != len(privateKeys) {
+		return types.ResponseStatus_Error, fmt.Errorf("public keys count does not match private keys count")
+	}
 	publicKeyMap := make(map[beacon.ValidatorPubkey]bool)
 	for _, pubkey := range publicKeys {
 		publicKeyMap[pubkey] = true
