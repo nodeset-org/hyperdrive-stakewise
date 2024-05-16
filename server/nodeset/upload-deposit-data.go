@@ -111,7 +111,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	unregisteredPubkeys := []beacon.ValidatorPubkey{}
 
 	for _, pubkey := range publicKeys {
-		if !swcommon.IsUploadedToNodeset(pubkey, activePubkeysOnNodeset) {
+		if !swcommon.IsUploadedToNodeset(pubkey, activePubkeysOnNodeset) && !swcommon.IsUploadedToNodeset(pubkey, pendingPubkeysOnNodeset) {
 			unregisteredKeys = append(unregisteredKeys, privateKeyMap[pubkey])
 			unregisteredPubkeys = append(unregisteredPubkeys, pubkey)
 		}
