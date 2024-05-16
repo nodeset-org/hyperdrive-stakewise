@@ -78,27 +78,19 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting private keys: %w", err)
 	}
-	publicKeys, err := w.DerivePubKeys(privateKeys)
-	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error deriving public keys: %w", err)
-	}
-	if len(publicKeys) != len(privateKeys) {
-		return types.ResponseStatus_Error, fmt.Errorf("public keys count does not match private keys count")
-	}
 
 	privateKeyMap := make(map[beacon.ValidatorPubkey]*eth2types.BLSPrivateKey)
 	publicKeyMap := make(map[beacon.ValidatorPubkey]bool)
-	for i, pubkey := range publicKeys {
+	for _, privateKey := range privateKeys {
+		pubkey := beacon.ValidatorPubkey(privateKey.PublicKey().Marshal())
 		publicKeyMap[pubkey] = true
-		privateKeyMap[pubkey] = privateKeys[i]
-
+		privateKeyMap[pubkey] = privateKey
 	}
 
 	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
 	pendingPubkeysOnNodeset := []beacon.ValidatorPubkey{}
 
-	newPublicKeys := []beacon.ValidatorPubkey{}
-
+	publicKeys := []beacon.ValidatorPubkey{}
 	for _, validator := range nodesetStatusResponse {
 		_, exists := publicKeyMap[validator.Pubkey]
 		if exists {
@@ -108,10 +100,9 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 				pendingPubkeysOnNodeset = append(pendingPubkeysOnNodeset, validator.Pubkey)
 			}
 		} else {
-			newPublicKeys = append(newPublicKeys, validator.Pubkey)
+			publicKeys = append(publicKeys, validator.Pubkey)
 		}
 	}
-	publicKeys = newPublicKeys
 
 	// Process public keys based on their status
 	unregisteredKeys := []*eth2types.BLSPrivateKey{}
