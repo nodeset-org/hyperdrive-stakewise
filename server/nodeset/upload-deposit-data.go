@@ -67,6 +67,11 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
 	}
+	// Fetch status from Nodeset APIs
+	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
+	if err != nil {
+		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
+	}
 
 	// Fetch private keys and derive public keys
 	privateKeys, err := w.GetAllPrivateKeys()
@@ -89,12 +94,6 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	publicKeyMap := make(map[beacon.ValidatorPubkey]bool)
 	for _, pubkey := range publicKeys {
 		publicKeyMap[pubkey] = true
-	}
-
-	// Fetch status from Nodeset APIs
-	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
-	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
 	}
 
 	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
@@ -144,7 +143,10 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	unregisteredKeysCount := len(unregisteredKeys)
 	pendingPubkeysOnNodesetCount := len(pendingPubkeysOnNodeset)
 
-	totalCost.Add(totalCost, new(big.Int).Mul(costPerKey, big.NewInt(int64(unregisteredKeysCount+pendingPubkeysOnNodesetCount))))
+	// totalCost.Add(totalCost, big.NewInt(0).Mul(costPerKey, big.NewInt(int64(unregisteredKeysCount+pendingPubkeysOnNodesetCount))))
+
+	totalCostForKeys := big.NewInt(0).Mul(costPerKey, big.NewInt(int64(unregisteredKeysCount+pendingPubkeysOnNodesetCount)))
+	totalCost.Add(totalCost, totalCostForKeys)
 
 	data.SufficientBalance = (totalCost.Cmp(balance) <= 0)
 
@@ -152,7 +154,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		for totalCost.Cmp(balance) > 0 {
 			unregisteredKeys = unregisteredKeys[1:]
 			unregisteredPubkeys = unregisteredPubkeys[1:]
-			totalCost = totalCost.Sub(totalCost, costPerKey)
+			totalCost.Sub(totalCost, costPerKey)
 		}
 		data.UnregisteredPubkeys = unregisteredPubkeys
 	}
