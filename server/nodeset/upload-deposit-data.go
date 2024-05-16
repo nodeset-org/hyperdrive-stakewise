@@ -80,6 +80,12 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if len(publicKeys) != len(privateKeys) {
 		return types.ResponseStatus_Error, fmt.Errorf("public keys count does not match private keys count")
 	}
+
+	privateKeyMap := make(map[beacon.ValidatorPubkey]*eth2types.BLSPrivateKey)
+	for i, publicKey := range publicKeys {
+		privateKeyMap[publicKey] = privateKeys[i]
+	}
+
 	publicKeyMap := make(map[beacon.ValidatorPubkey]bool)
 	for _, pubkey := range publicKeys {
 		publicKeyMap[pubkey] = true
@@ -117,11 +123,6 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	data.TotalCount = uint64(len(publicKeys))
 	// Used for displaying the unregistered keys in the response
 	unregisteredPubkeys := []beacon.ValidatorPubkey{}
-
-	privateKeyMap := make(map[beacon.ValidatorPubkey]*eth2types.BLSPrivateKey)
-	for i, publicKey := range publicKeys {
-		privateKeyMap[publicKey] = privateKeys[i]
-	}
 
 	for _, pubkey := range publicKeys {
 		if !swcommon.IsUploadedToNodeset(pubkey, activePubkeysOnNodeset) {
