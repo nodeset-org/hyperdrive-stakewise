@@ -104,8 +104,6 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	for _, validator := range nodesetStatusResponse {
 		_, exists := publicKeyMap[validator.Pubkey]
 		if exists {
-			publicKeyMap[validator.Pubkey] = false
-
 			if validator.Status != pendingState {
 				activePubkeysOnNodeset = append(activePubkeysOnNodeset, validator.Pubkey)
 			} else {
