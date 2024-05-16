@@ -62,6 +62,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	w := sp.GetWallet()
 	ec := sp.GetEthClient()
 	ctx := c.handler.ctx
+	data.EthPerKey = validatorDepositCost
 	// Requirements
 	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
 	if err != nil {
@@ -81,8 +82,10 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 
 	privateKeyMap := make(map[beacon.ValidatorPubkey]*eth2types.BLSPrivateKey)
 	publicKeyMap := make(map[beacon.ValidatorPubkey]bool)
+	publicKeys := []beacon.ValidatorPubkey{}
 	for _, privateKey := range privateKeys {
 		pubkey := beacon.ValidatorPubkey(privateKey.PublicKey().Marshal())
+		publicKeys = append(publicKeys, pubkey)
 		publicKeyMap[pubkey] = true
 		privateKeyMap[pubkey] = privateKey
 	}
@@ -90,7 +93,6 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
 	pendingPubkeysOnNodeset := []beacon.ValidatorPubkey{}
 
-	publicKeys := []beacon.ValidatorPubkey{}
 	for _, validator := range nodesetStatusResponse {
 		_, exists := publicKeyMap[validator.Pubkey]
 		if exists {
@@ -99,14 +101,12 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 			} else {
 				pendingPubkeysOnNodeset = append(pendingPubkeysOnNodeset, validator.Pubkey)
 			}
-		} else {
-			publicKeys = append(publicKeys, validator.Pubkey)
 		}
 	}
 
 	// Process public keys based on their status
 	unregisteredKeys := []*eth2types.BLSPrivateKey{}
-	data.TotalCount = uint64(len(publicKeys))
+	data.TotalCount = uint64(len(publicKeys)) - uint64(len(pendingPubkeysOnNodeset))
 	// Used for displaying the unregistered keys in the response
 	unregisteredPubkeys := []beacon.ValidatorPubkey{}
 
@@ -122,7 +122,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting balance: %w", err)
 	}
-	data.Balance = balance
+	data.Balance = eth.WeiToEth(balance)
 
 	totalCost := big.NewInt(0)
 	costPerKey := eth.EthToWei(validatorDepositCost)
@@ -144,6 +144,13 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		data.UnregisteredPubkeys = unregisteredPubkeys
 	}
 
+	remainingKeys := uint64(len(publicKeys)) - uint64(len(data.UnregisteredPubkeys)) - uint64(len(pendingPubkeysOnNodeset))
+	remainingCost := big.NewInt(0)
+	if remainingKeys > 0 {
+		remainingCost = big.NewInt(0).Mul(costPerKey, big.NewInt(int64(remainingKeys)))
+	}
+	data.RemainingEthRequired = eth.WeiToEth(remainingCost)
+
 	if len(unregisteredKeys) == 0 {
 		return types.ResponseStatus_Success, nil
 	}
@@ -162,12 +169,5 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		data.ServerResponse = response
 	}
 
-	remainingCost := new(big.Int).Sub(totalCost, balance)
-	if remainingCost.Sign() < 0 {
-		remainingCost.SetInt64(0)
-	}
-	data.RemainingEthRequired = eth.WeiToEth(remainingCost)
-
-	data.EthPerKey = validatorDepositCost
 	return types.ResponseStatus_Success, nil
 }
