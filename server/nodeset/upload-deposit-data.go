@@ -93,6 +93,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 
 	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
 	pendingPubkeysOnNodeset := []beacon.ValidatorPubkey{}
+
 	newPublicKeys := []beacon.ValidatorPubkey{}
 
 	for _, validator := range nodesetStatusResponse {
@@ -117,9 +118,14 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	// Used for displaying the unregistered keys in the response
 	unregisteredPubkeys := []beacon.ValidatorPubkey{}
 
-	for i, pubkey := range publicKeys {
+	privateKeyMap := make(map[beacon.ValidatorPubkey]*eth2types.BLSPrivateKey)
+	for i, publicKey := range publicKeys {
+		privateKeyMap[publicKey] = privateKeys[i]
+	}
+
+	for _, pubkey := range publicKeys {
 		if !swcommon.IsUploadedToNodeset(pubkey, activePubkeysOnNodeset) {
-			unregisteredKeys = append(unregisteredKeys, privateKeys[i])
+			unregisteredKeys = append(unregisteredKeys, privateKeyMap[pubkey])
 			unregisteredPubkeys = append(unregisteredPubkeys, pubkey)
 		}
 	}
