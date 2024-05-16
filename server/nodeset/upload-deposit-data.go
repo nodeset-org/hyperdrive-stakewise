@@ -143,8 +143,6 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	unregisteredKeysCount := len(unregisteredKeys)
 	pendingPubkeysOnNodesetCount := len(pendingPubkeysOnNodeset)
 
-	// totalCost.Add(totalCost, big.NewInt(0).Mul(costPerKey, big.NewInt(int64(unregisteredKeysCount+pendingPubkeysOnNodesetCount))))
-
 	totalCostForKeys := big.NewInt(0).Mul(costPerKey, big.NewInt(int64(unregisteredKeysCount+pendingPubkeysOnNodesetCount)))
 	totalCost.Add(totalCost, totalCostForKeys)
 
