@@ -62,12 +62,14 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	w := sp.GetWallet()
 	ec := sp.GetEthClient()
 	ctx := c.handler.ctx
-	data.EthPerKey = validatorDepositCost
+	nodeAddress := walletStatus.Address.NodeAddress
+
 	// Requirements
 	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
 	}
+
 	// Fetch status from Nodeset APIs
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {
@@ -80,6 +82,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		return types.ResponseStatus_Error, fmt.Errorf("error getting private keys: %w", err)
 	}
 
+	// Create maps of private keys for easy lookup
 	privateKeyMap := make(map[beacon.ValidatorPubkey]*eth2types.BLSPrivateKey)
 	publicKeyMap := make(map[beacon.ValidatorPubkey]bool)
 	publicKeys := []beacon.ValidatorPubkey{}
@@ -90,9 +93,9 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		privateKeyMap[pubkey] = privateKey
 	}
 
+	// Sort each key by its upload status
 	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
 	pendingPubkeysOnNodeset := []beacon.ValidatorPubkey{}
-
 	for _, validator := range nodesetStatusResponse {
 		_, exists := publicKeyMap[validator.Pubkey]
 		if exists {
@@ -103,13 +106,11 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 			}
 		}
 	}
+	data.TotalCount = uint64(len(publicKeys))
 
-	// Process public keys based on their status
+	// Create a list of unregistered keys
 	unregisteredKeys := []*eth2types.BLSPrivateKey{}
-	data.TotalCount = uint64(len(publicKeys)) - uint64(len(pendingPubkeysOnNodeset))
-	// Used for displaying the unregistered keys in the response
-	unregisteredPubkeys := []beacon.ValidatorPubkey{}
-
+	unregisteredPubkeys := []beacon.ValidatorPubkey{} // Used for displaying the unregistered keys in the response
 	for _, pubkey := range publicKeys {
 		if !swcommon.IsUploadedToNodeset(pubkey, activePubkeysOnNodeset) && !swcommon.IsUploadedToNodeset(pubkey, pendingPubkeysOnNodeset) {
 			unregisteredKeys = append(unregisteredKeys, privateKeyMap[pubkey])
@@ -117,45 +118,59 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		}
 	}
 
-	// Determine if sufficient balance is available for deposits
-	balance, err := ec.BalanceAt(ctx, opts.From, nil)
+	// Short circuit if all keys are already registered
+	if len(unregisteredKeys) == 0 {
+		return types.ResponseStatus_Success, nil
+	}
+
+	// Get the wallet's ETH balance
+	err = sp.RequireEthClientSynced(ctx)
+	if err != nil {
+		return types.ResponseStatus_ClientsNotSynced, err
+	}
+	balance, err := ec.BalanceAt(ctx, nodeAddress, nil)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting balance: %w", err)
 	}
 	data.Balance = eth.WeiToEth(balance)
 
-	totalCost := big.NewInt(0)
-	costPerKey := eth.EthToWei(validatorDepositCost)
+	// Subtract the cost of the pending keys
+	data.EthPerKey = validatorDepositCost
+	costPerKeyBig := eth.EthToWei(validatorDepositCost)
+	pendingCountBig := big.NewInt(int64(len(pendingPubkeysOnNodeset)))
+	pendingCost := big.NewInt(0).Mul(costPerKeyBig, pendingCountBig)
+	remainingBalance := big.NewInt(0).Sub(balance, pendingCost)
 
-	unregisteredKeysCount := len(unregisteredKeys)
-	pendingPubkeysOnNodesetCount := len(pendingPubkeysOnNodeset)
-
-	totalCostForKeys := big.NewInt(0).Mul(costPerKey, big.NewInt(int64(unregisteredKeysCount+pendingPubkeysOnNodesetCount)))
-	totalCost.Add(totalCost, totalCostForKeys)
-
-	data.SufficientBalance = (totalCost.Cmp(balance) <= 0)
-
-	if !data.SufficientBalance {
-		for totalCost.Cmp(balance) > 0 {
-			unregisteredKeys = unregisteredKeys[1:]
-			unregisteredPubkeys = unregisteredPubkeys[1:]
-			totalCost.Sub(totalCost, costPerKey)
+	// Register as many keys as possible with the remaining balance
+	registeredKeys := []*eth2types.BLSPrivateKey{}
+	remainingKeys := []*eth2types.BLSPrivateKey{}
+	data.NewPubkeys = []beacon.ValidatorPubkey{}
+	data.RemainingPubkeys = []beacon.ValidatorPubkey{}
+	for i, unregisteredKey := range unregisteredKeys {
+		pubkey := unregisteredPubkeys[i]
+		if costPerKeyBig.Cmp(remainingBalance) > 0 {
+			// Balance is insufficient, label this key as remaining
+			remainingKeys = append(remainingKeys, unregisteredKey)
+			data.RemainingPubkeys = append(data.RemainingPubkeys, pubkey)
+		} else {
+			// Balance is sufficient, register this key and subtract its cost
+			registeredKeys = append(registeredKeys, unregisteredKey)
+			data.NewPubkeys = append(data.NewPubkeys, pubkey)
+			remainingBalance.Sub(remainingBalance, costPerKeyBig)
 		}
-		data.UnregisteredPubkeys = unregisteredPubkeys
+	}
+	data.SufficientBalance = (len(remainingKeys) == 0)
+
+	// Get how much ETH is required to finish registering the remaining keys
+	if !data.SufficientBalance {
+		remainingKeysBig := big.NewInt(int64(len(remainingKeys)))
+		costOfRemainingKeys := big.NewInt(0).Mul(remainingKeysBig, costPerKeyBig)
+		remainingEthRequired := big.NewInt(0).Sub(costOfRemainingKeys, remainingBalance)
+		data.RemainingEthRequired = eth.WeiToEth(remainingEthRequired)
 	}
 
-	remainingKeys := uint64(len(publicKeys)) - uint64(len(data.UnregisteredPubkeys)) - uint64(len(pendingPubkeysOnNodeset))
-	remainingCost := big.NewInt(0)
-	if remainingKeys > 0 {
-		remainingCost = big.NewInt(0).Mul(costPerKey, big.NewInt(int64(remainingKeys)))
-	}
-	data.RemainingEthRequired = eth.WeiToEth(remainingCost)
-
-	if len(unregisteredKeys) == 0 {
-		return types.ResponseStatus_Success, nil
-	}
 	// Generate deposit data and submit
-	depositData, err := ddMgr.GenerateDepositData(unregisteredKeys)
+	depositData, err := ddMgr.GenerateDepositData(registeredKeys)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error generating deposit data: %w", err)
 	}
@@ -170,4 +185,29 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 
 	return types.ResponseStatus_Success, nil
+}
+
+// Temp function for unit testing demo
+func getRegisterableKeys(pendingKeys []beacon.ValidatorPubkey, unregisteredPubkeys []beacon.ValidatorPubkey, walletBalance *big.Int) ([]beacon.ValidatorPubkey, []beacon.ValidatorPubkey, *big.Int) {
+	costPerKeyBig := eth.EthToWei(validatorDepositCost)
+	pendingCountBig := big.NewInt(int64(len(pendingKeys)))
+	pendingCost := big.NewInt(0).Mul(costPerKeyBig, pendingCountBig)
+	remainingBalance := big.NewInt(0).Sub(walletBalance, pendingCost)
+
+	// Register as many keys as possible with the remaining balance
+	registeredPubkeys := []beacon.ValidatorPubkey{}
+	remainingPubkeys := []beacon.ValidatorPubkey{}
+	for i, unregisteredKey := range unregisteredPubkeys {
+		pubkey := unregisteredPubkeys[i]
+		if costPerKeyBig.Cmp(remainingBalance) > 0 {
+			// Balance is insufficient, label this key as remaining
+			remainingPubkeys = append(remainingPubkeys, pubkey)
+		} else {
+			// Balance is sufficient, register this key and subtract its cost
+			registeredPubkeys = append(registeredPubkeys, unregisteredKey)
+			remainingBalance.Sub(remainingBalance, costPerKeyBig)
+		}
+	}
+
+	return registeredPubkeys, remainingPubkeys, remainingBalance
 }
