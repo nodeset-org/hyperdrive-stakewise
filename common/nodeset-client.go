@@ -258,3 +258,22 @@ func (c *NodesetClient) submitRequest(ctx context.Context, method string, body i
 	logger.Debug("NodeSet response:", slog.String(log.CodeKey, resp.Status), slog.String(log.BodyKey, string(bytes)))
 	return bytes, nil
 }
+
+func IsUploadedToNodeset(pubKey beacon.ValidatorPubkey, registeredPubkeys []beacon.ValidatorPubkey) bool {
+	for _, registeredPubKey := range registeredPubkeys {
+		if registeredPubKey == pubKey {
+			return true
+		}
+	}
+	return false
+}
+
+func IsRegisteredToStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
+	// TODO: Implement
+	return false
+}
+
+func IsUploadedStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
+	// TODO: Implement
+	return false
+}

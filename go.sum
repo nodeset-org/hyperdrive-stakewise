@@ -236,8 +236,8 @@ github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 h1:RWengNIwukTxcDr9
 github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826/go.mod h1:TaXosZuwdSHYgviHp1DAtfrULt5eUgsSMsZf+YrPgl8=
 github.com/morikuni/aec v1.0.0 h1:nP9CBfwrvYnBRgY6qfDQkygYDmYwOilePFkwzv4dU8A=
 github.com/morikuni/aec v1.0.0/go.mod h1:BbKIizmSmc5MMPqRYbxO4ZU0S0+P200+tUnFx7PXmsc=
-github.com/nodeset-org/hyperdrive-daemon v0.4.2-dev.0.20240515155018-d97df5b61692 h1:LAHl/tj+l4UIZjJv+73S1EIb0stK3AGyw5X9odfC9x4=
-github.com/nodeset-org/hyperdrive-daemon v0.4.2-dev.0.20240515155018-d97df5b61692/go.mod h1:cPMY0KDqaoJXN2dUkC1ChhfjsguHDPLYcSbBskIPb/s=
+github.com/nodeset-org/hyperdrive-daemon v0.4.2-dev.0.20240515161352-9f17d9f9bfa5 h1:VyLPdNB285Rp6brVrJk7u5VfbdVKMBx6ilXciXCX8VI=
+github.com/nodeset-org/hyperdrive-daemon v0.4.2-dev.0.20240515161352-9f17d9f9bfa5/go.mod h1:cPMY0KDqaoJXN2dUkC1ChhfjsguHDPLYcSbBskIPb/s=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/olekukonko/tablewriter v0.0.5 h1:P2Ga83D34wi1o9J6Wh1mRuqd4mF/x/lgBS7N7AbDhec=
 github.com/olekukonko/tablewriter v0.0.5/go.mod h1:hPp6KlRPjbx+hW8ykQs1w3UBbZlj6HuIJcUGPhkA7kY=
