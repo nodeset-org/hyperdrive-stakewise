@@ -107,6 +107,8 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		}
 	}
 	data.TotalCount = uint64(len(publicKeys))
+	data.ActiveCount = uint64(len(activePubkeysOnNodeset))
+	data.PendingCount = uint64(len(pendingPubkeysOnNodeset))
 
 	// Create a list of unregistered keys
 	unregisteredKeys := []*eth2types.BLSPrivateKey{}
@@ -120,6 +122,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 
 	// Short circuit if all keys are already registered
 	if len(unregisteredKeys) == 0 {
+		data.SufficientBalance = true
 		return types.ResponseStatus_Success, nil
 	}
 

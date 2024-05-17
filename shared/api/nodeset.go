@@ -11,6 +11,8 @@ type NodesetUploadDepositDataData struct {
 	NewPubkeys           []beacon.ValidatorPubkey `json:"newPubkeys"`
 	RemainingPubkeys     []beacon.ValidatorPubkey `json:"remainingPubkeys"`
 	TotalCount           uint64                   `json:"totalCount"`
+	ActiveCount          uint64                   `json:"activeCount"`
+	PendingCount         uint64                   `json:"pendingCount"`
 	EthPerKey            float64                  `json:"ethPerKey"`
 	RemainingEthRequired float64                  `json:"remainingEthRequired"`
 }
