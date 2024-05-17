@@ -1,16 +1,18 @@
 package swapi
 
 import (
-	"math/big"
-
 	"github.com/rocket-pool/node-manager-core/beacon"
 )
 
 type NodesetUploadDepositDataData struct {
-	SufficientBalance   bool                     `json:"sufficientBalance"`
-	Balance             *big.Int                 `json:"balance"`
-	RequiredBalance     *big.Int                 `json:"requiredBalance"`
-	ServerResponse      []byte                   `json:"serverResponse"`
-	UnregisteredPubkeys []beacon.ValidatorPubkey `json:"newPubkeys"`
-	TotalCount          uint64                   `json:"totalCount"`
+	SufficientBalance    bool                     `json:"sufficientBalance"`
+	Balance              float64                  `json:"balance"`
+	ServerResponse       []byte                   `json:"serverResponse"`
+	NewPubkeys           []beacon.ValidatorPubkey `json:"newPubkeys"`
+	RemainingPubkeys     []beacon.ValidatorPubkey `json:"remainingPubkeys"`
+	TotalCount           uint64                   `json:"totalCount"`
+	ActiveCount          uint64                   `json:"activeCount"`
+	PendingCount         uint64                   `json:"pendingCount"`
+	EthPerKey            float64                  `json:"ethPerKey"`
+	RemainingEthRequired float64                  `json:"remainingEthRequired"`
 }
