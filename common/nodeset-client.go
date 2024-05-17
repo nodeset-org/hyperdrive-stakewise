@@ -35,6 +35,7 @@ const (
 // =================
 // === Requests  ===
 // =================
+
 type ExitMessageDetails struct {
 	Epoch          string `json:"epoch"`
 	ValidatorIndex string `json:"validator_index"`
