@@ -25,6 +25,7 @@ func NewNodesetHandler(logger *log.Logger, ctx context.Context, serviceProvider 
 	h.factories = []server.IContextFactory{
 		&nodesetSetValidatorsRootContextFactory{h},
 		&nodesetUploadDepositDataContextFactory{h},
+		&nodesetBlahContextFactory{h},
 	}
 	return h
 }

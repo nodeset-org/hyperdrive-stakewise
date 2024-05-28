@@ -27,14 +27,21 @@ const (
 	authHeader string = "Authorization"
 
 	// API paths
-	depositDataPath string = "deposit-data"
-	metaPath        string = "meta"
-	validatorsPath  string = "validators"
+	depositDataPath string = "dev/deposit-data"
+	metaPath        string = "dev/meta"
+	validatorsPath  string = "dev/validators"
+	nodeAddressPath string = "dev/node-address"
 )
 
 // =================
 // === Requests  ===
 // =================
+
+type SubmitAuthorizedAddressRequest struct {
+	Email       string `json:"email"`
+	NodeAddress string `json:"node_address"`
+	Signature   string `json:"signature"`
+}
 
 type ExitMessageDetails struct {
 	Epoch          string `json:"epoch"`
@@ -258,6 +265,28 @@ func (c *NodesetClient) submitRequest(ctx context.Context, method string, body i
 	// Debug log
 	logger.Debug("NodeSet response:", slog.String(log.CodeKey, resp.Status), slog.String(log.BodyKey, string(bytes)))
 	return bytes, nil
+}
+
+// Submits the authorized address to the server
+func (c *NodesetClient) SubmitAuthorizedAddress(ctx context.Context, email string, nodeAddress string, signature string) ([]byte, error) {
+	requestBody := SubmitAuthorizedAddressRequest{
+		Email:       email,
+		NodeAddress: nodeAddress,
+		Signature:   signature,
+	}
+
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling authorized address request to JSON: %w", err)
+	}
+
+	response, err := c.submitRequest(ctx, http.MethodPost, bytes.NewBuffer(jsonData), nil, nodeAddressPath)
+	if err != nil {
+		return nil, fmt.Errorf("error submitting authorized address: %w", err)
+	}
+
+	return response, nil
+
 }
 
 func IsUploadedToNodeset(pubKey beacon.ValidatorPubkey, registeredPubkeys []beacon.ValidatorPubkey) bool {
