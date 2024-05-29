@@ -23,7 +23,7 @@ type SendExitDataTask struct {
 	ctx    context.Context
 	sp     *swcommon.StakewiseServiceProvider
 	w      *swcommon.Wallet
-	ns     *swcommon.NodesetClient
+	ns     *swcommon.NodeSetClient_v1
 	bc     beacon.IBeaconClient
 }
 
@@ -126,7 +126,7 @@ func (t *SendExitDataTask) Run() error {
 
 	// Upload the messages to Nodeset
 	if len(exitData) > 0 {
-		_, err := t.ns.UploadSignedExitData(t.ctx, exitData)
+		err := t.ns.UploadSignedExitData(t.ctx, exitData)
 		if err != nil {
 			return fmt.Errorf("error uploading signed exit messages to NodeSet: %w", err)
 		}

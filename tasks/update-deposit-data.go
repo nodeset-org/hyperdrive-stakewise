@@ -23,7 +23,7 @@ type UpdateDepositDataTask struct {
 	sp     *swcommon.StakewiseServiceProvider
 	w      *swcommon.Wallet
 	hd     *client.ApiClient
-	ns     *swcommon.NodesetClient
+	ns     *swcommon.NodeSetClient_v1
 	ddMgr  *swcommon.DepositDataManager
 	cfg    *swconfig.StakewiseConfig
 }

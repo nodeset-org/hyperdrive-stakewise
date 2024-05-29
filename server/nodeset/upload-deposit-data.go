@@ -181,10 +181,8 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error serializing deposit data: %w", err)
 	}
-	if response, err := nc.UploadDepositData(ctx, serializedData); err != nil {
+	if err := nc.UploadDepositData(ctx, serializedData); err != nil {
 		return types.ResponseStatus_Error, err
-	} else {
-		data.ServerResponse = response
 	}
 
 	return types.ResponseStatus_Success, nil

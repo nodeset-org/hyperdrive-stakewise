@@ -1,5 +1,6 @@
 package keys
 
 const (
-	RetryKey string = "retry"
+	RetryKey   string = "retry"
+	MessageKey string = "message"
 )
