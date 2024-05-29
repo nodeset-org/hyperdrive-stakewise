@@ -66,14 +66,14 @@ var (
 type RegisterNodeRequest struct {
 	Email       string         `json:"email"`
 	NodeAddress common.Address `json:"node_address"`
-	Signature   []byte         `json:"signature"`
+	Signature   string         `json:"signature"` // Must be 0x-prefixed hex encoded
 }
 
 // Request to log into the NodeSet server
 type LoginRequest struct {
 	Nonce     string `json:"nonce"`
 	Address   string `json:"address"`
-	Signature []byte `json:"signature"`
+	Signature string `json:"signature"` // Must be 0x-prefixed hex encoded
 }
 
 // Details of an exit message
@@ -108,7 +108,7 @@ type NodeSetResponse[DataType any] struct {
 }
 
 // Response to a login request
-type LoginResponse struct {
+type LoginData struct {
 	Token string `json:"token"`
 }
 
@@ -172,10 +172,11 @@ func (c *NodeSetClient_v1) RegisterNode(ctx context.Context, email string, nodeW
 	}
 
 	// Create the request
+	signature := utils.EncodeHexWithPrefix(signResponse.Data.SignedMessage)
 	request := RegisterNodeRequest{
 		Email:       email,
 		NodeAddress: nodeWallet,
-		Signature:   signResponse.Data.SignedMessage,
+		Signature:   signature,
 	}
 	jsonData, err := json.Marshal(request)
 	if err != nil {
@@ -318,6 +319,7 @@ func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, re
 			if err != nil {
 				return defaultVal, fmt.Errorf("error logging in after token expired: %w", err)
 			}
+
 			// Try the request again
 			return submitRequest_v1[DataType](c, ctx, requireAuth, method, body, queryParams, subroutes...)
 		}
@@ -363,6 +365,10 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error getting nonce for login: %w", err)
 	}
+	logger.Debug("Got nonce for login",
+		slog.String(keys.NonceKey, nonceData.Nonce),
+	)
+	c.token = nonceData.Token // Store this as a temp token for the login request
 
 	// Get the node wallet
 	hd := c.sp.GetHyperdriveClient()
@@ -385,22 +391,30 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 	}
 
 	// Create the request
+	signature := utils.EncodeHexWithPrefix(signResponse.Data.SignedMessage)
 	request := LoginRequest{
 		Nonce:     nonceData.Nonce,
 		Address:   nodeAddress.Hex(),
-		Signature: signResponse.Data.SignedMessage,
+		Signature: signature,
 	}
 	jsonData, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("error marshalling login request: %w", err)
 	}
 
+	logger.Debug("Sending login request",
+		slog.String(log.BodyKey, string(jsonData)),
+	)
+
 	// Submit the request
-	loginResponse, err := submitRequest_v1[LoginResponse](c, ctx, false, http.MethodPost, bytes.NewBuffer(jsonData), nil, devPath, loginPath)
+	loginData, err := submitRequest_v1[LoginData](c, ctx, true, http.MethodPost, bytes.NewBuffer(jsonData), nil, devPath, loginPath)
 	if err != nil {
 		return fmt.Errorf("error logging in: %w", err)
 	}
-	c.token = loginResponse.Token
+	c.token = loginData.Token // Save this as the persistent token for all other requests
+	logger.Debug("Got nonce for session",
+		slog.String(keys.NonceKey, nonceData.Nonce),
+	)
 
 	// Log the successful login
 	logger.Info("Logged into NodeSet server")
