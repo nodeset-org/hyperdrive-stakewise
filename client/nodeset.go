@@ -40,3 +40,11 @@ func (r *NodesetRequester) UploadDepositData() (*types.ApiResponse[swapi.Nodeset
 	args := map[string]string{}
 	return client.SendGetRequest[swapi.NodesetUploadDepositDataData](r, "upload-deposit-data", "UploadDepositData", args)
 }
+
+// Register node with NodeSet
+func (r *NodesetRequester) RegisterNode(email string) (*types.ApiResponse[types.SuccessData], error) {
+	args := map[string]string{
+		"email": email,
+	}
+	return client.SendGetRequest[types.SuccessData](r, "register-node", "RegisterNode", args)
+}
