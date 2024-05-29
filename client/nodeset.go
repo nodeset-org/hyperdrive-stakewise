@@ -40,3 +40,13 @@ func (r *NodesetRequester) UploadDepositData() (*types.ApiResponse[swapi.Nodeset
 	args := map[string]string{}
 	return client.SendGetRequest[swapi.NodesetUploadDepositDataData](r, "upload-deposit-data", "UploadDepositData", args)
 }
+
+// Blah
+func (r *NodesetRequester) Blah(nodeAddress string, email string, signature string) (*types.ApiResponse[types.TxInfoData], error) {
+	args := map[string]string{
+		"nodeAddress": nodeAddress,
+		"email":       email,
+		"signature":   signature,
+	}
+	return client.SendGetRequest[types.TxInfoData](r, "blah", "Blah", args)
+}
