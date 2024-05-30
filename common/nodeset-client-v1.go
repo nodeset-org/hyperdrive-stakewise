@@ -252,11 +252,11 @@ func (c *NodeSetClient_v1) GetRegisteredValidators(ctx context.Context) ([]Valid
 	queryParams := map[string]string{
 		"network": c.res.EthNetworkName,
 	}
-	statuses, err := submitRequest_v1[[]ValidatorStatus](c, ctx, true, http.MethodGet, nil, queryParams, devPath, validatorsPath)
+	statuses, err := submitRequest_v1[ValidatorsData](c, ctx, true, http.MethodGet, nil, queryParams, devPath, validatorsPath)
 	if err != nil {
 		return nil, fmt.Errorf("error getting registered validators: %w", err)
 	}
-	return statuses, nil
+	return statuses.Validators, nil
 }
 
 // Send a request to the server and read the response
