@@ -64,9 +64,9 @@ var (
 
 // Request to register a node with the NodeSet server
 type RegisterNodeRequest struct {
-	Email       string         `json:"email"`
-	NodeAddress common.Address `json:"node_address"`
-	Signature   string         `json:"signature"` // Must be 0x-prefixed hex encoded
+	Email       string `json:"email"`
+	NodeAddress string `json:"node_address"`
+	Signature   string `json:"signature"` // Must be 0x-prefixed hex encoded
 }
 
 // Request to log into the NodeSet server
@@ -163,6 +163,12 @@ func NewNodeSetClient_v1(sp *StakewiseServiceProvider) *NodeSetClient_v1 {
 // Registers the node with the NodeSet server. Assumes wallet validation has already been done and the actual wallet address
 // is provided here; if it's not, the signature won't come from the node being registered so it will fail validation.
 func (c *NodeSetClient_v1) RegisterNode(ctx context.Context, email string, nodeWallet common.Address) error {
+	// Get the logger
+	logger, exists := log.FromContext(ctx)
+	if !exists {
+		panic("context didn't have a logger!")
+	}
+
 	// Sign the message
 	hd := c.sp.GetHyperdriveClient()
 	message := fmt.Sprintf(nodeRegistrationMessageFormat, email, nodeWallet.Hex())
@@ -175,13 +181,17 @@ func (c *NodeSetClient_v1) RegisterNode(ctx context.Context, email string, nodeW
 	signature := utils.EncodeHexWithPrefix(signResponse.Data.SignedMessage)
 	request := RegisterNodeRequest{
 		Email:       email,
-		NodeAddress: nodeWallet,
+		NodeAddress: nodeWallet.Hex(),
 		Signature:   signature,
 	}
 	jsonData, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("error marshalling registration request: %w", err)
 	}
+
+	logger.Debug("Sending Nodeset register node request",
+		slog.String(log.BodyKey, string(jsonData)),
+	)
 
 	// Submit the request
 	_, err = submitRequest_v1[string](c, ctx, false, http.MethodPost, bytes.NewBuffer(jsonData), nil, devPath, registerPath)
@@ -397,6 +407,7 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 		Address:   nodeAddress.Hex(),
 		Signature: signature,
 	}
+
 	jsonData, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("error marshalling login request: %w", err)
