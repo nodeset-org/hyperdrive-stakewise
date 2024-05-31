@@ -15,3 +15,9 @@ type NodesetUploadDepositDataData struct {
 	EthPerKey            float64                  `json:"ethPerKey"`
 	RemainingEthRequired float64                  `json:"remainingEthRequired"`
 }
+
+type NodeSetRegisterNodeData struct {
+	Success           bool `json:"success"`
+	AlreadyRegistered bool `json:"alreadyRegistered"`
+	NotWhitelisted    bool `json:"notWhitelisted"`
+}

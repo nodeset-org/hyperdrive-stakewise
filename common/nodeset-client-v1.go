@@ -35,14 +35,17 @@ const (
 	// Format for the authorization header
 	authHeaderFormat string = "Bearer %s"
 
-	// Header in the response if there was a problem authenticating with the server
-	authResponseHeader string = "WWW-Authenticate"
-
 	// Value of the auth response header if the node hasn't registered yet
 	unregisteredTokenKey string = "unregistered_token"
 
 	// Value of the auth response header if the login token has expired
 	invalidSessionKey string = "invalid_session"
+
+	// The node address has already been confirmed on a NodeSet account
+	addressAlreadyAuthorizedKey string = "address_already_authorized"
+
+	// The node address hasn't been whitelisted on the provided NodeSet account
+	addressMissingWhitelistKey string = "address_missing_whitelist"
 
 	// API paths
 	devPath         string = "dev"
@@ -55,7 +58,9 @@ const (
 )
 
 var (
-	ErrUnregisteredNode error = errors.New("node hasn't been registered with the NodeSet server yet")
+	ErrUnregisteredNode  error = errors.New("node hasn't been registered with the NodeSet server yet")
+	ErrAlreadyRegistered error = errors.New("node has already been registered with the NodeSet server")
+	ErrNotWhitelisted    error = errors.New("node address hasn't been whitelisted on the provided NodeSet account")
 )
 
 // =================
@@ -105,6 +110,7 @@ type NodeSetResponse[DataType any] struct {
 	OK      bool     `json:"ok"`
 	Message string   `json:"message,omitempty"`
 	Data    DataType `json:"data,omitempty"`
+	Error   string   `json:"error,omitempty"`
 }
 
 // Response to a login request
@@ -150,14 +156,23 @@ type NodeSetClient_v1 struct {
 	sp    *StakewiseServiceProvider
 	res   *swconfig.StakewiseResources
 	token string
+
+	// Stores the node's registration status
+	isNodeRegistered bool
 }
 
 // Creates a new Nodeset client
 func NewNodeSetClient_v1(sp *StakewiseServiceProvider) *NodeSetClient_v1 {
 	return &NodeSetClient_v1{
-		sp:  sp,
-		res: sp.GetResources(),
+		sp:               sp,
+		res:              sp.GetResources(),
+		isNodeRegistered: true,
 	}
+}
+
+// Returns whether the node is registered with the NodeSet server
+func (c *NodeSetClient_v1) IsNodeRegistered() bool {
+	return c.isNodeRegistered
 }
 
 // Registers the node with the NodeSet server. Assumes wallet validation has already been done and the actual wallet address
@@ -194,16 +209,34 @@ func (c *NodeSetClient_v1) RegisterNode(ctx context.Context, email string, nodeW
 	)
 
 	// Submit the request
-	_, err = submitRequest_v1[string](c, ctx, false, http.MethodPost, bytes.NewBuffer(jsonData), nil, devPath, registerPath)
+	code, response, err := submitRequest_v1[string](c, ctx, false, http.MethodPost, bytes.NewBuffer(jsonData), nil, devPath, registerPath)
 	if err != nil {
 		return fmt.Errorf("error registering node: %w", err)
+	}
+
+	// Check for special errors
+	if code == http.StatusBadRequest {
+		switch response.Error {
+		case addressAlreadyAuthorizedKey:
+			return ErrAlreadyRegistered
+		case addressMissingWhitelistKey:
+			return ErrNotWhitelisted
+		}
+	}
+
+	// Handle general errors
+	if code != http.StatusOK {
+		return fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
 	}
 	return nil
 }
 
 // Uploads deposit data to Nodeset
 func (c *NodeSetClient_v1) UploadDepositData(ctx context.Context, depositData []byte) error {
-	_, err := submitRequest_v1[string](c, ctx, true, http.MethodPost, bytes.NewBuffer(depositData), nil, devPath, depositDataPath)
+	code, response, err := submitRequest_v1[string](c, ctx, true, http.MethodPost, bytes.NewBuffer(depositData), nil, devPath, depositDataPath)
+	if err == nil && code != http.StatusOK {
+		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
+	}
 	if err != nil {
 		return fmt.Errorf("error uploading deposit data: %w", err)
 	}
@@ -220,12 +253,15 @@ func (c *NodeSetClient_v1) UploadSignedExitData(ctx context.Context, exitData []
 	params := map[string]string{
 		"network": c.res.EthNetworkName,
 	}
+
 	// Submit the PATCH request with the serialized JSON
-	_, err = submitRequest_v1[string](c, ctx, true, http.MethodPatch, bytes.NewBuffer(jsonData), params, devPath, validatorsPath)
+	code, response, err := submitRequest_v1[string](c, ctx, true, http.MethodPatch, bytes.NewBuffer(jsonData), params, devPath, validatorsPath)
+	if err == nil && code != http.StatusOK {
+		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
+	}
 	if err != nil {
 		return fmt.Errorf("error submitting exit data: %w", err)
 	}
-
 	return nil
 }
 
@@ -236,11 +272,14 @@ func (c *NodeSetClient_v1) GetServerDepositDataVersion(ctx context.Context) (int
 		"vault":   vault,
 		"network": c.res.EthNetworkName,
 	}
-	data, err := submitRequest_v1[DepositDataMetaData](c, ctx, true, http.MethodGet, nil, params, devPath, depositDataPath, metaPath)
+	code, response, err := submitRequest_v1[DepositDataMetaData](c, ctx, true, http.MethodGet, nil, params, devPath, depositDataPath, metaPath)
+	if err == nil && code != http.StatusOK {
+		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
+	}
 	if err != nil {
 		return 0, fmt.Errorf("error getting deposit data version: %w", err)
 	}
-	return data.Version, nil
+	return response.Data.Version, nil
 }
 
 // Get the aggregated deposit data from the server
@@ -250,11 +289,14 @@ func (c *NodeSetClient_v1) GetServerDepositData(ctx context.Context) (int, []typ
 		"vault":   vault,
 		"network": c.res.EthNetworkName,
 	}
-	data, err := submitRequest_v1[DepositDataData](c, ctx, true, http.MethodGet, nil, params, devPath, depositDataPath)
+	code, response, err := submitRequest_v1[DepositDataData](c, ctx, true, http.MethodGet, nil, params, devPath, depositDataPath)
+	if err == nil && code != http.StatusOK {
+		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
+	}
 	if err != nil {
 		return 0, nil, fmt.Errorf("error getting deposit data: %w", err)
 	}
-	return data.Version, data.DepositData, nil
+	return response.Data.Version, response.Data.DepositData, nil
 }
 
 // Get a list of all of the pubkeys that have already been registered with NodeSet for this node
@@ -262,16 +304,19 @@ func (c *NodeSetClient_v1) GetRegisteredValidators(ctx context.Context) ([]Valid
 	queryParams := map[string]string{
 		"network": c.res.EthNetworkName,
 	}
-	statuses, err := submitRequest_v1[ValidatorsData](c, ctx, true, http.MethodGet, nil, queryParams, devPath, validatorsPath)
+	code, response, err := submitRequest_v1[ValidatorsData](c, ctx, true, http.MethodGet, nil, queryParams, devPath, validatorsPath)
+	if err == nil && code != http.StatusOK {
+		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("error getting registered validators: %w", err)
 	}
-	return statuses.Validators, nil
+	return response.Data.Validators, nil
 }
 
 // Send a request to the server and read the response
-func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, requireAuth bool, method string, body io.Reader, queryParams map[string]string, subroutes ...string) (DataType, error) {
-	var defaultVal DataType
+func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, requireAuth bool, method string, body io.Reader, queryParams map[string]string, subroutes ...string) (int, NodeSetResponse[DataType], error) {
+	var defaultVal NodeSetResponse[DataType]
 
 	// Get the logger
 	logger, exists := log.FromContext(ctx)
@@ -282,11 +327,11 @@ func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, re
 	// Make the request
 	path, err := url.JoinPath(c.res.NodesetApiUrl, subroutes...)
 	if err != nil {
-		return defaultVal, fmt.Errorf("error joining path [%v]: %w", subroutes, err)
+		return 0, defaultVal, fmt.Errorf("error joining path [%v]: %w", subroutes, err)
 	}
 	request, err := http.NewRequestWithContext(ctx, method, path, body)
 	if err != nil {
-		return defaultVal, fmt.Errorf("error generating request to [%s]: %w", path, err)
+		return 0, defaultVal, fmt.Errorf("error generating request to [%s]: %w", path, err)
 	}
 	query := request.URL.Query()
 	for name, value := range queryParams {
@@ -300,7 +345,7 @@ func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, re
 		if c.token == "" {
 			err = c.login(ctx)
 			if err != nil {
-				return defaultVal, fmt.Errorf("error logging in before submitting request: %w", err)
+				return 0, defaultVal, fmt.Errorf("error logging in before submitting request: %w", err)
 			}
 		}
 		request.Header.Set(authHeader, fmt.Sprintf(authHeaderFormat, c.token))
@@ -313,21 +358,34 @@ func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, re
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
-		return defaultVal, fmt.Errorf("error submitting request to nodeset server: %w", err)
+		return 0, defaultVal, fmt.Errorf("error submitting request to nodeset server: %w", err)
+	}
+
+	// Read the body
+	defer resp.Body.Close()
+	bytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, defaultVal, fmt.Errorf("nodeset server responded to request with code %s but reading the response body failed: %w", resp.Status, err)
+	}
+
+	// Unmarshal the response
+	var response NodeSetResponse[DataType]
+	err = json.Unmarshal(bytes, &response)
+	if err != nil {
+		return 0, defaultVal, fmt.Errorf("nodeset server responded to request with code %s and unmarshalling the response failed: [%w]... original body: [%s]", resp.Status, err, string(bytes))
 	}
 
 	// Check for auth issues
 	if resp.StatusCode == http.StatusUnauthorized {
-		// Get the header
-		authResponseCode := resp.Header.Get(authResponseHeader)
-		switch authResponseCode {
+		switch response.Error {
 		case unregisteredTokenKey:
-			return defaultVal, ErrUnregisteredNode
+			c.isNodeRegistered = false
+			return 0, defaultVal, ErrUnregisteredNode
 		case invalidSessionKey:
 			// Try logging in again
 			err = c.login(ctx)
 			if err != nil {
-				return defaultVal, fmt.Errorf("error logging in after token expired: %w", err)
+				return 0, defaultVal, fmt.Errorf("error logging in after token expired: %w", err)
 			}
 
 			// Try the request again
@@ -335,28 +393,9 @@ func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, re
 		}
 	}
 
-	// Read the body
-	defer resp.Body.Close()
-	bytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return defaultVal, fmt.Errorf("nodeset server responded to request with code %s but reading the response body failed: %w", resp.Status, err)
-	}
-
-	// Unmarshal the response
-	var response NodeSetResponse[DataType]
-	err = json.Unmarshal(bytes, &response)
-	if err != nil {
-		return defaultVal, fmt.Errorf("nodeset server responded to request with code %s and unmarshalling the response failed: [%w]... original body: [%s]", resp.Status, err, string(bytes))
-	}
-
-	// Check if the request failed
-	if resp.StatusCode != http.StatusOK {
-		return defaultVal, fmt.Errorf("nodeset server responded to request with code %s: [%s]", resp.Status, response.Message)
-	}
-
 	// Debug log
 	logger.Debug("NodeSet response:", slog.String(log.CodeKey, resp.Status), slog.String(keys.MessageKey, response.Message))
-	return response.Data, nil
+	return resp.StatusCode, response, nil
 }
 
 // Logs into the NodeSet API server, grabbing a new authentication token
@@ -371,10 +410,14 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 	logger.Info("Not authenticated with the NodeSet server, logging in")
 
 	// Get the nonce
-	nonceData, err := submitRequest_v1[NonceData](c, ctx, false, http.MethodGet, nil, nil, devPath, noncePath)
+	code, nonceResponse, err := submitRequest_v1[NonceData](c, ctx, false, http.MethodGet, nil, nil, devPath, noncePath)
+	if err == nil && code != http.StatusOK {
+		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, nonceResponse.Message)
+	}
 	if err != nil {
 		return fmt.Errorf("error getting nonce for login: %w", err)
 	}
+	nonceData := nonceResponse.Data
 	logger.Debug("Got nonce for login",
 		slog.String(keys.NonceKey, nonceData.Nonce),
 	)
@@ -418,10 +461,14 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 	)
 
 	// Submit the request
-	loginData, err := submitRequest_v1[LoginData](c, ctx, true, http.MethodPost, bytes.NewBuffer(jsonData), nil, devPath, loginPath)
+	code, loginResponse, err := submitRequest_v1[LoginData](c, ctx, true, http.MethodPost, bytes.NewBuffer(jsonData), nil, devPath, loginPath)
+	if err == nil && code != http.StatusOK {
+		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, loginResponse.Message)
+	}
 	if err != nil {
 		return fmt.Errorf("error logging in: %w", err)
 	}
+	loginData := loginResponse.Data
 	c.token = loginData.Token // Save this as the persistent token for all other requests
 	logger.Debug("Got nonce for session",
 		slog.String(keys.NonceKey, nonceData.Nonce),
@@ -429,6 +476,7 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 
 	// Log the successful login
 	logger.Info("Logged into NodeSet server")
+	c.isNodeRegistered = true
 
 	return nil
 }
