@@ -28,8 +28,8 @@ func (f *nodesetRegistrationStatusContextFactory) Create(args url.Values) (*node
 }
 
 func (f *nodesetRegistrationStatusContextFactory) RegisterRoute(router *mux.Router) {
-	duserver.RegisterQuerylessGet[*nodesetRegistrationStatusContext, swapi.NodeSetRegisterationStatusData](
-		router, "register-node", f, f.handler.logger.Logger, f.handler.serviceProvider.ServiceProvider,
+	duserver.RegisterQuerylessGet[*nodesetRegistrationStatusContext, swapi.NodeSetRegistrationStatusData](
+		router, "registration-status", f, f.handler.logger.Logger, f.handler.serviceProvider.ServiceProvider,
 	)
 }
 
@@ -41,7 +41,7 @@ type nodesetRegistrationStatusContext struct {
 	handler *NodesetHandler
 }
 
-func (c *nodesetRegistrationStatusContext) PrepareData(data *swapi.NodeSetRegisterationStatusData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
+func (c *nodesetRegistrationStatusContext) PrepareData(data *swapi.NodeSetRegistrationStatusData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	ctx := c.handler.ctx
 

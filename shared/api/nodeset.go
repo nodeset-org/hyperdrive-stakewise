@@ -22,6 +22,6 @@ type NodeSetRegisterNodeData struct {
 	NotWhitelisted    bool `json:"notWhitelisted"`
 }
 
-type NodeSetRegisterationStatusData struct {
+type NodeSetRegistrationStatusData struct {
 	Registered bool `json:"registered"`
 }
