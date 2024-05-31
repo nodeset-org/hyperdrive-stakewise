@@ -48,3 +48,9 @@ func (r *NodesetRequester) RegisterNode(email string) (*types.ApiResponse[swapi.
 	}
 	return client.SendGetRequest[swapi.NodeSetRegisterNodeData](r, "register-node", "RegisterNode", args)
 }
+
+// Get Registeration Status from Nodeset
+func (r *NodesetRequester) RegistrationStatus() (*types.ApiResponse[swapi.NodeSetRegisterationStatusData], error) {
+	args := map[string]string{}
+	return client.SendGetRequest[swapi.NodeSetRegisterationStatusData](r, "registeration-status", "RegisterationStatus", args)
+}
