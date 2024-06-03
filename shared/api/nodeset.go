@@ -7,7 +7,6 @@ import (
 type NodesetUploadDepositDataData struct {
 	SufficientBalance    bool                     `json:"sufficientBalance"`
 	Balance              float64                  `json:"balance"`
-	ServerResponse       []byte                   `json:"serverResponse"`
 	NewPubkeys           []beacon.ValidatorPubkey `json:"newPubkeys"`
 	RemainingPubkeys     []beacon.ValidatorPubkey `json:"remainingPubkeys"`
 	TotalCount           uint64                   `json:"totalCount"`
@@ -15,4 +14,14 @@ type NodesetUploadDepositDataData struct {
 	PendingCount         uint64                   `json:"pendingCount"`
 	EthPerKey            float64                  `json:"ethPerKey"`
 	RemainingEthRequired float64                  `json:"remainingEthRequired"`
+}
+
+type NodeSetRegisterNodeData struct {
+	Success           bool `json:"success"`
+	AlreadyRegistered bool `json:"alreadyRegistered"`
+	NotWhitelisted    bool `json:"notWhitelisted"`
+}
+
+type NodeSetRegistrationStatusData struct {
+	Registered bool `json:"registered"`
 }
