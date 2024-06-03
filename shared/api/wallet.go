@@ -17,6 +17,7 @@ type WalletGenerateKeysData struct {
 }
 
 type WalletClaimRewardsData struct {
+	NativeToken        common.Address       `json:"nativeToken"`
 	TokenName          string               `json:"tokenName"`
 	TokenSymbol        string               `json:"tokenSymbol"`
 	DistributableToken *big.Int             `json:"distributableToken"`

@@ -65,8 +65,8 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 		return types.ResponseStatus_AddressNotPresent, err
 	}
 
-	if res.SplitMain == nil {
-		return types.ResponseStatus_InvalidChainState, fmt.Errorf("no SplitMain contract has been set yet")
+	if res.SplitWarehouse == nil {
+		return types.ResponseStatus_InvalidChainState, fmt.Errorf("no SplitWarehouse contract has been set yet")
 	}
 	if res.Vault == nil {
 		return types.ResponseStatus_InvalidChainState, fmt.Errorf("no Stakewise Vault address has been set yet")
@@ -74,9 +74,9 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 
 	// Create bindings
 	logger.Debug("Preparing data for claim reward")
-	splitMainContract, err := swcontracts.NewSplitMain1_1(*res.SplitMain, ec, txMgr) // NOTE: need to parse the actual contract version once event support is added
+	splitWarehouseContract, err := swcontracts.NewSplitWarehouse(*res.SplitWarehouse, ec, txMgr) // NOTE: need to parse the actual contract version once event support is added
 	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error creating SplitMain binding: %w", err)
+		return types.ResponseStatus_Error, fmt.Errorf("error creating SplitWarehouse binding: %w", err)
 	}
 	token, err := contracts.NewErc20Contract(*res.Vault, ec, qMgr, txMgr, nil)
 	if err != nil {
@@ -85,22 +85,41 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 	data.TokenName = token.Name()
 	data.TokenSymbol = token.Symbol()
 
-	// Get the claimable rewards
+	// Get the native token address
 	err = qMgr.Query(func(mc *batch.MultiCaller) error {
-		splitMainContract.GetErc20Balance(mc, &data.WithdrawableToken, nodeAddress, *res.Vault)
-		splitMainContract.GetEthBalance(mc, &data.WithdrawableEth, nodeAddress)
+		splitWarehouseContract.NativeToken(mc, &data.NativeToken)
 		return nil
 	}, nil)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error querying claimable rewards: %w", err)
 	}
 
-	ethFlag := big.NewInt(0)
+	// Get the claimable rewards
+	err = qMgr.Query(func(mc *batch.MultiCaller) error {
+		splitWarehouseContract.BalanceOf(mc, &data.WithdrawableToken, nodeAddress, *res.Vault)
+		splitWarehouseContract.BalanceOf(mc, &data.WithdrawableEth, nodeAddress, data.NativeToken)
+		return nil
+	}, nil)
+	if err != nil {
+		return types.ResponseStatus_Error, fmt.Errorf("error querying claimable rewards: %w", err)
+	}
+
+	tokensToWithdraw := []common.Address{}
+	amountsToWithdraw := []*big.Int{}
+
 	if data.WithdrawableEth.Cmp(common.Big0) > 0 {
 		// Only withdraw ETH if there is a balance
-		ethFlag.Add(ethFlag, common.Big1)
+		tokensToWithdraw = append(tokensToWithdraw, data.NativeToken)
+		amountsToWithdraw = append(amountsToWithdraw, data.WithdrawableEth)
 	}
-	data.TxInfo, err = splitMainContract.Withdraw(nodeAddress, ethFlag, []common.Address{*res.Vault}, opts)
+
+	if data.WithdrawableToken.Cmp(common.Big0) > 0 {
+		// Only withdraw tokens if there is a balance
+		tokensToWithdraw = append(tokensToWithdraw, *res.Vault)
+		amountsToWithdraw = append(amountsToWithdraw, data.WithdrawableToken)
+	}
+
+	data.TxInfo, err = splitWarehouseContract.Withdraw(nodeAddress, amountsToWithdraw, tokensToWithdraw, opts)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error creating Withdraw TX: %w", err)
 	}
