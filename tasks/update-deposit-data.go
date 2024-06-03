@@ -2,6 +2,7 @@ package swtasks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -49,6 +50,10 @@ func (t *UpdateDepositDataTask) Run() error {
 	// Get the version on the server
 	remoteVersion, err := t.ns.GetServerDepositDataVersion(t.ctx)
 	if err != nil {
+		if errors.Is(err, swcommon.ErrUnregisteredNode) {
+			t.logger.Warn("Node is not registered with the NodeSet server yet.")
+			return nil
+		}
 		return fmt.Errorf("error getting latest deposit data version: %w", err)
 	}
 

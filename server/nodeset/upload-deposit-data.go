@@ -182,7 +182,11 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		return types.ResponseStatus_Error, fmt.Errorf("error serializing deposit data: %w", err)
 	}
 	if err := nc.UploadDepositData(ctx, serializedData); err != nil {
-		return types.ResponseStatus_Error, err
+		if errors.Is(err, swcommon.ErrUnregisteredNode) {
+			data.UnregisteredNode = true
+		} else {
+			return types.ResponseStatus_Error, fmt.Errorf("error uploading deposit data: %w", err)
+		}
 	}
 
 	return types.ResponseStatus_Success, nil
