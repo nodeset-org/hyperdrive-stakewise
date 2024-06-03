@@ -19,11 +19,11 @@ import (
 // === Factory ===
 // ===============
 
-type nodesetRegisterNodeContexttFactory struct {
+type nodesetRegisterNodeContextFactory struct {
 	handler *NodesetHandler
 }
 
-func (f *nodesetRegisterNodeContexttFactory) Create(args url.Values) (*nodesetRegisterNodeContext, error) {
+func (f *nodesetRegisterNodeContextFactory) Create(args url.Values) (*nodesetRegisterNodeContext, error) {
 	c := &nodesetRegisterNodeContext{
 		handler: f.handler,
 	}
@@ -33,7 +33,7 @@ func (f *nodesetRegisterNodeContexttFactory) Create(args url.Values) (*nodesetRe
 	return c, errors.Join(inputErrs...)
 }
 
-func (f *nodesetRegisterNodeContexttFactory) RegisterRoute(router *mux.Router) {
+func (f *nodesetRegisterNodeContextFactory) RegisterRoute(router *mux.Router) {
 	duserver.RegisterQuerylessGet[*nodesetRegisterNodeContext, swapi.NodeSetRegisterNodeData](
 		router, "register-node", f, f.handler.logger.Logger, f.handler.serviceProvider.ServiceProvider,
 	)

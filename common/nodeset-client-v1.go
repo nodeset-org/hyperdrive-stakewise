@@ -166,7 +166,7 @@ func NewNodeSetClient_v1(sp *StakewiseServiceProvider) *NodeSetClient_v1 {
 	return &NodeSetClient_v1{
 		sp:               sp,
 		res:              sp.GetResources(),
-		isNodeRegistered: true,
+		isNodeRegistered: false,
 	}
 }
 
@@ -228,6 +228,9 @@ func (c *NodeSetClient_v1) RegisterNode(ctx context.Context, email string, nodeW
 	if code != http.StatusOK {
 		return fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
 	}
+
+	// Node successfully registered
+	c.isNodeRegistered = true
 	return nil
 }
 
