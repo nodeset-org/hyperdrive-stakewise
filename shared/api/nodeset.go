@@ -5,6 +5,7 @@ import (
 )
 
 type NodesetUploadDepositDataData struct {
+	UnregisteredNode     bool                     `json:"unregisteredNode"`
 	SufficientBalance    bool                     `json:"sufficientBalance"`
 	Balance              float64                  `json:"balance"`
 	NewPubkeys           []beacon.ValidatorPubkey `json:"newPubkeys"`

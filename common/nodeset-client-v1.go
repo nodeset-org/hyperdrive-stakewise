@@ -36,7 +36,7 @@ const (
 	authHeaderFormat string = "Bearer %s"
 
 	// Value of the auth response header if the node hasn't registered yet
-	unregisteredTokenKey string = "unregistered_token"
+	unregisteredAddressKey string = "unregistered_address"
 
 	// Value of the auth response header if the login token has expired
 	invalidSessionKey string = "invalid_session"
@@ -380,8 +380,9 @@ func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, re
 
 	// Check for auth issues
 	if resp.StatusCode == http.StatusUnauthorized {
+		logger.Debug("NodeSet responded with 401 Unauthorized", slog.String(log.ErrorKey, response.Error))
 		switch response.Error {
-		case unregisteredTokenKey:
+		case unregisteredAddressKey:
 			c.isNodeRegistered = false
 			return 0, defaultVal, ErrUnregisteredNode
 		case invalidSessionKey:

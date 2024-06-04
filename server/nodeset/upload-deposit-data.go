@@ -73,7 +73,12 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	// Fetch status from Nodeset APIs
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
+		if errors.Is(err, swcommon.ErrUnregisteredNode) {
+			data.UnregisteredNode = true
+			return types.ResponseStatus_Success, nil
+		} else {
+			return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
+		}
 	}
 
 	// Fetch private keys and derive public keys
@@ -182,7 +187,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		return types.ResponseStatus_Error, fmt.Errorf("error serializing deposit data: %w", err)
 	}
 	if err := nc.UploadDepositData(ctx, serializedData); err != nil {
-		return types.ResponseStatus_Error, err
+		return types.ResponseStatus_Error, fmt.Errorf("error uploading deposit data: %w", err)
 	}
 
 	return types.ResponseStatus_Success, nil

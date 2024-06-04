@@ -2,6 +2,7 @@ package swtasks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -46,6 +47,10 @@ func (t *SendExitDataTask) Run() error {
 	// Get registered validators
 	resp, err := t.ns.GetRegisteredValidators(t.ctx)
 	if err != nil {
+		if errors.Is(err, swcommon.ErrUnregisteredNode) {
+			t.logger.Warn("Node is not registered with the NodeSet server yet.")
+			return nil
+		}
 		return fmt.Errorf("error getting registered validators: %w", err)
 	}
 	for _, status := range resp {
