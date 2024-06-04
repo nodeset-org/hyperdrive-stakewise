@@ -75,6 +75,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		if errors.Is(err, swcommon.ErrUnregisteredNode) {
 			data.UnregisteredNode = true
+			return types.ResponseStatus_Success, nil
 		} else {
 			return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
 		}
