@@ -70,7 +70,7 @@ func (c *SplitWarehouse) NativeToken(mc *batch.MultiCaller, out *common.Address)
 // === Transactions ===
 // ====================
 
-func (c *SplitWarehouse) Withdraw(address common.Address, amountWithdraw []*big.Int, claimTokenList []common.Address, opts *bind.TransactOpts) (*eth.TransactionInfo, error) {
+func (c *SplitWarehouse) Withdraw(address common.Address, claimTokenList []common.Address, amountWithdraw []*big.Int, opts *bind.TransactOpts) (*eth.TransactionInfo, error) {
 	return c.txMgr.CreateTransactionInfo(c.contract, "withdraw", opts, address, claimTokenList, amountWithdraw, address)
 }
 

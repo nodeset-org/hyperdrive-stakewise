@@ -17,12 +17,12 @@ type WalletGenerateKeysData struct {
 }
 
 type WalletClaimRewardsData struct {
-	NativeToken        common.Address       `json:"nativeToken"`
-	TokenName          string               `json:"tokenName"`
-	TokenSymbol        string               `json:"tokenSymbol"`
-	DistributableToken *big.Int             `json:"distributableToken"`
-	DistributableEth   *big.Int             `json:"distributableEth"`
-	WithdrawableToken  *big.Int             `json:"withdrawableToken"`
-	WithdrawableEth    *big.Int             `json:"withdrawableEth"`
-	TxInfo             *eth.TransactionInfo `json:"txInfo"`
+	NativeToken             common.Address       `json:"nativeToken"`
+	TokenName               string               `json:"tokenName"`
+	TokenSymbol             string               `json:"tokenSymbol"`
+	DistributableToken      *big.Int             `json:"distributableToken"`
+	DistributableEth        *big.Int             `json:"distributableEth"`
+	WithdrawableToken       *big.Int             `json:"withdrawableToken"`
+	WithdrawableNativeToken *big.Int             `json:"withdrawableNativeToken"`
+	TxInfo                  *eth.TransactionInfo `json:"txInfo"`
 }

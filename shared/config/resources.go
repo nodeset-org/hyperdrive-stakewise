@@ -26,6 +26,7 @@ type StakewiseResources struct {
 
 	// The address of the SplitWarehouse contract used to hold user funds.
 	// All node op rewards will live here; to claim them, call `Withdraw`.
+	// See https://docs.splits.org/core/warehouse
 	SplitWarehouse *common.Address
 }
 

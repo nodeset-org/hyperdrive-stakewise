@@ -97,7 +97,7 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 	// Get the claimable rewards
 	err = qMgr.Query(func(mc *batch.MultiCaller) error {
 		splitWarehouseContract.BalanceOf(mc, &data.WithdrawableToken, nodeAddress, *res.Vault)
-		splitWarehouseContract.BalanceOf(mc, &data.WithdrawableEth, nodeAddress, data.NativeToken)
+		splitWarehouseContract.BalanceOf(mc, &data.WithdrawableNativeToken, nodeAddress, data.NativeToken)
 		return nil
 	}, nil)
 	if err != nil {
@@ -107,10 +107,10 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 	tokensToWithdraw := []common.Address{}
 	amountsToWithdraw := []*big.Int{}
 
-	if data.WithdrawableEth.Cmp(common.Big0) > 0 {
+	if data.WithdrawableNativeToken.Cmp(common.Big0) > 0 {
 		// Only withdraw ETH if there is a balance
 		tokensToWithdraw = append(tokensToWithdraw, data.NativeToken)
-		amountsToWithdraw = append(amountsToWithdraw, data.WithdrawableEth)
+		amountsToWithdraw = append(amountsToWithdraw, data.WithdrawableNativeToken)
 	}
 
 	if data.WithdrawableToken.Cmp(common.Big0) > 0 {
@@ -119,7 +119,7 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 		amountsToWithdraw = append(amountsToWithdraw, data.WithdrawableToken)
 	}
 
-	data.TxInfo, err = splitWarehouseContract.Withdraw(nodeAddress, amountsToWithdraw, tokensToWithdraw, opts)
+	data.TxInfo, err = splitWarehouseContract.Withdraw(nodeAddress, tokensToWithdraw, amountsToWithdraw, opts)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error creating Withdraw TX: %w", err)
 	}
