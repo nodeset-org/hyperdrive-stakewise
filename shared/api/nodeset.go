@@ -24,6 +24,7 @@ type NodesetUploadDepositDataData struct {
 	PendingCount         uint64                   `json:"pendingCount"`
 	EthPerKey            float64                  `json:"ethPerKey"`
 	RemainingEthRequired float64                  `json:"remainingEthRequired"`
+	SerializedData       []byte                   `json:"serializedData"`
 }
 
 type NodeSetRegisterNodeData struct {
