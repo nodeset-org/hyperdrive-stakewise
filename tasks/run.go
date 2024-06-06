@@ -9,6 +9,8 @@ import (
 
 	"github.com/fatih/color"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
+	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
+	"github.com/nodeset-org/hyperdrive-stakewise/shared/keys"
 	"github.com/rocket-pool/node-manager-core/log"
 	"github.com/rocket-pool/node-manager-core/utils"
 )
@@ -67,6 +69,9 @@ func NewTaskLoop(sp *swcommon.StakewiseServiceProvider, wg *sync.WaitGroup) *Tas
 
 // Run daemon
 func (t *TaskLoop) Run() error {
+	// Log into the NodeSet server to check registration status
+	t.logIntoNodeSet()
+
 	// Run task loop
 	t.wg.Add(1)
 	go func() {
@@ -100,6 +105,40 @@ func (t *TaskLoop) Run() error {
 		}()
 	*/
 	return nil
+}
+
+// Log into the NodeSet server to check registration status
+func (t *TaskLoop) logIntoNodeSet() {
+	ns := t.sp.GetNodesetClient()
+	attempts := 3
+	for i := 0; i < attempts; i++ {
+		status, err := ns.GetNodeRegistrationStatus(t.ctx)
+		switch status {
+		case swapi.NodesetRegistrationStatus_Registered:
+			// Successful login
+			return
+		case swapi.NodesetRegistrationStatus_NoWallet:
+			// Error was because the wallet isn't ready yet, so just return since logging in won't work yet
+			t.logger.Info("Can't log in, node doesn't have a wallet yet")
+			return
+		case swapi.NodesetRegistrationStatus_Unregistered:
+			// Node's not registered yet, this isn't an actual error to report
+			t.logger.Info("Can't log in, node is not registered with NodeSet yet")
+			return
+		default:
+			// Error was because of a comms failure, so try again after 1 second
+			t.logger.Warn(
+				"Getting node registration status during NodeSet login attempt failed",
+				slog.String(log.ErrorKey, err.Error()),
+				slog.Int(keys.AttemptKey, i+1),
+			)
+			if utils.SleepWithCancel(t.ctx, time.Second) {
+				return
+			}
+		}
+
+	}
+	t.logger.Error("Max login attempts reached")
 }
 
 // Wait until the chains and other resources are ready to be queried
@@ -149,6 +188,11 @@ func (t *TaskLoop) waitUntilReady() waitUntilReadyResult {
 		}
 		t.logger.Error("Error waiting for Stakewise wallet initialization", slog.String(log.ErrorKey, errMsg))
 		return t.sleepAndReturnReadyResult()
+	}
+
+	// Wait for NodeSet registration
+	if t.sp.WaitForNodeSetRegistration(t.ctx) {
+		return waitUntilReadyExit
 	}
 
 	return waitUntilReadySuccess

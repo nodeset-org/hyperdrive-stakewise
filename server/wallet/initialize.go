@@ -44,7 +44,9 @@ type walletInitializeContext struct {
 func (c *walletInitializeContext) PrepareData(data *api.WalletInitializeData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	client := sp.GetHyperdriveClient()
+	ns := sp.GetNodesetClient()
 	w := sp.GetWallet()
+	ctx := c.handler.ctx
 
 	// Requirements
 	err := sp.RequireWalletReady(walletStatus)
@@ -67,5 +69,8 @@ func (c *walletInitializeContext) PrepareData(data *api.WalletInitializeData, wa
 	}
 
 	data.AccountAddress = walletStatus.Wallet.WalletAddress
+
+	// Force a login to the NodeSet service with the new wallet - other queries will get more info so errors are ignored
+	_ = ns.Login(ctx)
 	return types.ResponseStatus_Success, nil
 }

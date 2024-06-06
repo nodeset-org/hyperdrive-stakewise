@@ -53,7 +53,10 @@ func (c *nodesetRegistrationStatusContext) PrepareData(data *swapi.NodeSetRegist
 
 	// Register the node
 	ns := sp.GetNodesetClient()
-	data.Registered = ns.IsNodeRegistered()
+	data.Status, err = ns.GetNodeRegistrationStatus(ctx)
+	if err != nil {
+		data.ErrorMessage = err.Error()
+	}
 
 	return types.ResponseStatus_Success, nil
 }

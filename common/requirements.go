@@ -3,10 +3,18 @@ package swcommon
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
+	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	"github.com/rocket-pool/node-manager-core/log"
+	"github.com/rocket-pool/node-manager-core/utils"
 	"github.com/rocket-pool/node-manager-core/wallet"
+)
+
+const (
+	nodeSetRegistrationCheckInterval time.Duration = 15 * time.Second
 )
 
 func (sp *StakewiseServiceProvider) RequireStakewiseWalletReady(ctx context.Context, status wallet.WalletStatus) error {
@@ -56,6 +64,41 @@ func (sp *StakewiseServiceProvider) WaitForStakewiseWallet(ctx context.Context) 
 		return err
 	}
 	return sp.initializeStakewiseWallet(logger)
+}
+
+// Wait until the node has been registered with NodeSet.
+// Returns true if the context was cancelled and the caller should exit.
+func (sp *StakewiseServiceProvider) WaitForNodeSetRegistration(ctx context.Context) bool {
+	// Get the logger
+	logger, exists := log.FromContext(ctx)
+	if !exists {
+		panic("context didn't have a logger!")
+	}
+
+	// Wait for NodeSet registration
+	ns := sp.GetNodesetClient()
+	for {
+		status, err := ns.GetNodeRegistrationStatus(ctx)
+		if status == swapi.NodesetRegistrationStatus_Registered {
+			return false
+		}
+
+		var msg string
+		switch status {
+		case swapi.NodesetRegistrationStatus_Unregistered:
+			msg = "Not registered with NodeSet yet"
+		case swapi.NodesetRegistrationStatus_Unknown:
+			msg = fmt.Sprintf("Can't check NodeSet registration status (%s)", err.Error())
+		case swapi.NodesetRegistrationStatus_NoWallet:
+			msg = "Can't check NodeSet registration status until node has a wallet"
+		}
+		logger.Info(msg,
+			slog.Duration("retry", nodeSetRegistrationCheckInterval),
+		)
+		if utils.SleepWithCancel(ctx, nodeSetRegistrationCheckInterval) {
+			return true
+		}
+	}
 }
 
 func (sp *StakewiseServiceProvider) initializeStakewiseWallet(logger *log.Logger) error {

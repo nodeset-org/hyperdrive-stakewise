@@ -95,19 +95,20 @@ func main() {
 			return fmt.Errorf("error creating Stakewise service provider: %w", err)
 		}
 
-		// Start the server
+		// Start the task loop
+		fmt.Println("Starting task loop...")
+		taskLoop := swtasks.NewTaskLoop(stakewiseSp, stopWg)
+		err = taskLoop.Run()
+		if err != nil {
+			return fmt.Errorf("error starting task loop: %w", err)
+		}
+
+		// Start the server after the task loop so it can log into NodeSet before this starts serving registration status checks
 		ip := c.String(ipFlag.Name)
 		port := c.Uint64(portFlag.Name)
 		serverMgr, err := server.NewServerManager(stakewiseSp, ip, uint16(port), stopWg)
 		if err != nil {
 			return fmt.Errorf("error creating Stakewise server: %w", err)
-		}
-
-		// Start the task loop
-		taskLoop := swtasks.NewTaskLoop(stakewiseSp, stopWg)
-		err = taskLoop.Run()
-		if err != nil {
-			return fmt.Errorf("error starting task loop: %w", err)
 		}
 
 		// Handle process closures

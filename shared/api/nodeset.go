@@ -4,6 +4,15 @@ import (
 	"github.com/rocket-pool/node-manager-core/beacon"
 )
 
+type NodesetRegistrationStatus string
+
+const (
+	NodesetRegistrationStatus_Registered   NodesetRegistrationStatus = "registered"
+	NodesetRegistrationStatus_Unregistered NodesetRegistrationStatus = "unregistered"
+	NodesetRegistrationStatus_Unknown      NodesetRegistrationStatus = "unknown"
+	NodesetRegistrationStatus_NoWallet     NodesetRegistrationStatus = "no-wallet"
+)
+
 type NodesetUploadDepositDataData struct {
 	UnregisteredNode     bool                     `json:"unregisteredNode"`
 	SufficientBalance    bool                     `json:"sufficientBalance"`
@@ -24,5 +33,6 @@ type NodeSetRegisterNodeData struct {
 }
 
 type NodeSetRegistrationStatusData struct {
-	Registered bool `json:"registered"`
+	Status       NodesetRegistrationStatus `json:"status"`
+	ErrorMessage string                    `json:"errorMessage"`
 }
