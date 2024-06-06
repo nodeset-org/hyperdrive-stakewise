@@ -32,7 +32,7 @@ func (f *nodesetGenerateDepositDataContextFactory) Create(args url.Values) (*nod
 		handler: f.handler,
 	}
 	inputErrs := []error{
-		server.ValidateArgBatch("pubkeys", args, 0, input.ValidatePubkey, &c.pubkeys),
+		server.ValidateOptionalArgBatch("pubkeys", args, 0, input.ValidatePubkey, &c.pubkeys, nil),
 	}
 	return c, errors.Join(inputErrs...)
 }
