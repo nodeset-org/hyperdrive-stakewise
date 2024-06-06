@@ -1,12 +1,11 @@
 package swclient
 
 import (
-	"strconv"
-
 	"github.com/ethereum/go-ethereum/common"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	"github.com/rocket-pool/node-manager-core/api/client"
 	"github.com/rocket-pool/node-manager-core/api/types"
+	"github.com/rocket-pool/node-manager-core/beacon"
 )
 
 type NodesetRequester struct {
@@ -37,11 +36,9 @@ func (r *NodesetRequester) SetValidatorsRoot(root common.Hash) (*types.ApiRespon
 	return client.SendGetRequest[types.TxInfoData](r, "set-validators-root", "SetValidatorsRoot", args)
 }
 
-// Upload the aggregated deposit data file to NodeSet's servers, or just print and return it
-func (r *NodesetRequester) UploadDepositData(printOnly bool) (*types.ApiResponse[swapi.NodesetUploadDepositDataData], error) {
-	args := map[string]string{
-		"print-only": strconv.FormatBool(printOnly),
-	}
+// Upload the aggregated deposit data file to NodeSet's servers
+func (r *NodesetRequester) UploadDepositData() (*types.ApiResponse[swapi.NodesetUploadDepositDataData], error) {
+	args := map[string]string{}
 	return client.SendGetRequest[swapi.NodesetUploadDepositDataData](r, "upload-deposit-data", "UploadDepositData", args)
 }
 
@@ -57,4 +54,12 @@ func (r *NodesetRequester) RegisterNode(email string) (*types.ApiResponse[swapi.
 func (r *NodesetRequester) RegistrationStatus() (*types.ApiResponse[swapi.NodeSetRegistrationStatusData], error) {
 	args := map[string]string{}
 	return client.SendGetRequest[swapi.NodeSetRegistrationStatusData](r, "registration-status", "RegistrationStatus", args)
+}
+
+// Generate deposit data for your validator keys without uploading them to NodeSet
+func (r *NodesetRequester) GenerateDepositData(pubkeys []beacon.ValidatorPubkey) (*types.ApiResponse[swapi.NodesetGenerateDepositDataData], error) {
+	args := map[string]string{
+		"pubkeys": client.MakeBatchArg(pubkeys),
+	}
+	return client.SendGetRequest[swapi.NodesetGenerateDepositDataData](r, "generate-deposit-data", "GenerateDepositData", args)
 }

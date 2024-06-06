@@ -1,6 +1,7 @@
 package swapi
 
 import (
+	"github.com/nodeset-org/hyperdrive-daemon/shared/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
 )
 
@@ -24,7 +25,6 @@ type NodesetUploadDepositDataData struct {
 	PendingCount         uint64                   `json:"pendingCount"`
 	EthPerKey            float64                  `json:"ethPerKey"`
 	RemainingEthRequired float64                  `json:"remainingEthRequired"`
-	SerializedData       []byte                   `json:"serializedData"`
 }
 
 type NodeSetRegisterNodeData struct {
@@ -36,4 +36,8 @@ type NodeSetRegisterNodeData struct {
 type NodeSetRegistrationStatusData struct {
 	Status       NodesetRegistrationStatus `json:"status"`
 	ErrorMessage string                    `json:"errorMessage"`
+}
+
+type NodesetGenerateDepositDataData struct {
+	Deposits []*types.ExtendedDepositData `json:"deposits"`
 }

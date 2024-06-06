@@ -13,11 +13,9 @@ import (
 	"github.com/gorilla/mux"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	"github.com/rocket-pool/node-manager-core/eth"
-	"github.com/rocket-pool/node-manager-core/utils/input"
 
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
-	"github.com/rocket-pool/node-manager-core/api/server"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/wallet"
@@ -38,12 +36,9 @@ type nodesetUploadDepositDataContextFactory struct {
 
 func (f *nodesetUploadDepositDataContextFactory) Create(args url.Values) (*nodesetUploadDepositDataContext, error) {
 	c := &nodesetUploadDepositDataContext{
-		handler:   f.handler,
-		printOnly: false,
+		handler: f.handler,
 	}
-	inputErrs := []error{
-		server.ValidateOptionalArg("print-only", args, input.ValidateBool, &c.printOnly, nil),
-	}
+	inputErrs := []error{}
 	return c, errors.Join(inputErrs...)
 }
 
@@ -57,8 +52,7 @@ func (f *nodesetUploadDepositDataContextFactory) RegisterRoute(router *mux.Route
 // === Context ===
 // ===============
 type nodesetUploadDepositDataContext struct {
-	handler   *NodesetHandler
-	printOnly bool
+	handler *NodesetHandler
 }
 
 func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadDepositDataData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
@@ -183,7 +177,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		data.RemainingEthRequired = eth.WeiToEth(remainingEthRequired)
 	}
 
-	// Generate deposit data
+	// Generate deposit data and submit
 	depositData, err := ddMgr.GenerateDepositData(registeredKeys)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error generating deposit data: %w", err)
@@ -192,15 +186,8 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error serializing deposit data: %w", err)
 	}
-
-	// Attach or submit
-	if c.printOnly {
-		data.SerializedData = serializedData
-	} else {
-		err := nc.UploadDepositData(ctx, serializedData)
-		if err != nil {
-			return types.ResponseStatus_Error, fmt.Errorf("error uploading deposit data: %w", err)
-		}
+	if err := nc.UploadDepositData(ctx, serializedData); err != nil {
+		return types.ResponseStatus_Error, fmt.Errorf("error uploading deposit data: %w", err)
 	}
 
 	return types.ResponseStatus_Success, nil
