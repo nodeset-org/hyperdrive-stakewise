@@ -58,8 +58,9 @@ func (r *NodesetRequester) RegistrationStatus() (*types.ApiResponse[swapi.NodeSe
 
 // Generate deposit data for your validator keys without uploading them to NodeSet
 func (r *NodesetRequester) GenerateDepositData(pubkeys []beacon.ValidatorPubkey) (*types.ApiResponse[swapi.NodesetGenerateDepositDataData], error) {
-	args := map[string]string{
-		"pubkeys": client.MakeBatchArg(pubkeys),
+	args := map[string]string{}
+	if len(pubkeys) > 0 {
+		args["pubkeys"] = client.MakeBatchArg(pubkeys)
 	}
 	return client.SendGetRequest[swapi.NodesetGenerateDepositDataData](r, "generate-deposit-data", "GenerateDepositData", args)
 }
