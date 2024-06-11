@@ -102,6 +102,8 @@ mkdir -p build/$VERSION
 
 # Make a multiarch builder, ignore if it's already there
 docker buildx create --name multiarch-builder --driver docker-container --use > /dev/null 2>&1
+# NOTE: if using a local repo with a private CA, you will have to follow these steps to add the CA to the builder:
+# https://stackoverflow.com/a/73585243
 
 # Build the artifacts
 if [ "$DAEMON" = true ]; then
