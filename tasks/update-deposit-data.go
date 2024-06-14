@@ -21,16 +21,16 @@ import (
 type UpdateDepositDataTask struct {
 	logger *log.Logger
 	ctx    context.Context
-	sp     *swcommon.StakewiseServiceProvider
+	sp     *swcommon.StakeWiseServiceProvider
 	w      *swcommon.Wallet
 	hd     *client.ApiClient
 	ns     *swcommon.NodeSetClient_v1
 	ddMgr  *swcommon.DepositDataManager
-	cfg    *swconfig.StakewiseConfig
+	cfg    *swconfig.StakeWiseConfig
 }
 
 // Create update deposit data task
-func NewUpdateDepositDataTask(ctx context.Context, sp *swcommon.StakewiseServiceProvider, logger *log.Logger) *UpdateDepositDataTask {
+func NewUpdateDepositDataTask(ctx context.Context, sp *swcommon.StakeWiseServiceProvider, logger *log.Logger) *UpdateDepositDataTask {
 	return &UpdateDepositDataTask{
 		logger: logger,
 		ctx:    ctx,

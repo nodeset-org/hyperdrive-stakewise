@@ -155,7 +155,7 @@ type ValidatorsData struct {
 
 // Client for interacting with the Nodeset server
 type NodeSetClient_v1 struct {
-	sp    *StakewiseServiceProvider
+	sp    *StakeWiseServiceProvider
 	res   *swconfig.StakewiseResources
 	token string
 
@@ -165,13 +165,22 @@ type NodeSetClient_v1 struct {
 }
 
 // Creates a new Nodeset client
-func NewNodeSetClient_v1(sp *StakewiseServiceProvider) *NodeSetClient_v1 {
+func NewNodeSetClient_v1(sp *StakeWiseServiceProvider) *NodeSetClient_v1 {
 	return &NodeSetClient_v1{
 		sp:                     sp,
 		res:                    sp.GetResources(),
 		nodeRegistrationStatus: swapi.NodesetRegistrationStatus_Unknown,
 		lock:                   &sync.Mutex{},
 	}
+}
+
+// Logs out of the NodeSet service, resetting the registration status in the process.
+func (c *NodeSetClient_v1) Logout() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.token = ""
+	c.nodeRegistrationStatus = swapi.NodesetRegistrationStatus_Unknown
 }
 
 // Returns whether the node is registered with the NodeSet server

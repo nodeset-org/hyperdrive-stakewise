@@ -12,11 +12,11 @@ import (
 type WalletHandler struct {
 	logger          *log.Logger
 	ctx             context.Context
-	serviceProvider *swcommon.StakewiseServiceProvider
+	serviceProvider *swcommon.StakeWiseServiceProvider
 	factories       []server.IContextFactory
 }
 
-func NewWalletHandler(logger *log.Logger, ctx context.Context, serviceProvider *swcommon.StakewiseServiceProvider) *WalletHandler {
+func NewWalletHandler(logger *log.Logger, ctx context.Context, serviceProvider *swcommon.StakeWiseServiceProvider) *WalletHandler {
 	h := &WalletHandler{
 		logger:          logger,
 		ctx:             ctx,

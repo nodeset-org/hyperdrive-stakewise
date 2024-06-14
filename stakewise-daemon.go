@@ -32,7 +32,7 @@ func main() {
 
 	// Set application info
 	app.Name = "stakewise-daemon"
-	app.Usage = "Hyperdrive Daemon for NodeSet Stakewise Module Management"
+	app.Usage = "Hyperdrive Daemon for NodeSet StakeWise Module Management"
 	app.Version = shared.HyperdriveVersion
 	app.Authors = []*cli.Author{
 		{
@@ -45,7 +45,7 @@ func main() {
 	moduleDirFlag := &cli.StringFlag{
 		Name:     "module-dir",
 		Aliases:  []string{"d"},
-		Usage:    "The path to the Stakewise module data directory",
+		Usage:    "The path to the StakeWise module data directory",
 		Required: true,
 	}
 	hyperdriveUrlFlag := &cli.StringFlag{
@@ -86,13 +86,13 @@ func main() {
 		stopWg := new(sync.WaitGroup)
 
 		// Create the service provider
-		sp, err := services.NewServiceProvider(hyperdriveUrl, moduleDir, swconfig.ModuleName, swconfig.ClientLogName, swconfig.NewStakewiseConfig, config.ClientTimeout)
+		sp, err := services.NewServiceProvider(hyperdriveUrl, moduleDir, swconfig.ModuleName, swconfig.ClientLogName, swconfig.NewStakeWiseConfig, config.ClientTimeout)
 		if err != nil {
 			return fmt.Errorf("error creating service provider: %w", err)
 		}
-		stakewiseSp, err := swcommon.NewStakewiseServiceProvider(sp)
+		stakewiseSp, err := swcommon.NewStakeWiseServiceProvider(sp)
 		if err != nil {
-			return fmt.Errorf("error creating Stakewise service provider: %w", err)
+			return fmt.Errorf("error creating StakeWise service provider: %w", err)
 		}
 
 		// Start the task loop
@@ -108,7 +108,7 @@ func main() {
 		port := c.Uint64(portFlag.Name)
 		serverMgr, err := server.NewServerManager(stakewiseSp, ip, uint16(port), stopWg)
 		if err != nil {
-			return fmt.Errorf("error creating Stakewise server: %w", err)
+			return fmt.Errorf("error creating StakeWise server: %w", err)
 		}
 
 		// Handle process closures
