@@ -17,7 +17,7 @@ const (
 	nodeSetRegistrationCheckInterval time.Duration = 15 * time.Second
 )
 
-func (sp *StakewiseServiceProvider) RequireStakewiseWalletReady(ctx context.Context, status wallet.WalletStatus) error {
+func (sp *StakeWiseServiceProvider) RequireStakewiseWalletReady(ctx context.Context, status wallet.WalletStatus) error {
 	// Get the logger
 	logger, exists := log.FromContext(ctx)
 	if !exists {
@@ -42,7 +42,7 @@ func (sp *StakewiseServiceProvider) RequireStakewiseWalletReady(ctx context.Cont
 	return sp.initializeStakewiseWallet(logger)
 }
 
-func (sp *StakewiseServiceProvider) WaitForStakewiseWallet(ctx context.Context) error {
+func (sp *StakeWiseServiceProvider) WaitForStakewiseWallet(ctx context.Context) error {
 	// Get the logger
 	logger, exists := log.FromContext(ctx)
 	if !exists {
@@ -68,7 +68,7 @@ func (sp *StakewiseServiceProvider) WaitForStakewiseWallet(ctx context.Context) 
 
 // Wait until the node has been registered with NodeSet.
 // Returns true if the context was cancelled and the caller should exit.
-func (sp *StakewiseServiceProvider) WaitForNodeSetRegistration(ctx context.Context) bool {
+func (sp *StakeWiseServiceProvider) WaitForNodeSetRegistration(ctx context.Context) bool {
 	// Get the logger
 	logger, exists := log.FromContext(ctx)
 	if !exists {
@@ -101,7 +101,7 @@ func (sp *StakewiseServiceProvider) WaitForNodeSetRegistration(ctx context.Conte
 	}
 }
 
-func (sp *StakewiseServiceProvider) initializeStakewiseWallet(logger *log.Logger) error {
+func (sp *StakeWiseServiceProvider) initializeStakewiseWallet(logger *log.Logger) error {
 	// Get the wallet from Hyperdrive
 	logger.Warn("Stakewise wallet not found, initializing now")
 	ethkeyResponse, err := sp.GetHyperdriveClient().Wallet.ExportEthKey()

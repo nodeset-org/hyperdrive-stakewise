@@ -12,11 +12,11 @@ import (
 type StatusHandler struct {
 	logger          *log.Logger
 	ctx             context.Context
-	serviceProvider *swcommon.StakewiseServiceProvider
+	serviceProvider *swcommon.StakeWiseServiceProvider
 	factories       []server.IContextFactory
 }
 
-func NewStatusHandler(logger *log.Logger, ctx context.Context, serviceProvider *swcommon.StakewiseServiceProvider) *StatusHandler {
+func NewStatusHandler(logger *log.Logger, ctx context.Context, serviceProvider *swcommon.StakeWiseServiceProvider) *StatusHandler {
 	h := &StatusHandler{
 		logger:          logger,
 		ctx:             ctx,

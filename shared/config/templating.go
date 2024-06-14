@@ -6,41 +6,41 @@ import (
 	"github.com/rocket-pool/node-manager-core/config"
 )
 
-func (c *StakewiseConfig) WalletFilename() string {
+func (c *StakeWiseConfig) WalletFilename() string {
 	return WalletFilename
 }
 
-func (c *StakewiseConfig) PasswordFilename() string {
+func (c *StakeWiseConfig) PasswordFilename() string {
 	return PasswordFilename
 }
 
-func (c *StakewiseConfig) KeystorePasswordFile() string {
+func (c *StakeWiseConfig) KeystorePasswordFile() string {
 	return KeystorePasswordFile
 }
 
-func (c *StakewiseConfig) DaemonContainerName() string {
+func (c *StakeWiseConfig) DaemonContainerName() string {
 	return string(ContainerID_StakewiseDaemon)
 }
 
-func (c *StakewiseConfig) OperatorContainerName() string {
+func (c *StakeWiseConfig) OperatorContainerName() string {
 	return string(ContainerID_StakewiseOperator)
 }
 
-func (c *StakewiseConfig) VcContainerName() string {
+func (c *StakeWiseConfig) VcContainerName() string {
 	return string(ContainerID_StakewiseValidator)
 }
 
-func (c *StakewiseConfig) DepositDataFile() string {
+func (c *StakeWiseConfig) DepositDataFile() string {
 	return DepositDataFile
 }
 
 // The tag for the daemon container
-func (cfg *StakewiseConfig) GetDaemonContainerTag() string {
+func (cfg *StakeWiseConfig) GetDaemonContainerTag() string {
 	return cfg.DaemonContainerTag.Value
 }
 
 // Get the container tag of the selected VC
-func (cfg *StakewiseConfig) GetVcContainerTag() string {
+func (cfg *StakeWiseConfig) GetVcContainerTag() string {
 	bn := cfg.hdCfg.GetSelectedBeaconNode()
 	switch bn {
 	case config.BeaconNode_Lighthouse:
@@ -59,7 +59,7 @@ func (cfg *StakewiseConfig) GetVcContainerTag() string {
 }
 
 // Gets the additional flags of the selected VC
-func (cfg *StakewiseConfig) GetVcAdditionalFlags() string {
+func (cfg *StakeWiseConfig) GetVcAdditionalFlags() string {
 	bn := cfg.hdCfg.GetSelectedBeaconNode()
 	switch bn {
 	case config.BeaconNode_Lighthouse:
@@ -79,12 +79,12 @@ func (cfg *StakewiseConfig) GetVcAdditionalFlags() string {
 
 // Check if any of the services have doppelganger detection enabled
 // NOTE: update this with each new service that runs a VC!
-func (cfg *StakewiseConfig) IsDoppelgangerEnabled() bool {
+func (cfg *StakeWiseConfig) IsDoppelgangerEnabled() bool {
 	return cfg.VcCommon.DoppelgangerDetection.Value
 }
 
 // Used by text/template to format validator.yml
-func (cfg *StakewiseConfig) Graffiti() (string, error) {
+func (cfg *StakeWiseConfig) Graffiti() (string, error) {
 	prefix := cfg.hdCfg.GraffitiPrefix()
 	customGraffiti := cfg.VcCommon.Graffiti.Value
 	if customGraffiti == "" {
@@ -93,18 +93,18 @@ func (cfg *StakewiseConfig) Graffiti() (string, error) {
 	return fmt.Sprintf("%s (%s)", prefix, customGraffiti), nil
 }
 
-func (cfg *StakewiseConfig) FeeRecipient() string {
+func (cfg *StakeWiseConfig) FeeRecipient() string {
 	return cfg.resources.FeeRecipient.Hex()
 }
 
-func (cfg *StakewiseConfig) Vault() string {
+func (cfg *StakeWiseConfig) Vault() string {
 	return cfg.resources.Vault.Hex()
 }
 
-func (cfg *StakewiseConfig) Network() string {
+func (cfg *StakeWiseConfig) Network() string {
 	return cfg.resources.EthNetworkName
 }
 
-func (cfg *StakewiseConfig) IsEnabled() bool {
+func (cfg *StakeWiseConfig) IsEnabled() bool {
 	return cfg.Enabled.Value
 }

@@ -20,7 +20,7 @@ type ServerManager struct {
 }
 
 // Creates a new server manager
-func NewServerManager(sp *swcommon.StakewiseServiceProvider, ip string, port uint16, stopWg *sync.WaitGroup) (*ServerManager, error) {
+func NewServerManager(sp *swcommon.StakeWiseServiceProvider, ip string, port uint16, stopWg *sync.WaitGroup) (*ServerManager, error) {
 	// Start the API server
 	apiServer, err := createServer(sp, ip, port)
 	if err != nil {
@@ -30,6 +30,7 @@ func NewServerManager(sp *swcommon.StakewiseServiceProvider, ip string, port uin
 	if err != nil {
 		return nil, fmt.Errorf("error starting API server: %w", err)
 	}
+	port = apiServer.GetPort()
 	fmt.Printf("API server started on %s:%d\n", ip, port)
 
 	// Create the manager
@@ -37,6 +38,11 @@ func NewServerManager(sp *swcommon.StakewiseServiceProvider, ip string, port uin
 		apiServer: apiServer,
 	}
 	return mgr, nil
+}
+
+// Returns the port the server is running on
+func (m *ServerManager) GetPort() uint16 {
+	return m.apiServer.GetPort()
 }
 
 // Stops and shuts down the servers
@@ -48,7 +54,7 @@ func (m *ServerManager) Stop() {
 }
 
 // Creates a new Hyperdrive API server
-func createServer(sp *swcommon.StakewiseServiceProvider, ip string, port uint16) (*server.NetworkSocketApiServer, error) {
+func createServer(sp *swcommon.StakeWiseServiceProvider, ip string, port uint16) (*server.NetworkSocketApiServer, error) {
 	apiLogger := sp.GetApiLogger()
 	ctx := apiLogger.CreateContextWithLogger(sp.GetBaseContext())
 

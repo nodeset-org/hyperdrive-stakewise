@@ -15,7 +15,7 @@ const (
 )
 
 // Configuration for Stakewise
-type StakewiseConfig struct {
+type StakeWiseConfig struct {
 	// Toggle for enabling access to the root filesystem (for multiple disk usage metrics)
 	Enabled config.Parameter[bool]
 
@@ -49,8 +49,22 @@ type StakewiseConfig struct {
 }
 
 // Generates a new Stakewise config
-func NewStakewiseConfig(hdCfg *hdconfig.HyperdriveConfig) *StakewiseConfig {
-	cfg := &StakewiseConfig{
+func NewStakeWiseConfig(hdCfg *hdconfig.HyperdriveConfig) *StakeWiseConfig {
+	swCfg := newStakeWiseConfigImpl(hdCfg)
+	swCfg.updateResources()
+	return swCfg
+}
+
+// Generates a new Stakewise config with custom resources
+func NewStakeWiseConfigWithResources(hdCfg *hdconfig.HyperdriveConfig, resources *StakewiseResources) *StakeWiseConfig {
+	swCfg := newStakeWiseConfigImpl(hdCfg)
+	swCfg.resources = resources
+	return swCfg
+}
+
+// Internal constructor for Stakewise config
+func newStakeWiseConfigImpl(hdCfg *hdconfig.HyperdriveConfig) *StakeWiseConfig {
+	cfg := &StakeWiseConfig{
 		hdCfg: hdCfg,
 
 		Enabled: config.Parameter[bool]{
@@ -144,26 +158,32 @@ func NewStakewiseConfig(hdCfg *hdconfig.HyperdriveConfig) *StakewiseConfig {
 	cfg.Nimbus = config.NewNimbusVcConfig()
 	cfg.Prysm = config.NewPrysmVcConfig()
 	cfg.Teku = config.NewTekuVcConfig()
+
+	// Add test network support to the VC tags
 	cfg.Lighthouse.ContainerTag.Default[hdconfig.Network_HoleskyDev] = cfg.Lighthouse.ContainerTag.Default[config.Network_Holesky]
 	cfg.Lodestar.ContainerTag.Default[hdconfig.Network_HoleskyDev] = cfg.Lodestar.ContainerTag.Default[config.Network_Holesky]
 	cfg.Nimbus.ContainerTag.Default[hdconfig.Network_HoleskyDev] = cfg.Nimbus.ContainerTag.Default[config.Network_Holesky]
 	cfg.Prysm.ContainerTag.Default[hdconfig.Network_HoleskyDev] = cfg.Prysm.ContainerTag.Default[config.Network_Holesky]
 	cfg.Teku.ContainerTag.Default[hdconfig.Network_HoleskyDev] = cfg.Teku.ContainerTag.Default[config.Network_Holesky]
 
-	// Apply the default values for mainnet
-	config.ApplyDefaults(cfg, hdCfg.Network.Value)
-	cfg.updateResources()
+	cfg.Lighthouse.ContainerTag.Default[hdconfig.Network_LocalTest] = cfg.Lighthouse.ContainerTag.Default[config.Network_Holesky]
+	cfg.Lodestar.ContainerTag.Default[hdconfig.Network_LocalTest] = cfg.Lodestar.ContainerTag.Default[config.Network_Holesky]
+	cfg.Nimbus.ContainerTag.Default[hdconfig.Network_LocalTest] = cfg.Nimbus.ContainerTag.Default[config.Network_Holesky]
+	cfg.Prysm.ContainerTag.Default[hdconfig.Network_LocalTest] = cfg.Prysm.ContainerTag.Default[config.Network_Holesky]
+	cfg.Teku.ContainerTag.Default[hdconfig.Network_LocalTest] = cfg.Teku.ContainerTag.Default[config.Network_Holesky]
 
+	// Apply the default values for the current network
+	config.ApplyDefaults(cfg, hdCfg.Network.Value)
 	return cfg
 }
 
 // The title for the config
-func (cfg *StakewiseConfig) GetTitle() string {
+func (cfg *StakeWiseConfig) GetTitle() string {
 	return "Stakewise"
 }
 
 // Get the parameters for this config
-func (cfg *StakewiseConfig) GetParameters() []config.IParameter {
+func (cfg *StakeWiseConfig) GetParameters() []config.IParameter {
 	return []config.IParameter{
 		&cfg.Enabled,
 		&cfg.ApiPort,
@@ -175,7 +195,7 @@ func (cfg *StakewiseConfig) GetParameters() []config.IParameter {
 }
 
 // Get the sections underneath this one
-func (cfg *StakewiseConfig) GetSubconfigs() map[string]config.IConfigSection {
+func (cfg *StakeWiseConfig) GetSubconfigs() map[string]config.IConfigSection {
 	return map[string]config.IConfigSection{
 		ids.VcCommonID:   cfg.VcCommon,
 		ids.LighthouseID: cfg.Lighthouse,
@@ -187,15 +207,15 @@ func (cfg *StakewiseConfig) GetSubconfigs() map[string]config.IConfigSection {
 }
 
 // Changes the current network, propagating new parameter settings if they are affected
-func (cfg *StakewiseConfig) ChangeNetwork(oldNetwork config.Network, newNetwork config.Network) {
+func (cfg *StakeWiseConfig) ChangeNetwork(oldNetwork config.Network, newNetwork config.Network) {
 	// Run the changes
 	config.ChangeNetwork(cfg, oldNetwork, newNetwork)
 	cfg.updateResources()
 }
 
 // Creates a copy of the configuration
-func (cfg *StakewiseConfig) Clone() hdconfig.IModuleConfig {
-	clone := NewStakewiseConfig(cfg.hdCfg)
+func (cfg *StakeWiseConfig) Clone() hdconfig.IModuleConfig {
+	clone := NewStakeWiseConfig(cfg.hdCfg)
 	config.Clone(cfg, clone, cfg.hdCfg.Network.Value)
 	clone.Version = cfg.Version
 	clone.updateResources()
@@ -203,30 +223,30 @@ func (cfg *StakewiseConfig) Clone() hdconfig.IModuleConfig {
 }
 
 // Get the Stakewise resources for the selected network
-func (cfg *StakewiseConfig) GetStakewiseResources() *StakewiseResources {
+func (cfg *StakeWiseConfig) GetStakeWiseResources() *StakewiseResources {
 	return cfg.resources
 }
 
 // Updates the default parameters based on the current network value
-func (cfg *StakewiseConfig) UpdateDefaults(network config.Network) {
+func (cfg *StakeWiseConfig) UpdateDefaults(network config.Network) {
 	config.UpdateDefaults(cfg, network)
 }
 
 // Checks to see if the current configuration is valid; if not, returns a list of errors
-func (cfg *StakewiseConfig) Validate() []string {
+func (cfg *StakeWiseConfig) Validate() []string {
 	errors := []string{}
 	return errors
 }
 
 // Serialize the module config to a map
-func (cfg *StakewiseConfig) Serialize() map[string]any {
+func (cfg *StakeWiseConfig) Serialize() map[string]any {
 	cfgMap := config.Serialize(cfg)
 	cfgMap[hdids.VersionID] = cfg.Version
 	return cfgMap
 }
 
 // Deserialize the module config from a map
-func (cfg *StakewiseConfig) Deserialize(configMap map[string]any, network config.Network) error {
+func (cfg *StakeWiseConfig) Deserialize(configMap map[string]any, network config.Network) error {
 	err := config.Deserialize(cfg, configMap, network)
 	if err != nil {
 		return err
@@ -241,7 +261,7 @@ func (cfg *StakewiseConfig) Deserialize(configMap map[string]any, network config
 }
 
 // Get the version of the module config
-func (cfg *StakewiseConfig) GetVersion() string {
+func (cfg *StakeWiseConfig) GetVersion() string {
 	return cfg.Version
 }
 
@@ -250,7 +270,7 @@ func (cfg *StakewiseConfig) GetVersion() string {
 // =====================
 
 // Update the config's resource cache
-func (cfg *StakewiseConfig) updateResources() {
+func (cfg *StakeWiseConfig) updateResources() {
 	cfg.resources = newStakewiseResources(cfg.hdCfg.Network.Value)
 }
 
@@ -258,19 +278,19 @@ func (cfg *StakewiseConfig) updateResources() {
 // === Module Info ===
 // ===================
 
-func (cfg *StakewiseConfig) GetHdClientLogFileName() string {
+func (cfg *StakeWiseConfig) GetHdClientLogFileName() string {
 	return ClientLogName
 }
 
-func (cfg *StakewiseConfig) GetApiLogFileName() string {
+func (cfg *StakeWiseConfig) GetApiLogFileName() string {
 	return hdconfig.ApiLogName
 }
 
-func (cfg *StakewiseConfig) GetTasksLogFileName() string {
+func (cfg *StakeWiseConfig) GetTasksLogFileName() string {
 	return hdconfig.TasksLogName
 }
 
-func (cfg *StakewiseConfig) GetLogNames() []string {
+func (cfg *StakeWiseConfig) GetLogNames() []string {
 	return []string{
 		cfg.GetHdClientLogFileName(),
 		cfg.GetApiLogFileName(),
@@ -279,22 +299,22 @@ func (cfg *StakewiseConfig) GetLogNames() []string {
 }
 
 // The module name
-func (cfg *StakewiseConfig) GetModuleName() string {
+func (cfg *StakeWiseConfig) GetModuleName() string {
 	return ModuleName
 }
 
 // The module name
-func (cfg *StakewiseConfig) GetShortName() string {
+func (cfg *StakeWiseConfig) GetShortName() string {
 	return ShortModuleName
 }
 
-func (cfg *StakewiseConfig) GetValidatorContainerTagInfo() map[config.ContainerID]string {
+func (cfg *StakeWiseConfig) GetValidatorContainerTagInfo() map[config.ContainerID]string {
 	return map[config.ContainerID]string{
 		ContainerID_StakewiseValidator: cfg.GetVcContainerTag(),
 	}
 }
 
-func (cfg *StakewiseConfig) GetContainersToDeploy() []config.ContainerID {
+func (cfg *StakeWiseConfig) GetContainersToDeploy() []config.ContainerID {
 	return []config.ContainerID{
 		ContainerID_StakewiseDaemon,
 		ContainerID_StakewiseOperator,

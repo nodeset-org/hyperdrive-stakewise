@@ -38,7 +38,7 @@ type TaskLoop struct {
 	// Services
 	ctx    context.Context
 	logger *log.Logger
-	sp     *swcommon.StakewiseServiceProvider
+	sp     *swcommon.StakeWiseServiceProvider
 	wg     *sync.WaitGroup
 
 	// Tasks
@@ -50,7 +50,7 @@ type TaskLoop struct {
 	wasBeaconClientSynced    bool
 }
 
-func NewTaskLoop(sp *swcommon.StakewiseServiceProvider, wg *sync.WaitGroup) *TaskLoop {
+func NewTaskLoop(sp *swcommon.StakeWiseServiceProvider, wg *sync.WaitGroup) *TaskLoop {
 	logger := sp.GetTasksLogger()
 	ctx := logger.CreateContextWithLogger(sp.GetBaseContext())
 	taskLoop := &TaskLoop{
