@@ -112,7 +112,10 @@ func status_cleanup(snapshotName string) {
 	}
 
 	// Reload the SW wallet to undo any changes made during the test
-	testMgr.GetStakeWiseServiceProvider().GetWallet().Reload()
+	err = testMgr.GetStakeWiseServiceProvider().GetWallet().Reload()
+	if err != nil {
+		fail("Error reloading wallet for Stakewise: %v", err)
+	}
 
 	// Log out of the NS mock server
 	testMgr.GetStakeWiseServiceProvider().GetNodesetClient().Logout()
