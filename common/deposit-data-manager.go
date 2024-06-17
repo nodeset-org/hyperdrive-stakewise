@@ -123,9 +123,13 @@ func (m *DepositDataManager) UpdateDepositData(data []types.ExtendedDepositData)
 // NOTE: reverse engineered from https://github.com/stakewise/v3-operator/blob/fa4ac2673a64a486ced51098005376e56e2ddd19/src/validators/utils.py#L207
 func (m *DepositDataManager) ComputeMerkleRoot(data []types.ExtendedDepositData) (common.Hash, error) {
 	leafCount := len(data)
-	leaves := make([][]byte, leafCount)
+	if leafCount == 0 {
+		// Empty data gets an empty root
+		return common.Hash{}, nil
+	}
 
 	// Create leaf data for each deposit data
+	leaves := make([][]byte, leafCount)
 	for i, dd := range data {
 		// Get the deposit data root for this deposit data
 		ddRoot, err := m.regenerateDepositDataRoot(dd)
