@@ -84,7 +84,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	// Check the response
 	require.Len(t, response.Data.States, 1)
 	responseValidator := response.Data.States[0]
-	require.Equal(t, swtypes.NodesetStatus_UploadedToNodeset, responseValidator.NodesetStatus) // Should be RegisteredToStakewise but that's not implemented on the NS side yet
+	require.Equal(t, swtypes.NodesetStatus_RegisteredToStakewise, responseValidator.NodesetStatus)
 	require.Equal(t, beacon.ValidatorState_ActiveOngoing, responseValidator.BeaconStatus)
 	require.Equal(t, strconv.FormatUint(validator.Index, 10), responseValidator.Index)
 	t.Logf("Validator was active, index = %s", responseValidator.Index)
