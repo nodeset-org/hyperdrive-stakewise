@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/nodeset-org/hyperdrive-daemon v0.5.0-b1.0.20240614184837-e4f7a44efd10
-	github.com/nodeset-org/nodeset-svc-mock v0.1.1-0.20240617153031-d1f012b45a3e
+	github.com/nodeset-org/nodeset-svc-mock v0.1.1-0.20240617160247-3ac8bfac0cb9
 	github.com/nodeset-org/osha v0.1.1-0.20240614183409-91272019f954
 	github.com/rocket-pool/batch-query v1.0.0
 	github.com/rocket-pool/node-manager-core v0.4.1-0.20240614183125-1546057bc5ef
