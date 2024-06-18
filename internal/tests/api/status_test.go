@@ -74,7 +74,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	// Mark the validator as active
 	err = nsMock.MarkValidatorRegistered(vault, network, depositDataSet)
 	require.NoError(t, err)
-	t.Log("Deposit data set marked as uploaded")
+	t.Log("Deposit data set marked as registered")
 
 	// Set the validator to active
 	validator.Status = beacon.ValidatorState_ActiveOngoing
