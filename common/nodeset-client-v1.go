@@ -559,6 +559,7 @@ func IsUploadedToNodeset(pubKey beacon.ValidatorPubkey, registeredPubkeys []beac
 func GetNodesetStatus(pubKey beacon.ValidatorPubkey, registeredPubkeysStatusMapping map[beacon.ValidatorPubkey]string) swtypes.NodesetStatus {
 	for registeredPubKey, nodesetStatus := range registeredPubkeysStatusMapping {
 		if registeredPubKey == pubKey {
+			// TODO: Convert these string values to enum
 			if nodesetStatus == "REGISTERED" {
 				return swtypes.NodesetStatus_RegisteredToStakewise
 			} else if nodesetStatus == "UPLOADED" {
