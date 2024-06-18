@@ -18,6 +18,8 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/shared/types"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
+	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
+
 	"github.com/nodeset-org/hyperdrive-stakewise/shared/keys"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/log"
@@ -554,12 +556,18 @@ func IsUploadedToNodeset(pubKey beacon.ValidatorPubkey, registeredPubkeys []beac
 	return false
 }
 
-func IsRegisteredToStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
-	// TODO: Implement
-	return false
-}
-
-func IsUploadedStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
-	// TODO: Implement
-	return false
+func GetNodesetStatus(pubKey beacon.ValidatorPubkey, registeredPubkeysStatusMapping map[beacon.ValidatorPubkey]string) swtypes.NodesetStatus {
+	for registeredPubKey, nodesetStatus := range registeredPubkeysStatusMapping {
+		if registeredPubKey == pubKey {
+			// TODO: Convert these string values to enum
+			if nodesetStatus == "REGISTERED" {
+				return swtypes.NodesetStatus_RegisteredToStakewise
+			} else if nodesetStatus == "UPLOADED" {
+				return swtypes.NodesetStatus_UploadedStakewise
+			} else {
+				return swtypes.NodesetStatus_UploadedToNodeset
+			}
+		}
+	}
+	return swtypes.NodesetStatus_Generated
 }
