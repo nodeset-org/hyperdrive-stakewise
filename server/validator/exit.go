@@ -67,6 +67,7 @@ func (c *validatorExitContext) PrepareData(data *api.ValidatorExitData, walletSt
 	w := sp.GetWallet()
 	ctx := c.handler.ctx
 
+	// This line below never gets called since an empty pubkey list will throw a validation error
 	if len(c.pubkeys) == 0 {
 		return types.ResponseStatus_Success, nil
 	}
@@ -130,6 +131,7 @@ func (c *validatorExitContext) PrepareData(data *api.ValidatorExitData, walletSt
 			Index:     indexUint,
 			Signature: signature,
 		}
+
 		if !c.noBroadcast {
 			err = bc.ExitValidator(ctx, index, c.epoch, signature)
 			if err != nil {
