@@ -113,13 +113,13 @@ func status_cleanup(snapshotName string) {
 	// Reload the HD wallet to undo any changes made during the test
 	err = testMgr.GetServiceProvider().GetWallet().Reload(testMgr.GetLogger())
 	if err != nil {
-		fail("Error reloading wallet: %v", err)
+		fail("Error reloading hyperdrive wallet: %v", err)
 	}
 
 	// Reload the SW wallet to undo any changes made during the test
 	err = testMgr.GetStakeWiseServiceProvider().GetWallet().Reload()
 	if err != nil {
-		fail("Error reloading wallet for Stakewise: %v", err)
+		fail("Error reloading stakewise wallet: %v", err)
 	}
 
 	// Log out of the NS mock server

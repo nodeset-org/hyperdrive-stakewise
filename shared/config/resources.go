@@ -39,11 +39,11 @@ func newStakewiseResources(network config.Network) *StakewiseResources {
 	// Mainnet
 	mainnetResources := &StakewiseResources{
 		NetworkResources: config.NewResources(config.Network_Mainnet),
-		NodesetApiUrl:    "",
-		Vault:            nil,
-		FeeRecipient:     nil,
-		SplitWarehouse:   nil,
-		PullSplit:        nil,
+		NodesetApiUrl:    "https://nodeset.io/api",
+		Vault:            config.HexToAddressPtr("0xE2AEECC76839692AEa35a8D119181b14ebf411c9"),
+		FeeRecipient:     config.HexToAddressPtr("0x48319f97E5Da1233c21c48b80097c0FB7a20Ff86"),
+		SplitWarehouse:   config.HexToAddressPtr("0x8fb66F38cF86A3d5e8768f8F1754A24A6c661Fb8"),
+		PullSplit:        config.HexToAddressPtr("0x6Cc15f76F76326aCe299Ad7b8fdf4693a96E05C1"),
 	}
 
 	// Holesky
