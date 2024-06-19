@@ -378,8 +378,8 @@ github.com/multiformats/go-multihash v0.2.3/go.mod h1:dXgKXCXjBzdscBLk9JkjINiEsC
 github.com/multiformats/go-varint v0.0.7 h1:sWSGR+f/eu5ABZA2ZpYKBILXTTs9JWpdEM/nEGOHFS8=
 github.com/multiformats/go-varint v0.0.7/go.mod h1:r8PUYw/fD/SjBCiKOoDlGF6QawOELpZAu9eioSos/OU=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
-github.com/nodeset-org/hyperdrive-daemon v0.5.0-b1.0.20240618204202-7f072201f2a6 h1:TLL3iLutiZ5Pgr/LrVFe0rnSYIC1g2qrYFGm8SxO5ew=
-github.com/nodeset-org/hyperdrive-daemon v0.5.0-b1.0.20240618204202-7f072201f2a6/go.mod h1:s/Xyxms9/wmKZL9AqQVurNnqttae//DKPqJJhsj5nMM=
+github.com/nodeset-org/hyperdrive-daemon v0.5.0-b1.0.20240619210724-0605e8ffb53e h1:rlTlwxOXLmF3KJarJCnARmWAvOXfABbsr05MX+oZ6T8=
+github.com/nodeset-org/hyperdrive-daemon v0.5.0-b1.0.20240619210724-0605e8ffb53e/go.mod h1:s/Xyxms9/wmKZL9AqQVurNnqttae//DKPqJJhsj5nMM=
 github.com/nodeset-org/nodeset-svc-mock v0.2.0 h1:JBR0EqHGNkRvVaidUWZcShb+WgOgIaTcaeYzV0/TAvo=
 github.com/nodeset-org/nodeset-svc-mock v0.2.0/go.mod h1:pbff0NjIm7oCmBRKgXkXIWp/a9/zAXaS7BDJ69wR4GU=
 github.com/nodeset-org/osha v0.2.0 h1:k/rqy8Qun/EAnodU+yZy98OSHWK36PzmBfLXvb2uVw8=
