@@ -59,6 +59,10 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
 	}
+	err = sp.RequireBeaconClientSynced(ctx)
+	if err != nil {
+		return types.ResponseStatus_ClientsNotSynced, err
+	}
 
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {

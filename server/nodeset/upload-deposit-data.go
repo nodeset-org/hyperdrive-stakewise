@@ -69,6 +69,14 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
 	}
+	err = sp.RequireEthClientSynced(ctx)
+	if err != nil {
+		return types.ResponseStatus_ClientsNotSynced, err
+	}
+	err = sp.RequireBeaconClientSynced(ctx)
+	if err != nil {
+		return types.ResponseStatus_ClientsNotSynced, err
+	}
 
 	// Fetch status from Nodeset APIs
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)

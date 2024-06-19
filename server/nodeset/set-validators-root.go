@@ -61,6 +61,10 @@ func (c *nodesetSetValidatorsRootContext) PrepareData(data *types.TxInfoData, wa
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
 	}
+	err = sp.RequireEthClientSynced(ctx)
+	if err != nil {
+		return types.ResponseStatus_ClientsNotSynced, err
+	}
 
 	if res.Vault == nil {
 		return types.ResponseStatus_InvalidChainState, fmt.Errorf("no Stakewise Vault address has been set yet")

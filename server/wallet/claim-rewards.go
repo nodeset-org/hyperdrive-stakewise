@@ -58,11 +58,16 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 	qMgr := sp.GetQueryManager()
 	txMgr := sp.GetTransactionManager()
 	nodeAddress := walletStatus.Address.NodeAddress
+	ctx := c.handler.ctx
 
 	// Requirements
 	err := sp.RequireNodeAddress(walletStatus)
 	if err != nil {
 		return types.ResponseStatus_AddressNotPresent, err
+	}
+	err = sp.RequireEthClientSynced(ctx)
+	if err != nil {
+		return types.ResponseStatus_ClientsNotSynced, err
 	}
 
 	if res.SplitWarehouse == nil {
