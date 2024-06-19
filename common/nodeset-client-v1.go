@@ -51,6 +51,12 @@ const (
 	// The node address hasn't been whitelisted on the provided NodeSet account
 	addressMissingWhitelistKey string = "address_missing_whitelist"
 
+	// Deposit data has withdrawal creds that don't match a StakeWise vault
+	vaultNotFoundKey string = "vault_not_found"
+
+	// Deposit data can't be uploaded to Mainnet because the user isn't allowed to use Mainnet yet
+	invalidPermissionsKey string = "invalid_permissions"
+
 	// API paths
 	devPath         string = "dev"
 	registerPath    string = "node-address"
@@ -62,9 +68,11 @@ const (
 )
 
 var (
-	ErrUnregisteredNode  error = errors.New("node hasn't been registered with the NodeSet server yet")
-	ErrAlreadyRegistered error = errors.New("node has already been registered with the NodeSet server")
-	ErrNotWhitelisted    error = errors.New("node address hasn't been whitelisted on the provided NodeSet account")
+	ErrUnregisteredNode   error = errors.New("node hasn't been registered with the NodeSet server yet")
+	ErrAlreadyRegistered  error = errors.New("node has already been registered with the NodeSet server")
+	ErrNotWhitelisted     error = errors.New("node address hasn't been whitelisted on the provided NodeSet account")
+	ErrVaultNotFound      error = errors.New("deposit data has withdrawal creds that don't match a StakeWise vault")
+	ErrInvalidPermissions error = errors.New("deposit data can't be uploaded to Mainnet because you aren't permitted to use Mainnet yet")
 )
 
 // =================
@@ -267,12 +275,29 @@ func (c *NodeSetClient_v1) UploadDepositData(ctx context.Context, depositData []
 	defer c.lock.Unlock()
 
 	code, response, err := submitRequest_v1[string](c, ctx, true, http.MethodPost, bytes.NewBuffer(depositData), nil, devPath, depositDataPath)
-	if err == nil && code != http.StatusOK {
-		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
-	}
 	if err != nil {
 		return fmt.Errorf("error uploading deposit data: %w", err)
 	}
+
+	// Check for special errors
+	switch code {
+	case http.StatusBadRequest:
+		switch response.Error {
+		case vaultNotFoundKey:
+			return ErrVaultNotFound
+		}
+	case http.StatusForbidden:
+		switch response.Error {
+		case invalidPermissionsKey:
+			return ErrInvalidPermissions
+		}
+	}
+
+	// Handle general errors
+	if code != http.StatusOK {
+		return fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
+	}
+
 	return nil
 }
 
