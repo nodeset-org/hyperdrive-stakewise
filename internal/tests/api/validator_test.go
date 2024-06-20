@@ -48,7 +48,6 @@ func TestExit(t *testing.T) {
 	t.Log("Validator added to the beacon chain")
 
 	client := testMgr.GetApiClient()
-	// var exitEpoch uint64 = 1
 	response, err := client.Validator.Exit([]beacon.ValidatorPubkey{pubkey}, nil, false)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(response.Data.ExitInfos))

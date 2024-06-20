@@ -16,13 +16,6 @@ func TestWalletInit_Success(t *testing.T) {
 	}
 	defer status_cleanup(snapshotName)
 
-	// Get some resources
-	// sp := testMgr.GetStakeWiseServiceProvider()
-	// vault := *sp.GetResources().Vault
-	// network := sp.GetResources().EthNetworkName
-	// wallet := sp.GetWallet()
-	// ddMgr := sp.GetDepositDataManager()
-	// nsMock := testMgr.GetNodeSetMockServer().GetManager()
 	client := testMgr.GetApiClient()
 
 	response, err := client.Wallet.Initialize()
