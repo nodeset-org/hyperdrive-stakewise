@@ -52,51 +52,60 @@ func NewWallet(sp *services.ServiceProvider) (*Wallet, error) {
 		stakewisePasswordFilePath: filepath.Join(moduleDir, swconfig.PasswordFilename),
 	}
 
+	err := wallet.Reload()
+	if err != nil {
+		return nil, fmt.Errorf("error loading wallet: %w", err)
+	}
+	return wallet, nil
+}
+
+// Reload the wallet data from disk
+func (w *Wallet) Reload() error {
 	// Check if the wallet data exists
+	moduleDir := w.sp.GetModuleDir()
 	dataPath := filepath.Join(moduleDir, walletDataFilename)
 	_, err := os.Stat(dataPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		// No data yet, so make some
-		wallet.data = stakewiseWalletData{
+		w.data = stakewiseWalletData{
 			NextAccount:               0,
 			NodeSetDepositDataVersion: 0,
 		}
 
 		// Save it
-		err = wallet.saveData()
+		err = w.saveData()
 		if err != nil {
-			return nil, err
+			return err
 		}
 	} else if err != nil {
-		return nil, fmt.Errorf("error checking status of wallet file [%s]: %w", dataPath, err)
+		return fmt.Errorf("error checking status of wallet file [%s]: %w", dataPath, err)
 	} else {
 		// Read it
 		bytes, err := os.ReadFile(dataPath)
 		if err != nil {
-			return nil, fmt.Errorf("error loading wallet data: %w", err)
+			return fmt.Errorf("error loading wallet data: %w", err)
 		}
 		var data stakewiseWalletData
 		err = json.Unmarshal(bytes, &data)
 		if err != nil {
-			return nil, fmt.Errorf("error deserializing wallet data: %w", err)
+			return fmt.Errorf("error deserializing wallet data: %w", err)
 		}
-		wallet.data = data
+		w.data = data
 	}
 
 	// Make the Stakewise keystore manager
 	stakewiseKeystoreMgr, err := newStakewiseKeystoreManager(moduleDir)
 	if err != nil {
-		return nil, fmt.Errorf("error creating Stakewise keystore manager: %w", err)
+		return fmt.Errorf("error creating Stakewise keystore manager: %w", err)
 	}
-	wallet.stakewiseKeystoreManager = stakewiseKeystoreMgr
-
-	return wallet, nil
+	w.stakewiseKeystoreManager = stakewiseKeystoreMgr
+	return nil
 }
 
 // Generate a new validator key and save it
 func (w *Wallet) GenerateNewValidatorKey() (*eth2types.BLSPrivateKey, error) {
 	// Get the path for the next validator key
-	path := fmt.Sprintf(shared.StakewiseValidatorPath, w.data.NextAccount)
+	path := fmt.Sprintf(shared.StakeWiseValidatorPath, w.data.NextAccount)
 
 	// Ask the HD daemon to generate the key
 	client := w.sp.GetHyperdriveClient()

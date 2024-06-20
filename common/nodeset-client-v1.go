@@ -10,12 +10,16 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/goccy/go-json"
 
 	"github.com/nodeset-org/hyperdrive-daemon/shared/types"
+	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
+	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
+
 	"github.com/nodeset-org/hyperdrive-stakewise/shared/keys"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/log"
@@ -47,6 +51,12 @@ const (
 	// The node address hasn't been whitelisted on the provided NodeSet account
 	addressMissingWhitelistKey string = "address_missing_whitelist"
 
+	// Deposit data has withdrawal creds that don't match a StakeWise vault
+	vaultNotFoundKey string = "vault_not_found"
+
+	// Deposit data can't be uploaded to Mainnet because the user isn't allowed to use Mainnet yet
+	invalidPermissionsKey string = "invalid_permissions"
+
 	// API paths
 	devPath         string = "dev"
 	registerPath    string = "node-address"
@@ -58,9 +68,11 @@ const (
 )
 
 var (
-	ErrUnregisteredNode  error = errors.New("node hasn't been registered with the NodeSet server yet")
-	ErrAlreadyRegistered error = errors.New("node has already been registered with the NodeSet server")
-	ErrNotWhitelisted    error = errors.New("node address hasn't been whitelisted on the provided NodeSet account")
+	ErrUnregisteredNode   error = errors.New("node hasn't been registered with the NodeSet server yet")
+	ErrAlreadyRegistered  error = errors.New("node has already been registered with the NodeSet server")
+	ErrNotWhitelisted     error = errors.New("node address hasn't been whitelisted on the provided NodeSet account")
+	ErrVaultNotFound      error = errors.New("deposit data has withdrawal creds that don't match a StakeWise vault")
+	ErrInvalidPermissions error = errors.New("deposit data can't be uploaded to Mainnet because you aren't permitted to use Mainnet yet")
 )
 
 // =================
@@ -153,31 +165,54 @@ type ValidatorsData struct {
 
 // Client for interacting with the Nodeset server
 type NodeSetClient_v1 struct {
-	sp    *StakewiseServiceProvider
+	sp    *StakeWiseServiceProvider
 	res   *swconfig.StakewiseResources
 	token string
 
 	// Stores the node's registration status
-	isNodeRegistered bool
+	nodeRegistrationStatus swapi.NodesetRegistrationStatus
+	lock                   *sync.Mutex
 }
 
 // Creates a new Nodeset client
-func NewNodeSetClient_v1(sp *StakewiseServiceProvider) *NodeSetClient_v1 {
+func NewNodeSetClient_v1(sp *StakeWiseServiceProvider) *NodeSetClient_v1 {
 	return &NodeSetClient_v1{
-		sp:               sp,
-		res:              sp.GetResources(),
-		isNodeRegistered: false,
+		sp:                     sp,
+		res:                    sp.GetResources(),
+		nodeRegistrationStatus: swapi.NodesetRegistrationStatus_Unknown,
+		lock:                   &sync.Mutex{},
 	}
 }
 
+// Logs out of the NodeSet service, resetting the registration status in the process.
+func (c *NodeSetClient_v1) Logout() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	c.token = ""
+	c.nodeRegistrationStatus = swapi.NodesetRegistrationStatus_Unknown
+}
+
 // Returns whether the node is registered with the NodeSet server
-func (c *NodeSetClient_v1) IsNodeRegistered() bool {
-	return c.isNodeRegistered
+func (c *NodeSetClient_v1) GetNodeRegistrationStatus(ctx context.Context) (swapi.NodesetRegistrationStatus, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// Force refresh the registration status if it hasn't been determined yet
+	if c.nodeRegistrationStatus == swapi.NodesetRegistrationStatus_Unknown ||
+		c.nodeRegistrationStatus == swapi.NodesetRegistrationStatus_NoWallet {
+		err := c.loginImpl(ctx)
+		return c.nodeRegistrationStatus, err
+	}
+	return c.nodeRegistrationStatus, nil
 }
 
 // Registers the node with the NodeSet server. Assumes wallet validation has already been done and the actual wallet address
 // is provided here; if it's not, the signature won't come from the node being registered so it will fail validation.
 func (c *NodeSetClient_v1) RegisterNode(ctx context.Context, email string, nodeWallet common.Address) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	// Get the logger
 	logger, exists := log.FromContext(ctx)
 	if !exists {
@@ -230,24 +265,47 @@ func (c *NodeSetClient_v1) RegisterNode(ctx context.Context, email string, nodeW
 	}
 
 	// Node successfully registered
-	c.isNodeRegistered = true
+	c.nodeRegistrationStatus = swapi.NodesetRegistrationStatus_Registered
 	return nil
 }
 
 // Uploads deposit data to Nodeset
 func (c *NodeSetClient_v1) UploadDepositData(ctx context.Context, depositData []byte) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	code, response, err := submitRequest_v1[string](c, ctx, true, http.MethodPost, bytes.NewBuffer(depositData), nil, devPath, depositDataPath)
-	if err == nil && code != http.StatusOK {
-		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
-	}
 	if err != nil {
 		return fmt.Errorf("error uploading deposit data: %w", err)
 	}
+
+	// Check for special errors
+	switch code {
+	case http.StatusBadRequest:
+		switch response.Error {
+		case vaultNotFoundKey:
+			return ErrVaultNotFound
+		}
+	case http.StatusForbidden:
+		switch response.Error {
+		case invalidPermissionsKey:
+			return ErrInvalidPermissions
+		}
+	}
+
+	// Handle general errors
+	if code != http.StatusOK {
+		return fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
+	}
+
 	return nil
 }
 
 // Submit signed exit data to Nodeset
 func (c *NodeSetClient_v1) UploadSignedExitData(ctx context.Context, exitData []ExitData) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	// Serialize the exit data into JSON
 	jsonData, err := json.Marshal(exitData)
 	if err != nil {
@@ -270,6 +328,9 @@ func (c *NodeSetClient_v1) UploadSignedExitData(ctx context.Context, exitData []
 
 // Get the current version of the aggregated deposit data on the server
 func (c *NodeSetClient_v1) GetServerDepositDataVersion(ctx context.Context) (int, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	vault := utils.RemovePrefix(strings.ToLower(c.res.Vault.Hex()))
 	params := map[string]string{
 		"vault":   vault,
@@ -287,6 +348,9 @@ func (c *NodeSetClient_v1) GetServerDepositDataVersion(ctx context.Context) (int
 
 // Get the aggregated deposit data from the server
 func (c *NodeSetClient_v1) GetServerDepositData(ctx context.Context) (int, []types.ExtendedDepositData, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	vault := utils.RemovePrefix(strings.ToLower(c.res.Vault.Hex()))
 	params := map[string]string{
 		"vault":   vault,
@@ -304,6 +368,9 @@ func (c *NodeSetClient_v1) GetServerDepositData(ctx context.Context) (int, []typ
 
 // Get a list of all of the pubkeys that have already been registered with NodeSet for this node
 func (c *NodeSetClient_v1) GetRegisteredValidators(ctx context.Context) ([]ValidatorStatus, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	queryParams := map[string]string{
 		"network": c.res.EthNetworkName,
 	}
@@ -346,7 +413,7 @@ func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, re
 	if requireAuth {
 		// Make sure the auth token exists
 		if c.token == "" {
-			err = c.login(ctx)
+			err = c.loginImpl(ctx)
 			if err != nil {
 				return 0, defaultVal, fmt.Errorf("error logging in before submitting request: %w", err)
 			}
@@ -383,11 +450,11 @@ func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, re
 		logger.Debug("NodeSet responded with 401 Unauthorized", slog.String(log.ErrorKey, response.Error))
 		switch response.Error {
 		case unregisteredAddressKey:
-			c.isNodeRegistered = false
+			c.nodeRegistrationStatus = swapi.NodesetRegistrationStatus_Unregistered
 			return 0, defaultVal, ErrUnregisteredNode
 		case invalidSessionKey:
 			// Try logging in again
-			err = c.login(ctx)
+			err = c.loginImpl(ctx)
 			if err != nil {
 				return 0, defaultVal, fmt.Errorf("error logging in after token expired: %w", err)
 			}
@@ -403,11 +470,31 @@ func submitRequest_v1[DataType any](c *NodeSetClient_v1, ctx context.Context, re
 }
 
 // Logs into the NodeSet API server, grabbing a new authentication token
-func (c *NodeSetClient_v1) login(ctx context.Context) error {
+func (c *NodeSetClient_v1) Login(ctx context.Context) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.loginImpl(ctx)
+}
+
+// Implementation for logging in
+func (c *NodeSetClient_v1) loginImpl(ctx context.Context) error {
 	// Get the logger
 	logger, exists := log.FromContext(ctx)
 	if !exists {
 		panic("context didn't have a logger!")
+	}
+
+	// Get the node wallet
+	hd := c.sp.GetHyperdriveClient()
+	walletStatusResponse, err := hd.Wallet.Status()
+	if err != nil {
+		return fmt.Errorf("error getting wallet status for login: %w", err)
+	}
+	walletStatus := walletStatusResponse.Data.WalletStatus
+	err = c.sp.RequireWalletReady(walletStatus)
+	if err != nil {
+		c.nodeRegistrationStatus = swapi.NodesetRegistrationStatus_NoWallet
+		return fmt.Errorf("can't log into nodeset, hyperdrive wallet not initialized yet")
 	}
 
 	// Log the login attempt
@@ -419,6 +506,10 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, nonceResponse.Message)
 	}
 	if err != nil {
+		// If the status was no-wallet, set it back to unknown
+		if c.nodeRegistrationStatus == swapi.NodesetRegistrationStatus_NoWallet {
+			c.nodeRegistrationStatus = swapi.NodesetRegistrationStatus_Unknown
+		}
 		return fmt.Errorf("error getting nonce for login: %w", err)
 	}
 	nonceData := nonceResponse.Data
@@ -427,23 +518,15 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 	)
 	c.token = nonceData.Token // Store this as a temp token for the login request
 
-	// Get the node wallet
-	hd := c.sp.GetHyperdriveClient()
-	walletStatusResponse, err := hd.Wallet.Status()
-	if err != nil {
-		return fmt.Errorf("error getting wallet status for login: %w", err)
-	}
-	walletStatus := walletStatusResponse.Data.WalletStatus
-	err = c.sp.RequireStakewiseWalletReady(ctx, walletStatus)
-	if err != nil {
-		return fmt.Errorf("error logging in: %w", err)
-	}
-
 	// Create the signature
 	nodeAddress := walletStatus.Wallet.WalletAddress
 	message := fmt.Sprintf(loginMessageFormat, nonceData.Nonce, nodeAddress.Hex())
 	signResponse, err := hd.Wallet.SignMessage([]byte(message))
 	if err != nil {
+		// If the status was no-wallet, set it back to unknown
+		if c.nodeRegistrationStatus == swapi.NodesetRegistrationStatus_NoWallet {
+			c.nodeRegistrationStatus = swapi.NodesetRegistrationStatus_Unknown
+		}
 		return fmt.Errorf("error signing login message: %w", err)
 	}
 
@@ -457,12 +540,12 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 
 	jsonData, err := json.Marshal(request)
 	if err != nil {
+		// If the status was no-wallet, set it back to unknown
+		if c.nodeRegistrationStatus == swapi.NodesetRegistrationStatus_NoWallet {
+			c.nodeRegistrationStatus = swapi.NodesetRegistrationStatus_Unknown
+		}
 		return fmt.Errorf("error marshalling login request: %w", err)
 	}
-
-	logger.Debug("Sending login request",
-		slog.String(log.BodyKey, string(jsonData)),
-	)
 
 	// Submit the request
 	code, loginResponse, err := submitRequest_v1[LoginData](c, ctx, true, http.MethodPost, bytes.NewBuffer(jsonData), nil, devPath, loginPath)
@@ -470,6 +553,10 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, loginResponse.Message)
 	}
 	if err != nil {
+		// If the status was no-wallet, set it back to unknown
+		if c.nodeRegistrationStatus == swapi.NodesetRegistrationStatus_NoWallet {
+			c.nodeRegistrationStatus = swapi.NodesetRegistrationStatus_Unknown
+		}
 		return fmt.Errorf("error logging in: %w", err)
 	}
 	loginData := loginResponse.Data
@@ -480,7 +567,7 @@ func (c *NodeSetClient_v1) login(ctx context.Context) error {
 
 	// Log the successful login
 	logger.Info("Logged into NodeSet server")
-	c.isNodeRegistered = true
+	c.nodeRegistrationStatus = swapi.NodesetRegistrationStatus_Registered
 
 	return nil
 }
@@ -494,12 +581,18 @@ func IsUploadedToNodeset(pubKey beacon.ValidatorPubkey, registeredPubkeys []beac
 	return false
 }
 
-func IsRegisteredToStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
-	// TODO: Implement
-	return false
-}
-
-func IsUploadedStakewise(pubKey beacon.ValidatorPubkey, statuses map[beacon.ValidatorPubkey]beacon.ValidatorStatus) bool {
-	// TODO: Implement
-	return false
+func GetNodesetStatus(pubKey beacon.ValidatorPubkey, registeredPubkeysStatusMapping map[beacon.ValidatorPubkey]string) swtypes.NodesetStatus {
+	for registeredPubKey, nodesetStatus := range registeredPubkeysStatusMapping {
+		if registeredPubKey == pubKey {
+			// TODO: Convert these string values to enum
+			if nodesetStatus == "REGISTERED" {
+				return swtypes.NodesetStatus_RegisteredToStakewise
+			} else if nodesetStatus == "UPLOADED" {
+				return swtypes.NodesetStatus_UploadedStakewise
+			} else {
+				return swtypes.NodesetStatus_UploadedToNodeset
+			}
+		}
+	}
+	return swtypes.NodesetStatus_Generated
 }

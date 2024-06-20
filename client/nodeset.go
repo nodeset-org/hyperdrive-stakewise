@@ -5,6 +5,7 @@ import (
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	"github.com/rocket-pool/node-manager-core/api/client"
 	"github.com/rocket-pool/node-manager-core/api/types"
+	"github.com/rocket-pool/node-manager-core/beacon"
 )
 
 type NodesetRequester struct {
@@ -49,8 +50,17 @@ func (r *NodesetRequester) RegisterNode(email string) (*types.ApiResponse[swapi.
 	return client.SendGetRequest[swapi.NodeSetRegisterNodeData](r, "register-node", "RegisterNode", args)
 }
 
-// Gey Registration status from Nodeset
+// Get the node's NodeSet registration status
 func (r *NodesetRequester) RegistrationStatus() (*types.ApiResponse[swapi.NodeSetRegistrationStatusData], error) {
 	args := map[string]string{}
 	return client.SendGetRequest[swapi.NodeSetRegistrationStatusData](r, "registration-status", "RegistrationStatus", args)
+}
+
+// Generate deposit data for your validator keys without uploading them to NodeSet
+func (r *NodesetRequester) GenerateDepositData(pubkeys []beacon.ValidatorPubkey) (*types.ApiResponse[swapi.NodesetGenerateDepositDataData], error) {
+	args := map[string]string{}
+	if len(pubkeys) > 0 {
+		args["pubkeys"] = client.MakeBatchArg(pubkeys)
+	}
+	return client.SendGetRequest[swapi.NodesetGenerateDepositDataData](r, "generate-deposit-data", "GenerateDepositData", args)
 }

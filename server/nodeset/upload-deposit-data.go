@@ -69,6 +69,14 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
 	}
+	err = sp.RequireEthClientSynced(ctx)
+	if err != nil {
+		return types.ResponseStatus_ClientsNotSynced, err
+	}
+	err = sp.RequireBeaconClientSynced(ctx)
+	if err != nil {
+		return types.ResponseStatus_ClientsNotSynced, err
+	}
 
 	// Fetch status from Nodeset APIs
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
@@ -187,6 +195,16 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		return types.ResponseStatus_Error, fmt.Errorf("error serializing deposit data: %w", err)
 	}
 	if err := nc.UploadDepositData(ctx, serializedData); err != nil {
+		// Handle special errors
+		if errors.Is(err, swcommon.ErrVaultNotFound) {
+			data.InvalidWithdrawalCredentials = true
+			return types.ResponseStatus_Success, nil
+		} else if errors.Is(err, swcommon.ErrInvalidPermissions) {
+			data.NotAuthorizedForMainnet = true
+			return types.ResponseStatus_Success, nil
+		}
+
+		// General failure
 		return types.ResponseStatus_Error, fmt.Errorf("error uploading deposit data: %w", err)
 	}
 

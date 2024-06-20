@@ -7,7 +7,6 @@ import (
 
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
-	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
 
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
@@ -60,6 +59,10 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 	if err != nil {
 		return types.ResponseStatus_WalletNotReady, err
 	}
+	err = sp.RequireBeaconClientSynced(ctx)
+	if err != nil {
+		return types.ResponseStatus_ClientsNotSynced, err
+	}
 
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {
@@ -80,9 +83,9 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 		return types.ResponseStatus_Error, fmt.Errorf("error getting validator statuses: %w", err)
 	}
 
-	registeredPubkeys := make([]beacon.ValidatorPubkey, 0)
+	registeredPubkeysStatusMapping := make(map[beacon.ValidatorPubkey]string)
 	for _, pubkeyStatus := range nodesetStatusResponse {
-		registeredPubkeys = append(registeredPubkeys, pubkeyStatus.Pubkey)
+		registeredPubkeysStatusMapping[pubkeyStatus.Pubkey] = pubkeyStatus.Status
 	}
 
 	// Get status info for each pubkey
@@ -101,16 +104,7 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 		}
 
 		// NodeSet status
-		switch {
-		case swcommon.IsRegisteredToStakewise(pubkey, beaconStatusResponse):
-			state.NodesetStatus = swtypes.NodesetStatus_RegisteredToStakewise
-		case swcommon.IsUploadedStakewise(pubkey, beaconStatusResponse):
-			state.NodesetStatus = swtypes.NodesetStatus_UploadedStakewise
-		case swcommon.IsUploadedToNodeset(pubkey, registeredPubkeys):
-			state.NodesetStatus = swtypes.NodesetStatus_UploadedToNodeset
-		default:
-			state.NodesetStatus = swtypes.NodesetStatus_Generated
-		}
+		state.NodesetStatus = swcommon.GetNodesetStatus(pubkey, registeredPubkeysStatusMapping)
 	}
 
 	return types.ResponseStatus_Success, nil

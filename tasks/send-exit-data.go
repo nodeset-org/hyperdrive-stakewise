@@ -22,14 +22,14 @@ const (
 type SendExitDataTask struct {
 	logger *log.Logger
 	ctx    context.Context
-	sp     *swcommon.StakewiseServiceProvider
+	sp     *swcommon.StakeWiseServiceProvider
 	w      *swcommon.Wallet
 	ns     *swcommon.NodeSetClient_v1
 	bc     beacon.IBeaconClient
 }
 
 // Create Exit data task
-func NewSendExitDataTask(ctx context.Context, sp *swcommon.StakewiseServiceProvider, logger *log.Logger) *SendExitDataTask {
+func NewSendExitDataTask(ctx context.Context, sp *swcommon.StakeWiseServiceProvider, logger *log.Logger) *SendExitDataTask {
 	return &SendExitDataTask{
 		logger: logger,
 		ctx:    ctx,
