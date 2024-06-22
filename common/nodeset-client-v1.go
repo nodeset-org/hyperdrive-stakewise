@@ -244,7 +244,7 @@ func (c *NodeSetClient_v1) RegisterNode(ctx context.Context, email string, nodeW
 	)
 
 	// Submit the request
-	code, response, err := submitRequest_v1[string](c, ctx, false, http.MethodPost, bytes.NewBuffer(jsonData), nil, devPath, registerPath)
+	code, response, err := submitRequest_v1[string](c, ctx, false, http.MethodPost, bytes.NewBuffer(jsonData), nil, registerPath)
 	if err != nil {
 		return fmt.Errorf("error registering node: %w", err)
 	}
@@ -274,7 +274,7 @@ func (c *NodeSetClient_v1) UploadDepositData(ctx context.Context, depositData []
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	code, response, err := submitRequest_v1[string](c, ctx, true, http.MethodPost, bytes.NewBuffer(depositData), nil, devPath, depositDataPath)
+	code, response, err := submitRequest_v1[string](c, ctx, true, http.MethodPost, bytes.NewBuffer(depositData), nil, depositDataPath)
 	if err != nil {
 		return fmt.Errorf("error uploading deposit data: %w", err)
 	}
@@ -316,7 +316,7 @@ func (c *NodeSetClient_v1) UploadSignedExitData(ctx context.Context, exitData []
 	}
 
 	// Submit the PATCH request with the serialized JSON
-	code, response, err := submitRequest_v1[string](c, ctx, true, http.MethodPatch, bytes.NewBuffer(jsonData), params, devPath, validatorsPath)
+	code, response, err := submitRequest_v1[string](c, ctx, true, http.MethodPatch, bytes.NewBuffer(jsonData), params, validatorsPath)
 	if err == nil && code != http.StatusOK {
 		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
 	}
@@ -336,7 +336,7 @@ func (c *NodeSetClient_v1) GetServerDepositDataVersion(ctx context.Context) (int
 		"vault":   vault,
 		"network": c.res.EthNetworkName,
 	}
-	code, response, err := submitRequest_v1[DepositDataMetaData](c, ctx, true, http.MethodGet, nil, params, devPath, depositDataPath, metaPath)
+	code, response, err := submitRequest_v1[DepositDataMetaData](c, ctx, true, http.MethodGet, nil, params, depositDataPath, metaPath)
 	if err == nil && code != http.StatusOK {
 		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
 	}
@@ -356,7 +356,7 @@ func (c *NodeSetClient_v1) GetServerDepositData(ctx context.Context) (int, []typ
 		"vault":   vault,
 		"network": c.res.EthNetworkName,
 	}
-	code, response, err := submitRequest_v1[DepositDataData](c, ctx, true, http.MethodGet, nil, params, devPath, depositDataPath)
+	code, response, err := submitRequest_v1[DepositDataData](c, ctx, true, http.MethodGet, nil, params, depositDataPath)
 	if err == nil && code != http.StatusOK {
 		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
 	}
@@ -374,7 +374,7 @@ func (c *NodeSetClient_v1) GetRegisteredValidators(ctx context.Context) ([]Valid
 	queryParams := map[string]string{
 		"network": c.res.EthNetworkName,
 	}
-	code, response, err := submitRequest_v1[ValidatorsData](c, ctx, true, http.MethodGet, nil, queryParams, devPath, validatorsPath)
+	code, response, err := submitRequest_v1[ValidatorsData](c, ctx, true, http.MethodGet, nil, queryParams, validatorsPath)
 	if err == nil && code != http.StatusOK {
 		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, response.Message)
 	}
@@ -501,7 +501,7 @@ func (c *NodeSetClient_v1) loginImpl(ctx context.Context) error {
 	logger.Info("Not authenticated with the NodeSet server, logging in")
 
 	// Get the nonce
-	code, nonceResponse, err := submitRequest_v1[NonceData](c, ctx, false, http.MethodGet, nil, nil, devPath, noncePath)
+	code, nonceResponse, err := submitRequest_v1[NonceData](c, ctx, false, http.MethodGet, nil, nil, noncePath)
 	if err == nil && code != http.StatusOK {
 		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, nonceResponse.Message)
 	}
@@ -548,7 +548,7 @@ func (c *NodeSetClient_v1) loginImpl(ctx context.Context) error {
 	}
 
 	// Submit the request
-	code, loginResponse, err := submitRequest_v1[LoginData](c, ctx, true, http.MethodPost, bytes.NewBuffer(jsonData), nil, devPath, loginPath)
+	code, loginResponse, err := submitRequest_v1[LoginData](c, ctx, true, http.MethodPost, bytes.NewBuffer(jsonData), nil, loginPath)
 	if err == nil && code != http.StatusOK {
 		err = fmt.Errorf("nodeset server responded to request with code %d: [%s]", code, loginResponse.Message)
 	}
