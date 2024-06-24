@@ -12,7 +12,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/nodeset-org/hyperdrive-daemon v1.0.0
 	github.com/nodeset-org/nodeset-svc-mock v0.2.0
-	github.com/nodeset-org/osha v0.2.0
+	github.com/nodeset-org/osha v0.2.1-0.20240620212038-8021d567be75
 	github.com/rocket-pool/batch-query v1.0.0
 	github.com/rocket-pool/node-manager-core v0.5.1-0.20240620041049-333f5150790e
 	github.com/stretchr/testify v1.9.0
@@ -172,4 +172,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/nodeset-org/osha => ../osha
+// replace github.com/nodeset-org/osha => ../osha
