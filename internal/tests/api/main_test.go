@@ -25,7 +25,6 @@ var (
 	nodeAddress         common.Address
 	nsEmail             string = "test@nodeset.io"
 )
-var ()
 
 func TestMain(m *testing.M) {
 	wg = &sync.WaitGroup{}
