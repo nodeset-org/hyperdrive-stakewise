@@ -16,61 +16,62 @@ import (
 
 // Various singleton variables used for testing
 var (
-	testMgr     *swtesting.StakeWiseTestManager = nil
-	wg          *sync.WaitGroup                 = nil
-	logger      *slog.Logger                    = nil
-	nodeAddress common.Address
-	nsEmail     string = "test@nodeset.io"
+	testMgr             *swtesting.StakeWiseTestManager = nil
+	unregisteredTestMgr *swtesting.StakeWiseTestManager = nil
+	wg                  *sync.WaitGroup                 = nil
+	logger              *slog.Logger                    = nil
+	nodeAddress         common.Address
+	nsEmail             string = "test@nodeset.io"
+)
+var (
+	unregisteredTestMgrIndex           = uint64(999999)
+	unregisteredTestMgrDefaultMnemonic = "radar blur cabbage chef fix engine embark joy scheme fiction master release"
 )
 
-// Initialize a common server used by all tests
 func TestMain(m *testing.M) {
 	wg = &sync.WaitGroup{}
-	var err error
 
-	// Create a new test manager
-	testMgr, err = swtesting.NewStakeWiseTestManager("localhost", "localhost", "localhost")
+	// Initialize test managers
+	unregisteredTestMgr, err := initializeTestManager()
+	if err != nil {
+		fail("error creating unregistered test manager: %v", err)
+	}
+
+	testMgr, err := initializeTestManager()
 	if err != nil {
 		fail("error creating test manager: %v", err)
 	}
+
 	logger = testMgr.GetLogger()
 
-	// Generate a new wallet
-	derivationPath := string(wallet.DerivationPath_Default)
-	index := uint64(0)
+	// Generate wallets
 	password := "test_password123"
-	hdClient := testMgr.HyperdriveTestManager.GetApiClient()
-	recoverResponse, err := hdClient.Wallet.Recover(&derivationPath, keys.DefaultMnemonic, &index, password, true)
+	derivationPath := string(wallet.DerivationPath_Default)
+	unregisteredRecoverResponse, err := recoverWallet(unregisteredTestMgr, unregisteredTestMgrDefaultMnemonic, &unregisteredTestMgrIndex, password, derivationPath)
+	if err != nil {
+		fail("error recovering unregistered wallet: %v", err)
+	}
+
+	index := uint64(0)
+	recoverResponse, err := recoverWallet(testMgr, keys.DefaultMnemonic, &index, password, derivationPath)
 	if err != nil {
 		fail("error generating wallet: %v", err)
 	}
 	nodeAddress = recoverResponse.Data.AccountAddress
 
-	// Set up NodeSet with the StakeWise vault
-	sp := testMgr.GetStakeWiseServiceProvider()
-	res := sp.GetResources()
-	nsServer := testMgr.GetNodeSetMockServer().GetManager()
-	err = nsServer.AddStakeWiseVault(*res.Vault, res.EthNetworkName)
+	// Setup NodeSet and add StakeWise vaults
+	err = setupNodeSet(testMgr, nsEmail, nodeAddress, recoverResponse.Data.AccountAddress)
 	if err != nil {
-		fail("error adding stakewise vault to nodeset: %v", err)
+		fail("error setting up NodeSet: %v", err)
 	}
 
-	// Make a NodeSet account
-	err = nsServer.AddUser(nsEmail)
+	err = setupNodeSet(unregisteredTestMgr, nsEmail, unregisteredRecoverResponse.Data.AccountAddress, recoverResponse.Data.AccountAddress)
 	if err != nil {
-		fail("error adding user to nodeset: %v", err)
-	}
-	err = nsServer.WhitelistNodeAccount(nsEmail, nodeAddress)
-	if err != nil {
-		fail("error adding node account to nodeset: %v", err)
+		fail("error setting up NodeSet for unregistered manager: %v", err)
 	}
 
 	// Register with NodeSet
-	logger := log.NewDefaultLogger()
-	ctx := logger.CreateContextWithLogger(sp.GetBaseContext())
-	nsClient := testMgr.GetStakeWiseServiceProvider().GetNodesetClient()
-	err = nsClient.RegisterNode(ctx, nsEmail, nodeAddress)
-	if err != nil {
+	if err = registerNode(testMgr, nsEmail, nodeAddress); err != nil {
 		fail("error registering node with nodeset: %v", err)
 	}
 
@@ -80,6 +81,46 @@ func TestMain(m *testing.M) {
 	// Clean up and exit
 	cleanup()
 	os.Exit(code)
+}
+
+func initializeTestManager() (*swtesting.StakeWiseTestManager, error) {
+	return swtesting.NewStakeWiseTestManager("localhost", "localhost", "localhost")
+}
+
+func recoverWallet(testMgr *swtesting.StakeWiseTestManager, mnemonic string, index *uint64, password, derivationPath string) (*wallet.RecoverResponse, error) {
+	hdClient := testMgr.HyperdriveTestManager.GetApiClient()
+	return hdClient.Wallet.Recover(&derivationPath, mnemonic, index, password, true)
+}
+
+func setupNodeSet(testMgr *swtesting.StakeWiseTestManager, email, accountAddress1, accountAddress2 string) error {
+	sp := testMgr.GetStakeWiseServiceProvider()
+	res := sp.GetResources()
+	nsServer := testMgr.GetNodeSetMockServer().GetManager()
+
+	if err := nsServer.AddStakeWiseVault(*res.Vault, res.EthNetworkName); err != nil {
+		return fmt.Errorf("error adding stakewise vault to nodeset: %w", err)
+	}
+
+	if err := nsServer.AddUser(email); err != nil {
+		return fmt.Errorf("error adding user to nodeset: %w", err)
+	}
+
+	if err := nsServer.WhitelistNodeAccount(email, accountAddress1); err != nil {
+		return fmt.Errorf("error whitelisting node account: %w", err)
+	}
+
+	if err := nsServer.WhitelistNodeAccount(email, accountAddress2); err != nil {
+		return fmt.Errorf("error whitelisting node account: %w", err)
+	}
+
+	return nil
+}
+
+func registerNode(testMgr *swtesting.StakeWiseTestManager, email, nodeAddress string) error {
+	logger := log.NewDefaultLogger()
+	ctx := logger.CreateContextWithLogger(testMgr.GetStakeWiseServiceProvider().GetBaseContext())
+	nsClient := testMgr.GetStakeWiseServiceProvider().GetNodesetClient()
+	return nsClient.RegisterNode(ctx, email, nodeAddress)
 }
 
 func fail(format string, args ...any) {
