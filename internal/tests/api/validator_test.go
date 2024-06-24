@@ -15,7 +15,7 @@ func TestExit_EmptyPubkeys(t *testing.T) {
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(testMgr, snapshotName)
 	client := testMgr.GetApiClient()
 	pubkeys := []beacon.ValidatorPubkey{}
 
@@ -28,7 +28,7 @@ func TestExit(t *testing.T) {
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(testMgr, snapshotName)
 
 	sp := testMgr.GetStakeWiseServiceProvider()
 	wallet := sp.GetWallet()

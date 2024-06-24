@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	swtesting "github.com/nodeset-org/hyperdrive-stakewise/testing"
+
 	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
 	"github.com/nodeset-org/osha"
 	"github.com/rocket-pool/node-manager-core/beacon"
@@ -19,7 +21,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(testMgr, snapshotName)
 
 	// Get some resources
 	sp := testMgr.GetStakeWiseServiceProvider()
@@ -96,7 +98,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 }
 
 // Clean up after each test
-func status_cleanup(snapshotName string) {
+func status_cleanup(_testMgr *swtesting.StakeWiseTestManager, snapshotName string) {
 	// Handle panics
 	r := recover()
 	if r != nil {
@@ -105,23 +107,23 @@ func status_cleanup(snapshotName string) {
 	}
 
 	// Revert to the snapshot taken at the start of the test
-	err := testMgr.RevertToCustomSnapshot(snapshotName)
+	err := _testMgr.RevertToCustomSnapshot(snapshotName)
 	if err != nil {
 		fail("Error reverting to custom snapshot: %v", err)
 	}
 
 	// Reload the HD wallet to undo any changes made during the test
-	err = testMgr.GetServiceProvider().GetWallet().Reload(testMgr.GetLogger())
+	err = _testMgr.GetServiceProvider().GetWallet().Reload(_testMgr.GetLogger())
 	if err != nil {
 		fail("Error reloading hyperdrive wallet: %v", err)
 	}
 
 	// Reload the SW wallet to undo any changes made during the test
-	err = testMgr.GetStakeWiseServiceProvider().GetWallet().Reload()
+	err = _testMgr.GetStakeWiseServiceProvider().GetWallet().Reload()
 	if err != nil {
 		fail("Error reloading stakewise wallet: %v", err)
 	}
 
 	// Log out of the NS mock server
-	testMgr.GetStakeWiseServiceProvider().GetNodesetClient().Logout()
+	_testMgr.GetStakeWiseServiceProvider().GetNodesetClient().Logout()
 }

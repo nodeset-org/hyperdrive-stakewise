@@ -14,7 +14,7 @@ func TestRegistrationStatus_Registered(t *testing.T) {
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(testMgr, snapshotName)
 
 	client := testMgr.GetApiClient()
 	response, err := client.Nodeset.RegistrationStatus()
@@ -29,7 +29,7 @@ func TestUploadDepositData(t *testing.T) {
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(testMgr, snapshotName)
 }
 
 func TestRegisterNode_AlreadyRegisteredError(t *testing.T) {
@@ -38,7 +38,7 @@ func TestRegisterNode_AlreadyRegisteredError(t *testing.T) {
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(testMgr, snapshotName)
 
 	client := testMgr.GetApiClient()
 	_, err = client.Nodeset.RegisterNode("test@nodeset.io")
@@ -47,11 +47,11 @@ func TestRegisterNode_AlreadyRegisteredError(t *testing.T) {
 
 func TestRegisterNode_Success(t *testing.T) {
 	// Take a snapshot, revert at the end
-	snapshotName, err := testMgr.CreateCustomSnapshot(osha.Service_EthClients | osha.Service_Filesystem)
+	snapshotName, err := unregisteredTestMgr.CreateCustomSnapshot(osha.Service_EthClients | osha.Service_Filesystem)
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(unregisteredTestMgr, snapshotName)
 	client := unregisteredTestMgr.GetApiClient()
 	_, err = client.Nodeset.RegisterNode("test@nodeset.io")
 	require.NoError(t, err)

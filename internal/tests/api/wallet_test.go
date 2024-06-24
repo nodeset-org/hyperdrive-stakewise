@@ -14,7 +14,7 @@ func TestWalletInit_Success(t *testing.T) {
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(testMgr, snapshotName)
 
 	client := testMgr.GetApiClient()
 
@@ -30,7 +30,7 @@ func TestWalletGenerateKeys_SingleKey(t *testing.T) {
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(testMgr, snapshotName)
 
 	client := testMgr.GetApiClient()
 
@@ -46,7 +46,7 @@ func TestWalletGenerateKeys_MultipleKeys(t *testing.T) {
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(testMgr, snapshotName)
 
 	client := testMgr.GetApiClient()
 
@@ -62,7 +62,7 @@ func TestWalletClaimRewards(t *testing.T) {
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
-	defer status_cleanup(snapshotName)
+	defer status_cleanup(testMgr, snapshotName)
 
 	client := testMgr.GetApiClient()
 
