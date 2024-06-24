@@ -63,11 +63,21 @@ func TestMain(m *testing.M) {
 	nodeAddress = recoverResponse.Data.AccountAddress
 
 	// Set up NodeSet with the StakeWise vault
-	setupNodeSet(testMgr, nsEmail, recoverResponse.Data.AccountAddress)
-	setupNodeSet(unregisteredTestMgr, nsEmail, unregisteredRecoverResponse.Data.AccountAddress)
+	err = setupNodeSet(testMgr, nsEmail, recoverResponse.Data.AccountAddress)
+	if err != nil {
+		fail("error setup NodeSet: %v", err)
+	}
+
+	err = setupNodeSet(unregisteredTestMgr, nsEmail, unregisteredRecoverResponse.Data.AccountAddress)
+	if err != nil {
+		fail("error setup NodeSet: %v", err)
+	}
 
 	// Register with NodeSet
-	registerNodeSet(testMgr, nsEmail, nodeAddress)
+	err = registerNodeSet(testMgr, nsEmail, nodeAddress)
+	if err != nil {
+		fail("error registering NodeSet: %v", err)
+	}
 
 	// Run tests
 	code := m.Run()
