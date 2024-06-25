@@ -7,7 +7,8 @@ import (
 
 const (
 	// Address of a mock StakeWise vault for testing
-	StakeWiseVaultString string = "0x57ace215eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+	StakeWiseVaultString string = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+	SplitWarehouseString string = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
 )
 
 // GetTestResources returns a new StakewiseResources instance with test network values
@@ -17,7 +18,7 @@ func GetTestResources(networkResources *config.NetworkResources, nodesetUrl stri
 		NodesetApiUrl:    nodesetUrl,
 		Vault:            config.HexToAddressPtr(StakeWiseVaultString),
 		FeeRecipient:     config.HexToAddressPtr(""),
-		SplitWarehouse:   config.HexToAddressPtr(""),
+		SplitWarehouse:   config.HexToAddressPtr(SplitWarehouseString),
 		PullSplit:        config.HexToAddressPtr(""),
 	}
 }

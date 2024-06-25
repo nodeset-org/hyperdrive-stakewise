@@ -46,7 +46,6 @@ func (f *walletClaimRewardsContextFactory) RegisterRoute(router *mux.Router) {
 
 type walletClaimRewardsContext struct {
 	handler *WalletHandler
-	// address common.Address
 }
 
 // Return the transaction data
@@ -55,6 +54,8 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 	sp := c.handler.serviceProvider
 	ec := sp.GetEthClient()
 	res := sp.GetResources()
+	fmt.Printf("!!!res.SplitWarehouse %v\n", res.SplitWarehouse)
+	fmt.Printf("!!!res.Vault %v\n", res.Vault)
 	qMgr := sp.GetQueryManager()
 	txMgr := sp.GetTransactionManager()
 	nodeAddress := walletStatus.Address.NodeAddress
