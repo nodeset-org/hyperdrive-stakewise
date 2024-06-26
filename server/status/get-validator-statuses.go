@@ -54,6 +54,8 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 	nc := sp.GetNodesetClient()
 	ctx := c.handler.ctx
 
+	logger := c.handler.logger
+
 	// Requirements
 	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
 	if err != nil {
@@ -64,20 +66,25 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 		return types.ResponseStatus_ClientsNotSynced, err
 	}
 
+	logger.Debug("Getting validator statuses from NodeSet")
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting nodeset statuses: %w", err)
 	}
+
+	logger.Debug("Getting private keys")
 	privateKeys, err := w.GetAllPrivateKeys()
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting private keys: %w", err)
 	}
 
+	logger.Debug("Deriving public keys")
 	publicKeys, err := w.DerivePubKeys(privateKeys)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting public keys: %w", err)
 	}
 
+	logger.Debug("Getting validator statuses from Beacon client")
 	beaconStatusResponse, err := bc.GetValidatorStatuses(ctx, publicKeys, nil)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting validator statuses: %w", err)
