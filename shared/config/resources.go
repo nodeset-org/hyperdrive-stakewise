@@ -59,7 +59,7 @@ func newStakewiseResources(network config.Network) *StakewiseResources {
 	// Holesky Dev
 	holeskyDevResources := &StakewiseResources{
 		NetworkResources: config.NewResources(config.Network_Holesky),
-		NodesetApiUrl:    "https://dev.nodeset.io/api",
+		NodesetApiUrl:    "https://staging.nodeset.io/api",
 		Vault:            config.HexToAddressPtr("0xf8763855473ce978232bBa37ef90fcFc8aAE10d1"),
 		FeeRecipient:     config.HexToAddressPtr("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
 		SplitWarehouse:   config.HexToAddressPtr("0x8fb66F38cF86A3d5e8768f8F1754A24A6c661Fb8"),
