@@ -22,6 +22,10 @@ func (c *StakeWiseConfig) DaemonContainerName() string {
 	return string(ContainerID_StakewiseDaemon)
 }
 
+func (c *StakeWiseConfig) DataVolume() string {
+	return DataVolume
+}
+
 func (c *StakeWiseConfig) OperatorContainerName() string {
 	return string(ContainerID_StakewiseOperator)
 }
