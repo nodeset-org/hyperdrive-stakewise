@@ -12,6 +12,9 @@ const (
 	DepositDataFile      string = "deposit-data.json"
 	DefaultApiPort       uint16 = 8180
 
+	// Volumes
+	DataVolume string = "swdata"
+
 	// Logging
 	ClientLogName string = "hd.log"
 )
