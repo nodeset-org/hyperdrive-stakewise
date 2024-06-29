@@ -1,6 +1,7 @@
 package swwallet
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
+	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	swcontracts "github.com/nodeset-org/hyperdrive-stakewise/common/contracts"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	batch "github.com/rocket-pool/batch-query"
@@ -67,7 +69,10 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 	}
 	err = sp.RequireEthClientSynced(ctx)
 	if err != nil {
-		return types.ResponseStatus_ClientsNotSynced, err
+		if errors.Is(err, services.ErrExecutionClientNotSynced) {
+			return types.ResponseStatus_ClientsNotSynced, err
+		}
+		return types.ResponseStatus_Error, err
 	}
 
 	if res.SplitWarehouse == nil {
