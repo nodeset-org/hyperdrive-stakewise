@@ -382,8 +382,8 @@ github.com/nodeset-org/hyperdrive-daemon v1.0.0 h1:gacaa2kP2wv1dBO4cpG03RGsdmCTi
 github.com/nodeset-org/hyperdrive-daemon v1.0.0/go.mod h1:bkAacICyImNf7/nrHGiTuysDMCxtOq4wQ6dk1d2PbvI=
 github.com/nodeset-org/nodeset-svc-mock v0.2.0 h1:JBR0EqHGNkRvVaidUWZcShb+WgOgIaTcaeYzV0/TAvo=
 github.com/nodeset-org/nodeset-svc-mock v0.2.0/go.mod h1:pbff0NjIm7oCmBRKgXkXIWp/a9/zAXaS7BDJ69wR4GU=
-github.com/nodeset-org/osha v0.2.0 h1:k/rqy8Qun/EAnodU+yZy98OSHWK36PzmBfLXvb2uVw8=
-github.com/nodeset-org/osha v0.2.0/go.mod h1:qkXYqNHUom/vRxlP7sj7Ilq1bvaSv4AhjfyOAGIwoSk=
+github.com/nodeset-org/osha v0.2.1-0.20240620212038-8021d567be75 h1:GTkS8r/fV8DJ/wVeugD2nbCgRpc3pAFLenvKOrHZPow=
+github.com/nodeset-org/osha v0.2.1-0.20240620212038-8021d567be75/go.mod h1:qkXYqNHUom/vRxlP7sj7Ilq1bvaSv4AhjfyOAGIwoSk=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/olekukonko/tablewriter v0.0.5 h1:P2Ga83D34wi1o9J6Wh1mRuqd4mF/x/lgBS7N7AbDhec=
 github.com/olekukonko/tablewriter v0.0.5/go.mod h1:hPp6KlRPjbx+hW8ykQs1w3UBbZlj6HuIJcUGPhkA7kY=
