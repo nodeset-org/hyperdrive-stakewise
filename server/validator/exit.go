@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
+	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	api "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	"github.com/rocket-pool/node-manager-core/api/server"
 	"github.com/rocket-pool/node-manager-core/api/types"
@@ -78,7 +79,10 @@ func (c *validatorExitContext) PrepareData(data *api.ValidatorExitData, walletSt
 	}
 	err = sp.RequireBeaconClientSynced(ctx)
 	if err != nil {
-		return types.ResponseStatus_ClientsNotSynced, err
+		if errors.Is(err, services.ErrBeaconNodeNotSynced) {
+			return types.ResponseStatus_ClientsNotSynced, err
+		}
+		return types.ResponseStatus_Error, err
 	}
 
 	// Load the keys

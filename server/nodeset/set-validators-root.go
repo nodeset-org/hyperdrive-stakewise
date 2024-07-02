@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
+	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	swcontracts "github.com/nodeset-org/hyperdrive-stakewise/common/contracts"
 	"github.com/rocket-pool/node-manager-core/api/server"
 	"github.com/rocket-pool/node-manager-core/api/types"
@@ -63,7 +64,10 @@ func (c *nodesetSetValidatorsRootContext) PrepareData(data *types.TxInfoData, wa
 	}
 	err = sp.RequireEthClientSynced(ctx)
 	if err != nil {
-		return types.ResponseStatus_ClientsNotSynced, err
+		if errors.Is(err, services.ErrExecutionClientNotSynced) {
+			return types.ResponseStatus_ClientsNotSynced, err
+		}
+		return types.ResponseStatus_Error, err
 	}
 
 	if res.Vault == nil {
