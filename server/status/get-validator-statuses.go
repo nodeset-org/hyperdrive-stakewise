@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
+	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 )
 
 // ===============
@@ -61,7 +62,10 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 	}
 	err = sp.RequireBeaconClientSynced(ctx)
 	if err != nil {
-		return types.ResponseStatus_ClientsNotSynced, err
+		if errors.Is(err, services.ErrBeaconNodeNotSynced) {
+			return types.ResponseStatus_ClientsNotSynced, err
+		}
+		return types.ResponseStatus_Error, err
 	}
 
 	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)

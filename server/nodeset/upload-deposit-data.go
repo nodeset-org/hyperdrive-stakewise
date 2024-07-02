@@ -15,6 +15,7 @@ import (
 	"github.com/rocket-pool/node-manager-core/eth"
 
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
+	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
@@ -71,11 +72,17 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 	err = sp.RequireEthClientSynced(ctx)
 	if err != nil {
+		if errors.Is(err, services.ErrExecutionClientNotSynced) {
+			return types.ResponseStatus_Error, err
+		}
 		return types.ResponseStatus_ClientsNotSynced, err
 	}
 	err = sp.RequireBeaconClientSynced(ctx)
 	if err != nil {
-		return types.ResponseStatus_ClientsNotSynced, err
+		if errors.Is(err, services.ErrBeaconNodeNotSynced) {
+			return types.ResponseStatus_ClientsNotSynced, err
+		}
+		return types.ResponseStatus_Error, err
 	}
 
 	// Fetch status from Nodeset APIs
