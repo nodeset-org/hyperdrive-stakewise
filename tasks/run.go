@@ -70,7 +70,7 @@ func NewTaskLoop(sp *swcommon.StakeWiseServiceProvider, wg *sync.WaitGroup) *Tas
 // Run daemon
 func (t *TaskLoop) Run() error {
 	// Wait until the HD daemon has tried logging into the NodeSet server to check registration status
-	t.getNodeSetRegistrationstatus()
+	t.getNodeSetRegistrationStatus()
 
 	// Run task loop
 	t.wg.Add(1)
@@ -108,7 +108,7 @@ func (t *TaskLoop) Run() error {
 }
 
 // Get thee NodeSet server registration status
-func (t *TaskLoop) getNodeSetRegistrationstatus() {
+func (t *TaskLoop) getNodeSetRegistrationStatus() {
 	hd := t.sp.GetHyperdriveClient()
 	attempts := 3
 	for i := 0; i < attempts; i++ {
@@ -117,12 +117,13 @@ func (t *TaskLoop) getNodeSetRegistrationstatus() {
 			// Error was because of a comms failure, so try again after 1 second
 			t.logger.Warn(
 				"Getting node registration status during NodeSet login attempt failed",
-				slog.String(log.ErrorKey, response.Data.ErrorMessage),
+				slog.String(log.ErrorKey, err.Error()),
 				slog.Int(keys.AttemptKey, i+1),
 			)
 			if utils.SleepWithCancel(t.ctx, time.Second) {
 				return
 			}
+			continue
 		}
 
 		switch response.Data.Status {
