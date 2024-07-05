@@ -14,8 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/goccy/go-json"
-	"github.com/nodeset-org/hyperdrive-daemon/shared"
-	"github.com/nodeset-org/hyperdrive-daemon/shared/types"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/beacon/ssz_types"
@@ -47,7 +45,7 @@ func NewDepositDataManager(sp *StakeWiseServiceProvider) (*DepositDataManager, e
 	_, err := os.Stat(dataPath)
 	if errors.Is(err, fs.ErrNotExist) {
 		// Make a blank one
-		err = ddMgr.UpdateDepositData([]types.ExtendedDepositData{})
+		err = ddMgr.UpdateDepositData([]beacon.ExtendedDepositData{})
 		return ddMgr, err
 	}
 	if err != nil {
@@ -58,7 +56,7 @@ func NewDepositDataManager(sp *StakeWiseServiceProvider) (*DepositDataManager, e
 }
 
 // Generates deposit data for the provided keys
-func (m *DepositDataManager) GenerateDepositData(keys []*eth2types.BLSPrivateKey) ([]*types.ExtendedDepositData, error) {
+func (m *DepositDataManager) GenerateDepositData(keys []*eth2types.BLSPrivateKey) ([]beacon.ExtendedDepositData, error) {
 	resources := m.sp.GetResources()
 
 	if resources.Vault == nil {
@@ -69,17 +67,14 @@ func (m *DepositDataManager) GenerateDepositData(keys []*eth2types.BLSPrivateKey
 	withdrawalCreds := validator.GetWithdrawalCredsFromAddress(*resources.Vault)
 
 	// Create the new aggregated deposit data for all generated keys
-	dataList := make([]*types.ExtendedDepositData, len(keys))
+	dataList := make([]beacon.ExtendedDepositData, len(keys))
 	for i, key := range keys {
 		depositData, err := validator.GetDepositData(key, withdrawalCreds, resources.GenesisForkVersion, StakewiseDepositAmount, resources.EthNetworkName)
 		if err != nil {
 			pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
 			return nil, fmt.Errorf("error getting deposit data for key %s: %w", pubkey.HexWithPrefix(), err)
 		}
-		dataList[i] = &types.ExtendedDepositData{
-			ExtendedDepositData: depositData,
-			HyperdriveVersion:   shared.HyperdriveVersion,
-		}
+		dataList[i] = depositData
 	}
 	return dataList, nil
 }
@@ -93,7 +88,7 @@ func (m *DepositDataManager) GetDepositData() ([]byte, error) {
 	}
 
 	// Make sure it can deserialize properly
-	var depositData []types.ExtendedDepositData
+	var depositData []beacon.ExtendedDepositData
 	err = json.Unmarshal(bytes, &depositData)
 	if err != nil {
 		return nil, fmt.Errorf("error deserializing deposit data file [%s]: %w", m.dataPath, err)
@@ -103,7 +98,7 @@ func (m *DepositDataManager) GetDepositData() ([]byte, error) {
 }
 
 // Save the deposit data file
-func (m *DepositDataManager) UpdateDepositData(data []types.ExtendedDepositData) error {
+func (m *DepositDataManager) UpdateDepositData(data []beacon.ExtendedDepositData) error {
 	// Serialize it
 	bytes, err := json.Marshal(data)
 	if err != nil {
@@ -121,7 +116,7 @@ func (m *DepositDataManager) UpdateDepositData(data []types.ExtendedDepositData)
 
 // Compute the Merkle root of the aggregated deposit data using the Stakewise rules
 // NOTE: reverse engineered from https://github.com/stakewise/v3-operator/blob/fa4ac2673a64a486ced51098005376e56e2ddd19/src/validators/utils.py#L207
-func (m *DepositDataManager) ComputeMerkleRoot(data []types.ExtendedDepositData) (common.Hash, error) {
+func (m *DepositDataManager) ComputeMerkleRoot(data []beacon.ExtendedDepositData) (common.Hash, error) {
 	leafCount := len(data)
 	if leafCount == 0 {
 		// Empty data gets an empty root
@@ -204,7 +199,7 @@ func (m *DepositDataManager) ComputeMerkleRoot(data []types.ExtendedDepositData)
 }
 
 // Regenerate the deposit data hash root from a deposit data object instead of explicitly relying on the deposit data root provided in the EDD
-func (m *DepositDataManager) regenerateDepositDataRoot(dd types.ExtendedDepositData) (common.Hash, error) {
+func (m *DepositDataManager) regenerateDepositDataRoot(dd beacon.ExtendedDepositData) (common.Hash, error) {
 	var depositData = ssz_types.DepositData{
 		PublicKey:             dd.PublicKey,
 		WithdrawalCredentials: dd.WithdrawalCredentials,

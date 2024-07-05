@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"net/url"
 
-	"github.com/goccy/go-json"
 	eth2types "github.com/wealdtech/go-eth2-types/v2"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
+	apiv1 "github.com/nodeset-org/nodeset-client-go/api-v1"
 	"github.com/rocket-pool/node-manager-core/eth"
 
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
@@ -23,7 +23,6 @@ import (
 )
 
 const (
-	pendingState         string  = "PENDING"
 	validatorDepositCost float64 = 0.01
 )
 
@@ -59,11 +58,12 @@ type nodesetUploadDepositDataContext struct {
 func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadDepositDataData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
 	ddMgr := sp.GetDepositDataManager()
-	nc := sp.GetNodesetClient()
+	hd := sp.GetHyperdriveClient()
 	w := sp.GetWallet()
 	ec := sp.GetEthClient()
 	ctx := c.handler.ctx
 	nodeAddress := walletStatus.Address.NodeAddress
+	res := sp.GetResources()
 
 	// Requirements
 	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
@@ -85,15 +85,14 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 		return types.ResponseStatus_Error, err
 	}
 
-	// Fetch status from Nodeset APIs
-	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
+	// Fetch status from NodeSet
+	response, err := hd.NodeSet_StakeWise.GetRegisteredValidators(*res.Vault)
 	if err != nil {
-		if errors.Is(err, swcommon.ErrUnregisteredNode) {
-			data.UnregisteredNode = true
-			return types.ResponseStatus_Success, nil
-		} else {
-			return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
-		}
+		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
+	}
+	if response.Data.NotRegistered {
+		data.UnregisteredNode = true
+		return types.ResponseStatus_Success, nil
 	}
 
 	// Fetch private keys and derive public keys
@@ -116,10 +115,10 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	// Sort each key by its upload status
 	activePubkeysOnNodeset := []beacon.ValidatorPubkey{}
 	pendingPubkeysOnNodeset := []beacon.ValidatorPubkey{}
-	for _, validator := range nodesetStatusResponse {
+	for _, validator := range response.Data.Validators {
 		_, exists := publicKeyMap[validator.Pubkey]
 		if exists {
-			if validator.Status != pendingState {
+			if validator.Status != apiv1.StakeWiseStatus_Pending {
 				activePubkeysOnNodeset = append(activePubkeysOnNodeset, validator.Pubkey)
 			} else {
 				pendingPubkeysOnNodeset = append(pendingPubkeysOnNodeset, validator.Pubkey)
@@ -197,48 +196,18 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error generating deposit data: %w", err)
 	}
-	serializedData, err := json.Marshal(depositData)
+	uploadResponse, err := hd.NodeSet_StakeWise.UploadDepositData(depositData)
 	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error serializing deposit data: %w", err)
-	}
-	if err := nc.UploadDepositData(ctx, serializedData); err != nil {
-		// Handle special errors
-		if errors.Is(err, swcommon.ErrVaultNotFound) {
-			data.InvalidWithdrawalCredentials = true
-			return types.ResponseStatus_Success, nil
-		} else if errors.Is(err, swcommon.ErrInvalidPermissions) {
-			data.NotAuthorizedForMainnet = true
-			return types.ResponseStatus_Success, nil
-		}
-
-		// General failure
 		return types.ResponseStatus_Error, fmt.Errorf("error uploading deposit data: %w", err)
+	}
+	if uploadResponse.Data.VaultNotFound {
+		data.InvalidWithdrawalCredentials = true
+		return types.ResponseStatus_Success, nil
+	}
+	if uploadResponse.Data.InvalidPermissions {
+		data.NotAuthorizedForMainnet = true
+		return types.ResponseStatus_Success, nil
 	}
 
 	return types.ResponseStatus_Success, nil
-}
-
-// Temp function for unit testing demo
-func getRegisterableKeys(pendingKeys []beacon.ValidatorPubkey, unregisteredPubkeys []beacon.ValidatorPubkey, walletBalance *big.Int) ([]beacon.ValidatorPubkey, []beacon.ValidatorPubkey, *big.Int) {
-	costPerKeyBig := eth.EthToWei(validatorDepositCost)
-	pendingCountBig := big.NewInt(int64(len(pendingKeys)))
-	pendingCost := big.NewInt(0).Mul(costPerKeyBig, pendingCountBig)
-	remainingBalance := big.NewInt(0).Sub(walletBalance, pendingCost)
-
-	// Register as many keys as possible with the remaining balance
-	registeredPubkeys := []beacon.ValidatorPubkey{}
-	remainingPubkeys := []beacon.ValidatorPubkey{}
-	for i, unregisteredKey := range unregisteredPubkeys {
-		pubkey := unregisteredPubkeys[i]
-		if costPerKeyBig.Cmp(remainingBalance) > 0 {
-			// Balance is insufficient, label this key as remaining
-			remainingPubkeys = append(remainingPubkeys, pubkey)
-		} else {
-			// Balance is sufficient, register this key and subtract its cost
-			registeredPubkeys = append(registeredPubkeys, unregisteredKey)
-			remainingBalance.Sub(remainingBalance, costPerKeyBig)
-		}
-	}
-
-	return registeredPubkeys, remainingPubkeys, remainingBalance
 }

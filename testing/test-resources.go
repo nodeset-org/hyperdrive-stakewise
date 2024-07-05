@@ -1,6 +1,7 @@
 package testing
 
 import (
+	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/config"
 )
@@ -11,13 +12,12 @@ const (
 )
 
 // GetTestResources returns a new StakewiseResources instance with test network values
-func GetTestResources(networkResources *config.NetworkResources, nodesetUrl string) *swconfig.StakewiseResources {
+func GetTestResources(hdResources *hdconfig.HyperdriveResources) *swconfig.StakewiseResources {
 	return &swconfig.StakewiseResources{
-		NetworkResources: networkResources,
-		NodesetApiUrl:    nodesetUrl,
-		Vault:            config.HexToAddressPtr(StakeWiseVaultString),
-		FeeRecipient:     config.HexToAddressPtr(""),
-		SplitWarehouse:   config.HexToAddressPtr(""),
-		PullSplit:        config.HexToAddressPtr(""),
+		HyperdriveResources: hdResources,
+		Vault:               config.HexToAddressPtr(StakeWiseVaultString),
+		FeeRecipient:        config.HexToAddressPtr(""),
+		SplitWarehouse:      config.HexToAddressPtr(""),
+		PullSplit:           config.HexToAddressPtr(""),
 	}
 }

@@ -14,7 +14,6 @@ type StakeWiseServiceProvider struct {
 	wallet             *Wallet
 	resources          *swconfig.StakewiseResources
 	depositDataManager *DepositDataManager
-	nodesetClient      *NodeSetClient_v1
 }
 
 // Create a new service provider with Stakewise daemon-specific features
@@ -51,10 +50,6 @@ func NewStakeWiseServiceProviderFromCustomServices(sp *services.ServiceProvider,
 		return nil, fmt.Errorf("error initializing deposit data manager: %w", err)
 	}
 	stakewiseSp.depositDataManager = ddMgr
-
-	// Create the nodeset client
-	nc := NewNodeSetClient_v1(stakewiseSp)
-	stakewiseSp.nodesetClient = nc
 	return stakewiseSp, nil
 }
 
@@ -72,8 +67,4 @@ func (s *StakeWiseServiceProvider) GetResources() *swconfig.StakewiseResources {
 
 func (s *StakeWiseServiceProvider) GetDepositDataManager() *DepositDataManager {
 	return s.depositDataManager
-}
-
-func (s *StakeWiseServiceProvider) GetNodesetClient() *NodeSetClient_v1 {
-	return s.nodesetClient
 }

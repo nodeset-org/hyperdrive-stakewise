@@ -23,8 +23,6 @@ func NewNodesetHandler(logger *log.Logger, ctx context.Context, serviceProvider 
 		serviceProvider: serviceProvider,
 	}
 	h.factories = []server.IContextFactory{
-		&nodesetRegistrationStatusContextFactory{h},
-		&nodesetRegisterNodeContextFactory{h},
 		&nodesetSetValidatorsRootContextFactory{h},
 		&nodesetUploadDepositDataContextFactory{h},
 		&nodesetGenerateDepositDataContextFactory{h},

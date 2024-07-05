@@ -2,7 +2,6 @@ package swtasks
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -10,10 +9,10 @@ import (
 	swcontracts "github.com/nodeset-org/hyperdrive-stakewise/common/contracts"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/nodeset-org/hyperdrive-daemon/shared/types"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	batch "github.com/rocket-pool/batch-query"
+	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/log"
 )
 
@@ -24,9 +23,9 @@ type UpdateDepositDataTask struct {
 	sp     *swcommon.StakeWiseServiceProvider
 	w      *swcommon.Wallet
 	hd     *client.ApiClient
-	ns     *swcommon.NodeSetClient_v1
 	ddMgr  *swcommon.DepositDataManager
 	cfg    *swconfig.StakeWiseConfig
+	res    *swconfig.StakewiseResources
 }
 
 // Create update deposit data task
@@ -37,9 +36,9 @@ func NewUpdateDepositDataTask(ctx context.Context, sp *swcommon.StakeWiseService
 		sp:     sp,
 		w:      sp.GetWallet(),
 		hd:     sp.GetHyperdriveClient(),
-		ns:     sp.GetNodesetClient(),
 		ddMgr:  sp.GetDepositDataManager(),
 		cfg:    sp.GetModuleConfig(),
+		res:    sp.GetResources(),
 	}
 }
 
@@ -48,17 +47,18 @@ func (t *UpdateDepositDataTask) Run() error {
 	t.logger.Info("Checking version of NodeSet data on disk...")
 
 	// Get the version on the server
-	remoteVersion, err := t.ns.GetServerDepositDataVersion(t.ctx)
+	versionResponse, err := t.hd.NodeSet_StakeWise.GetDepositDataSetVersion(*t.res.Vault)
 	if err != nil {
-		if errors.Is(err, swcommon.ErrUnregisteredNode) {
-			t.logger.Warn("Node is not registered with the NodeSet server yet.")
-			return nil
-		}
 		return fmt.Errorf("error getting latest deposit data version: %w", err)
+	}
+	if versionResponse.Data.NotRegistered {
+		t.logger.Warn("Node is not registered with the NodeSet server yet.")
+		return nil
 	}
 
 	// Compare versions
 	localVersion := t.w.GetLatestDepositDataVersion()
+	remoteVersion := versionResponse.Data.Version
 	if remoteVersion == localVersion {
 		t.logger.Info("Local data is up to date", slog.Int("version", localVersion))
 		return nil
@@ -66,12 +66,13 @@ func (t *UpdateDepositDataTask) Run() error {
 
 	// Get the new data
 	t.logger.Info("Deposit data is out of date retrieving latest data...", slog.Int("localVersion", localVersion), slog.Int("remoteVersion", remoteVersion))
-	_, depositData, err := t.ns.GetServerDepositData(t.ctx)
+	setResponse, err := t.hd.NodeSet_StakeWise.GetDepositDataSet(*t.res.Vault)
 	if err != nil {
 		return fmt.Errorf("error getting latest deposit data: %w", err)
 	}
 
 	// Verify the merkle roots if enabled
+	depositData := setResponse.Data.DepositData
 	if t.cfg.VerifyDepositsRoot.Value {
 		isMatch, err := t.verifyDepositsRoot(depositData)
 		if err != nil {
@@ -104,7 +105,7 @@ func (t *UpdateDepositDataTask) Run() error {
 }
 
 // Verify the Merkle root from the deposits data matches what's on chain before saving
-func (t *UpdateDepositDataTask) verifyDepositsRoot(depositData []types.ExtendedDepositData) (bool, error) {
+func (t *UpdateDepositDataTask) verifyDepositsRoot(depositData []beacon.ExtendedDepositData) (bool, error) {
 	// Get services
 	ec := t.sp.GetEthClient()
 	res := t.sp.GetResources()

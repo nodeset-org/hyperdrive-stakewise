@@ -66,12 +66,15 @@ func TestMain(m *testing.M) {
 	}
 
 	// Register with NodeSet
-	logger := log.NewDefaultLogger()
-	ctx := logger.CreateContextWithLogger(sp.GetBaseContext())
-	nsClient := testMgr.GetStakeWiseServiceProvider().GetNodesetClient()
-	err = nsClient.RegisterNode(ctx, nsEmail, nodeAddress)
+	response, err := hdClient.NodeSet.RegisterNode(nsEmail)
 	if err != nil {
 		fail("error registering node with nodeset: %v", err)
+	}
+	if response.Data.AlreadyRegistered {
+		fail("node is already registered with nodeset")
+	}
+	if response.Data.NotWhitelisted {
+		fail("node is not whitelisted with a nodeset user account")
 	}
 
 	// Run tests

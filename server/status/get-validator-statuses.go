@@ -7,6 +7,7 @@ import (
 
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
+	apiv1 "github.com/nodeset-org/nodeset-client-go/api-v1"
 
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
@@ -52,7 +53,8 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 	sp := c.handler.serviceProvider
 	bc := sp.GetBeaconClient()
 	w := sp.GetWallet()
-	nc := sp.GetNodesetClient()
+	hd := sp.GetHyperdriveClient()
+	res := sp.GetResources()
 	ctx := c.handler.ctx
 
 	// Requirements
@@ -68,7 +70,7 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 		return types.ResponseStatus_Error, err
 	}
 
-	nodesetStatusResponse, err := nc.GetRegisteredValidators(ctx)
+	nodesetStatusResponse, err := hd.NodeSet_StakeWise.GetRegisteredValidators(*res.Vault)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting nodeset statuses: %w", err)
 	}
@@ -87,8 +89,8 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 		return types.ResponseStatus_Error, fmt.Errorf("error getting validator statuses: %w", err)
 	}
 
-	registeredPubkeysStatusMapping := make(map[beacon.ValidatorPubkey]string)
-	for _, pubkeyStatus := range nodesetStatusResponse {
+	registeredPubkeysStatusMapping := make(map[beacon.ValidatorPubkey]apiv1.StakeWiseStatus)
+	for _, pubkeyStatus := range nodesetStatusResponse.Data.Validators {
 		registeredPubkeysStatusMapping[pubkeyStatus.Pubkey] = pubkeyStatus.Status
 	}
 
