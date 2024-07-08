@@ -1,17 +1,7 @@
 package swapi
 
 import (
-	"github.com/nodeset-org/hyperdrive-daemon/shared/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
-)
-
-type NodesetRegistrationStatus string
-
-const (
-	NodesetRegistrationStatus_Registered   NodesetRegistrationStatus = "registered"
-	NodesetRegistrationStatus_Unregistered NodesetRegistrationStatus = "unregistered"
-	NodesetRegistrationStatus_Unknown      NodesetRegistrationStatus = "unknown"
-	NodesetRegistrationStatus_NoWallet     NodesetRegistrationStatus = "no-wallet"
 )
 
 type NodesetUploadDepositDataData struct {
@@ -29,17 +19,6 @@ type NodesetUploadDepositDataData struct {
 	RemainingEthRequired         float64                  `json:"remainingEthRequired"`
 }
 
-type NodeSetRegisterNodeData struct {
-	Success           bool `json:"success"`
-	AlreadyRegistered bool `json:"alreadyRegistered"`
-	NotWhitelisted    bool `json:"notWhitelisted"`
-}
-
-type NodeSetRegistrationStatusData struct {
-	Status       NodesetRegistrationStatus `json:"status"`
-	ErrorMessage string                    `json:"errorMessage"`
-}
-
 type NodesetGenerateDepositDataData struct {
-	Deposits []*types.ExtendedDepositData `json:"deposits"`
+	Deposits []beacon.ExtendedDepositData `json:"deposits"`
 }

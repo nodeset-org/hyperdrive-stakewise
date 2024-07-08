@@ -2,7 +2,7 @@ module github.com/nodeset-org/hyperdrive-stakewise
 
 go 1.21
 
-toolchain go1.21.1
+toolchain go1.21.10
 
 require (
 	github.com/ethereum/go-ethereum v1.14.3
@@ -10,8 +10,8 @@ require (
 	github.com/goccy/go-json v0.10.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.0.1
-	github.com/nodeset-org/nodeset-svc-mock v0.2.0
+	github.com/nodeset-org/hyperdrive-daemon v1.0.2-0.20240708180812-9e2a3dac7eb4
+	github.com/nodeset-org/nodeset-client-go v0.0.0-20240705161624-e301897d5d3c
 	github.com/nodeset-org/osha v0.2.0
 	github.com/rocket-pool/batch-query v1.0.0
 	github.com/rocket-pool/node-manager-core v0.5.1
@@ -127,12 +127,14 @@ require (
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7 // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.4-beta // indirect
 	github.com/prysmaticlabs/prysm/v5 v5.0.3 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sethvargo/go-password v0.2.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/supranational/blst v0.3.11 // indirect
+	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect
 	github.com/tklauser/numcpus v0.7.0 // indirect

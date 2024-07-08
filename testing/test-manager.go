@@ -14,7 +14,6 @@ import (
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swserver "github.com/nodeset-org/hyperdrive-stakewise/server"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
-	nsserver "github.com/nodeset-org/nodeset-svc-mock/server"
 	"github.com/rocket-pool/node-manager-core/log"
 )
 
@@ -25,9 +24,6 @@ type StakeWiseTestManager struct {
 	// The service provider for the test environment
 	sp *swcommon.StakeWiseServiceProvider
 
-	// The mock for the nodeset.io service
-	nodesetMock *nsserver.NodeSetMockServer
-
 	// The StakeWise Daemon server
 	serverMgr *swserver.ServerManager
 
@@ -36,15 +32,14 @@ type StakeWiseTestManager struct {
 
 	// Wait group for graceful shutdown
 	swWg *sync.WaitGroup
-	nsWg *sync.WaitGroup
 }
 
 // Creates a new TestManager instance
-// `hdaddress` is the address to bind the Hyperdrive daemon to.
-// `swaddress` is the address to bind the StakeWise daemon to.
-// `nsddress` is the address to bind the nodeset.io mock server to.
-func NewStakeWiseTestManager(hdaddress string, swaddress string, nsaddress string) (*StakeWiseTestManager, error) {
-	tm, err := hdtesting.NewHyperdriveTestManagerWithDefaults(hdaddress)
+// `hdAddress` is the address to bind the Hyperdrive daemon to.
+// `swAddress` is the address to bind the StakeWise daemon to.
+// `nsAddress` is the address to bind the nodeset.io mock server to.
+func NewStakeWiseTestManager(hdAddress string, swAddress string, nsAddress string) (*StakeWiseTestManager, error) {
+	tm, err := hdtesting.NewHyperdriveTestManagerWithDefaults(hdAddress, nsAddress)
 	if err != nil {
 		return nil, fmt.Errorf("error creating test manager: %w", err)
 	}
@@ -54,21 +49,8 @@ func NewStakeWiseTestManager(hdaddress string, swaddress string, nsaddress strin
 	hdCfg := hdSp.GetConfig()
 	hdClient := tm.GetApiClient()
 
-	// Make the nodeset.io mock server
-	nsWg := &sync.WaitGroup{}
-	nodesetMock, err := nsserver.NewNodeSetMockServer(tm.GetLogger(), nsaddress, 0)
-	if err != nil {
-		closeTestManager(tm)
-		return nil, fmt.Errorf("error creating nodeset mock server: %v", err)
-	}
-	err = nodesetMock.Start(nsWg)
-	if err != nil {
-		closeTestManager(tm)
-		return nil, fmt.Errorf("error starting nodeset mock server: %v", err)
-	}
-
 	// Make StakeWise resources
-	resources := GetTestResources(hdCfg.GetNetworkResources(), fmt.Sprintf("http://%s:%d/api/", nsaddress, nodesetMock.GetPort()))
+	resources := GetTestResources(hdSp.GetResources())
 	swCfg := swconfig.NewStakeWiseConfigWithResources(hdCfg, resources)
 
 	// Make the module directory
@@ -80,7 +62,7 @@ func NewStakeWiseTestManager(hdaddress string, swaddress string, nsaddress strin
 	}
 
 	// Make a new service provider
-	moduleSp, err := hdservices.NewServiceProviderFromArtifacts(hdClient, hdCfg, swCfg, resources.NetworkResources, moduleDir, swconfig.ModuleName, swconfig.ClientLogName, hdSp.GetEthClient(), hdSp.GetBeaconClient())
+	moduleSp, err := hdservices.NewServiceProviderFromArtifacts(hdClient, hdCfg, swCfg, hdSp.GetResources(), moduleDir, swconfig.ModuleName, swconfig.ClientLogName, hdSp.GetEthClient(), hdSp.GetBeaconClient())
 	if err != nil {
 		closeTestManager(tm)
 		return nil, fmt.Errorf("error creating service provider: %v", err)
@@ -93,14 +75,14 @@ func NewStakeWiseTestManager(hdaddress string, swaddress string, nsaddress strin
 
 	// Create the server
 	swWg := &sync.WaitGroup{}
-	serverMgr, err := swserver.NewServerManager(stakeWiseSP, swaddress, 0, swWg)
+	serverMgr, err := swserver.NewServerManager(stakeWiseSP, swAddress, 0, swWg)
 	if err != nil {
 		closeTestManager(tm)
 		return nil, fmt.Errorf("error creating stakewise server: %v", err)
 	}
 
 	// Create the client
-	urlString := fmt.Sprintf("http://%s:%d/%s", swaddress, serverMgr.GetPort(), swconfig.ApiClientRoute)
+	urlString := fmt.Sprintf("http://%s:%d/%s", swAddress, serverMgr.GetPort(), swconfig.ApiClientRoute)
 	url, err := url.Parse(urlString)
 	if err != nil {
 		closeTestManager(tm)
@@ -112,11 +94,9 @@ func NewStakeWiseTestManager(hdaddress string, swaddress string, nsaddress strin
 	m := &StakeWiseTestManager{
 		HyperdriveTestManager: tm,
 		sp:                    stakeWiseSP,
-		nodesetMock:           nodesetMock,
 		serverMgr:             serverMgr,
 		apiClient:             apiClient,
 		swWg:                  swWg,
-		nsWg:                  nsWg,
 	}
 	return m, nil
 }
@@ -124,11 +104,6 @@ func NewStakeWiseTestManager(hdaddress string, swaddress string, nsaddress strin
 // Get the StakeWise service provider
 func (m *StakeWiseTestManager) GetStakeWiseServiceProvider() *swcommon.StakeWiseServiceProvider {
 	return m.sp
-}
-
-// Get the nodeset.io mock server
-func (m *StakeWiseTestManager) GetNodeSetMockServer() *nsserver.NodeSetMockServer {
-	return m.nodesetMock
 }
 
 // Get the StakeWise Daemon server manager
@@ -143,15 +118,6 @@ func (m *StakeWiseTestManager) GetApiClient() *swclient.ApiClient {
 
 // Closes the test manager, shutting down the nodeset mock server and all other resources
 func (m *StakeWiseTestManager) Close() error {
-	if m.nodesetMock != nil {
-		err := m.nodesetMock.Stop()
-		if err != nil {
-			m.GetLogger().Warn("WARNING: API server didn't shutdown cleanly", log.Err(err))
-		}
-		m.nsWg.Wait()
-		m.TestManager.GetLogger().Info("Stopped nodeset.io mock server")
-		m.nodesetMock = nil
-	}
 	if m.serverMgr != nil {
 		m.serverMgr.Stop()
 		m.swWg.Wait()

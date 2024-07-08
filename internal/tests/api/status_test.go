@@ -36,12 +36,8 @@ func TestValidatorStatus_Active(t *testing.T) {
 	t.Logf("Validator key generated, pubkey = %s", pubkey.HexWithPrefix())
 
 	// Generate deposit data
-	depositDataPtrs, err := ddMgr.GenerateDepositData([]*eth2types.BLSPrivateKey{key})
+	depositData, err := ddMgr.GenerateDepositData([]*eth2types.BLSPrivateKey{key})
 	require.NoError(t, err)
-	depositData := make([]beacon.ExtendedDepositData, len(depositDataPtrs))
-	for i, ptr := range depositDataPtrs {
-		depositData[i] = (*ptr).ExtendedDepositData
-	}
 	t.Log("Deposit data generated")
 
 	// Upload the deposit data to nodeset
@@ -121,7 +117,4 @@ func status_cleanup(snapshotName string) {
 	if err != nil {
 		fail("Error reloading stakewise wallet: %v", err)
 	}
-
-	// Log out of the NS mock server
-	testMgr.GetStakeWiseServiceProvider().GetNodesetClient().Logout()
 }

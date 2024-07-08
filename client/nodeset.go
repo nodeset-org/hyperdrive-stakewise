@@ -42,20 +42,6 @@ func (r *NodesetRequester) UploadDepositData() (*types.ApiResponse[swapi.Nodeset
 	return client.SendGetRequest[swapi.NodesetUploadDepositDataData](r, "upload-deposit-data", "UploadDepositData", args)
 }
 
-// Register node with NodeSet
-func (r *NodesetRequester) RegisterNode(email string) (*types.ApiResponse[swapi.NodeSetRegisterNodeData], error) {
-	args := map[string]string{
-		"email": email,
-	}
-	return client.SendGetRequest[swapi.NodeSetRegisterNodeData](r, "register-node", "RegisterNode", args)
-}
-
-// Get the node's NodeSet registration status
-func (r *NodesetRequester) RegistrationStatus() (*types.ApiResponse[swapi.NodeSetRegistrationStatusData], error) {
-	args := map[string]string{}
-	return client.SendGetRequest[swapi.NodeSetRegistrationStatusData](r, "registration-status", "RegistrationStatus", args)
-}
-
 // Generate deposit data for your validator keys without uploading them to NodeSet
 func (r *NodesetRequester) GenerateDepositData(pubkeys []beacon.ValidatorPubkey) (*types.ApiResponse[swapi.NodesetGenerateDepositDataData], error) {
 	args := map[string]string{}
