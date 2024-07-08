@@ -132,11 +132,11 @@ func (t *TaskLoop) getNodeSetRegistrationStatus() {
 			return
 		case api.NodeSetRegistrationStatus_NoWallet:
 			// Error was because the wallet isn't ready yet, so just return since logging in won't work yet
-			t.logger.Info("Can't log in, node doesn't have a wallet yet")
+			t.logger.Info("Can't log into NodeSet, node doesn't have a wallet yet")
 			return
 		case api.NodeSetRegistrationStatus_Unregistered:
 			// Node's not registered yet, this isn't an actual error to report
-			t.logger.Info("Can't log in, node is not registered with NodeSet yet")
+			t.logger.Info("Node is not registered with NodeSet yet")
 			return
 		default:
 			// Error occurred on the remote side, so try again after 1 second

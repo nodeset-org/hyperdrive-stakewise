@@ -3,15 +3,10 @@ package swcommon
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	"github.com/rocket-pool/node-manager-core/log"
 	"github.com/rocket-pool/node-manager-core/wallet"
-)
-
-const (
-	nodeSetRegistrationCheckInterval time.Duration = 15 * time.Second
 )
 
 func (sp *StakeWiseServiceProvider) RequireStakewiseWalletReady(ctx context.Context, status wallet.WalletStatus) error {
