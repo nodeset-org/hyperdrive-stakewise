@@ -139,9 +139,9 @@ func (t *TaskLoop) getNodeSetRegistrationStatus() {
 			t.logger.Info("Can't log in, node is not registered with NodeSet yet")
 			return
 		default:
-			// Error was because of a comms failure, so try again after 1 second
+			// Error occurred on the remote side, so try again after 1 second
 			t.logger.Warn(
-				"Getting node registration status during NodeSet login attempt failed",
+				"NodeSet registration status is unknown",
 				slog.String(log.ErrorKey, response.Data.ErrorMessage),
 				slog.Int(keys.AttemptKey, i+1),
 			)
