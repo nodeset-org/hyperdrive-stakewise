@@ -38,11 +38,11 @@ type Wallet struct {
 	stakewisePasswordFilePath string
 	stakewiseKeystoreManager  *stakewiseKeystoreManager
 	data                      stakewiseWalletData
-	sp                        *services.ServiceProvider
+	sp                        services.IModuleServiceProvider
 }
 
 // Create a new wallet
-func NewWallet(sp *services.ServiceProvider) (*Wallet, error) {
+func NewWallet(sp services.IModuleServiceProvider) (*Wallet, error) {
 	moduleDir := sp.GetModuleDir()
 	validatorPath := filepath.Join(moduleDir, config.ValidatorsDirectory)
 	wallet := &Wallet{

@@ -97,18 +97,6 @@ func (cfg *StakeWiseConfig) Graffiti() (string, error) {
 	return fmt.Sprintf("%s (%s)", prefix, customGraffiti), nil
 }
 
-func (cfg *StakeWiseConfig) FeeRecipient() string {
-	return cfg.resources.FeeRecipient.Hex()
-}
-
-func (cfg *StakeWiseConfig) Vault() string {
-	return cfg.resources.Vault.Hex()
-}
-
-func (cfg *StakeWiseConfig) Network() string {
-	return cfg.resources.EthNetworkName
-}
-
 func (cfg *StakeWiseConfig) IsEnabled() bool {
 	return cfg.Enabled.Value
 }

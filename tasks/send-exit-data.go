@@ -24,7 +24,7 @@ const (
 type SendExitDataTask struct {
 	logger *log.Logger
 	ctx    context.Context
-	sp     *swcommon.StakeWiseServiceProvider
+	sp     swcommon.IStakeWiseServiceProvider
 	w      *swcommon.Wallet
 	hd     *client.ApiClient
 	bc     beacon.IBeaconClient
@@ -32,7 +32,7 @@ type SendExitDataTask struct {
 }
 
 // Create Exit data task
-func NewSendExitDataTask(ctx context.Context, sp *swcommon.StakeWiseServiceProvider, logger *log.Logger) *SendExitDataTask {
+func NewSendExitDataTask(ctx context.Context, sp swcommon.IStakeWiseServiceProvider, logger *log.Logger) *SendExitDataTask {
 	return &SendExitDataTask{
 		logger: logger,
 		ctx:    ctx,

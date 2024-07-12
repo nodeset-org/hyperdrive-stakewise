@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
 	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
-	"github.com/nodeset-org/osha"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/node/validator"
 	"github.com/stretchr/testify/require"
@@ -15,7 +15,7 @@ import (
 
 func TestValidatorStatus_Active(t *testing.T) {
 	// Take a snapshot, revert at the end
-	snapshotName, err := testMgr.CreateCustomSnapshot(osha.Service_EthClients | osha.Service_Filesystem)
+	snapshotName, err := testMgr.CreateCustomSnapshot(hdtesting.Service_EthClients | hdtesting.Service_Filesystem)
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}

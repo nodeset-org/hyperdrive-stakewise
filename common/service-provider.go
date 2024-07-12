@@ -1,15 +1,53 @@
 package swcommon
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
+	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
-type StakeWiseServiceProvider struct {
-	*services.ServiceProvider
+// Provides the StakeWise module config and resources
+type IStakeWiseConfigProvider interface {
+	// Gets the StakeWise config
+	GetConfig() *swconfig.StakeWiseConfig
+
+	// Gets the StakeWise resources
+	GetResources() *swconfig.StakewiseResources
+}
+
+// Provides the StakeWise wallet
+type IStakeWiseWalletProvider interface {
+	// Gets the wallet
+	GetWallet() *Wallet
+}
+
+// Provides the deposit data manager
+type IDepositDataManagerProvider interface {
+	// Gets the deposit data manager
+	GetDepositDataManager() *DepositDataManager
+}
+
+// Provides requirements for the StakeWise daemon
+type IStakeWiseRequirementsProvider interface {
+	RequireStakewiseWalletReady(ctx context.Context, status wallet.WalletStatus) error
+	WaitForStakewiseWallet(ctx context.Context) error
+}
+
+type IStakeWiseServiceProvider interface {
+	IStakeWiseConfigProvider
+	IStakeWiseWalletProvider
+	IDepositDataManagerProvider
+	IStakeWiseRequirementsProvider
+
+	services.IModuleServiceProvider
+}
+
+type stakeWiseServiceProvider struct {
+	services.IModuleServiceProvider
 	swCfg              *swconfig.StakeWiseConfig
 	wallet             *Wallet
 	resources          *swconfig.StakewiseResources
@@ -17,19 +55,20 @@ type StakeWiseServiceProvider struct {
 }
 
 // Create a new service provider with Stakewise daemon-specific features
-func NewStakeWiseServiceProvider(sp *services.ServiceProvider) (*StakeWiseServiceProvider, error) {
+func NewStakeWiseServiceProvider(sp services.IModuleServiceProvider) (IStakeWiseServiceProvider, error) {
 	// Create the resources
 	swCfg, ok := sp.GetModuleConfig().(*swconfig.StakeWiseConfig)
 	if !ok {
 		return nil, fmt.Errorf("stakewise config is not the correct type, it's a %s", reflect.TypeOf(swCfg))
 	}
-	res := swCfg.GetStakeWiseResources()
+	hdCfg := sp.GetHyperdriveConfig()
+	res := swconfig.NewStakewiseResources(hdCfg.Network.Value)
 
 	return NewStakeWiseServiceProviderFromCustomServices(sp, swCfg, res)
 }
 
 // Create a new service provider with Stakewise daemon-specific features, using custom services instead of loading them from the module service provider.
-func NewStakeWiseServiceProviderFromCustomServices(sp *services.ServiceProvider, cfg *swconfig.StakeWiseConfig, resources *swconfig.StakewiseResources) (*StakeWiseServiceProvider, error) {
+func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServiceProvider, cfg *swconfig.StakeWiseConfig, resources *swconfig.StakewiseResources) (IStakeWiseServiceProvider, error) {
 	// Create the wallet
 	wallet, err := NewWallet(sp)
 	if err != nil {
@@ -37,11 +76,11 @@ func NewStakeWiseServiceProviderFromCustomServices(sp *services.ServiceProvider,
 	}
 
 	// Make the provider
-	stakewiseSp := &StakeWiseServiceProvider{
-		ServiceProvider: sp,
-		swCfg:           cfg,
-		wallet:          wallet,
-		resources:       resources,
+	stakewiseSp := &stakeWiseServiceProvider{
+		IModuleServiceProvider: sp,
+		swCfg:                  cfg,
+		wallet:                 wallet,
+		resources:              resources,
 	}
 
 	// Create the deposit data manager
@@ -53,18 +92,18 @@ func NewStakeWiseServiceProviderFromCustomServices(sp *services.ServiceProvider,
 	return stakewiseSp, nil
 }
 
-func (s *StakeWiseServiceProvider) GetModuleConfig() *swconfig.StakeWiseConfig {
+func (s *stakeWiseServiceProvider) GetConfig() *swconfig.StakeWiseConfig {
 	return s.swCfg
 }
 
-func (s *StakeWiseServiceProvider) GetWallet() *Wallet {
-	return s.wallet
-}
-
-func (s *StakeWiseServiceProvider) GetResources() *swconfig.StakewiseResources {
+func (s *stakeWiseServiceProvider) GetResources() *swconfig.StakewiseResources {
 	return s.resources
 }
 
-func (s *StakeWiseServiceProvider) GetDepositDataManager() *DepositDataManager {
+func (s *stakeWiseServiceProvider) GetWallet() *Wallet {
+	return s.wallet
+}
+
+func (s *stakeWiseServiceProvider) GetDepositDataManager() *DepositDataManager {
 	return s.depositDataManager
 }

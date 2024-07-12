@@ -37,7 +37,7 @@ func (f *statusGetValidatorsStatusesContextFactory) Create(args url.Values) (*st
 
 func (f *statusGetValidatorsStatusesContextFactory) RegisterRoute(router *mux.Router) {
 	server.RegisterQuerylessGet[*statusGetValidatorsStatusesContext, swapi.ValidatorStatusData](
-		router, "status", f, f.handler.logger.Logger, f.handler.serviceProvider.ServiceProvider,
+		router, "status", f, f.handler.logger.Logger, f.handler.serviceProvider,
 	)
 }
 

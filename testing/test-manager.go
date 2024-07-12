@@ -22,7 +22,7 @@ type StakeWiseTestManager struct {
 	*hdtesting.HyperdriveTestManager
 
 	// The service provider for the test environment
-	sp *swcommon.StakeWiseServiceProvider
+	sp swcommon.IStakeWiseServiceProvider
 
 	// The StakeWise Daemon server
 	serverMgr *swserver.ServerManager
@@ -51,7 +51,7 @@ func NewStakeWiseTestManager(hdAddress string, swAddress string, nsAddress strin
 
 	// Make StakeWise resources
 	resources := GetTestResources(hdSp.GetResources())
-	swCfg := swconfig.NewStakeWiseConfigWithResources(hdCfg, resources)
+	swCfg := swconfig.NewStakeWiseConfig(hdCfg)
 
 	// Make the module directory
 	moduleDir := filepath.Join(hdCfg.UserDataPath.Value, hdconfig.ModulesName, swconfig.ModuleName)
@@ -62,7 +62,7 @@ func NewStakeWiseTestManager(hdAddress string, swAddress string, nsAddress strin
 	}
 
 	// Make a new service provider
-	moduleSp, err := hdservices.NewServiceProviderFromArtifacts(hdClient, hdCfg, swCfg, hdSp.GetResources(), moduleDir, swconfig.ModuleName, swconfig.ClientLogName, hdSp.GetEthClient(), hdSp.GetBeaconClient())
+	moduleSp, err := hdservices.NewModuleServiceProviderFromArtifacts(hdClient, hdCfg, swCfg, hdSp.GetResources(), moduleDir, swconfig.ModuleName, swconfig.ClientLogName, hdSp.GetEthClient(), hdSp.GetBeaconClient())
 	if err != nil {
 		closeTestManager(tm)
 		return nil, fmt.Errorf("error creating service provider: %v", err)
@@ -102,7 +102,7 @@ func NewStakeWiseTestManager(hdAddress string, swAddress string, nsAddress strin
 }
 
 // Get the StakeWise service provider
-func (m *StakeWiseTestManager) GetStakeWiseServiceProvider() *swcommon.StakeWiseServiceProvider {
+func (m *StakeWiseTestManager) GetStakeWiseServiceProvider() swcommon.IStakeWiseServiceProvider {
 	return m.sp
 }
 

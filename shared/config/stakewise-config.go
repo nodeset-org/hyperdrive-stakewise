@@ -16,7 +16,7 @@ const (
 
 // Configuration for Stakewise
 type StakeWiseConfig struct {
-	// Toggle for enabling access to the root filesystem (for multiple disk usage metrics)
+	// Toggle for enabling the module
 	Enabled config.Parameter[bool]
 
 	// Port to run the Stakewise API server on
@@ -43,27 +43,12 @@ type StakeWiseConfig struct {
 	Teku       *config.TekuVcConfig
 
 	// Internal fields
-	Version   string
-	hdCfg     *hdconfig.HyperdriveConfig
-	resources *StakewiseResources
+	Version string
+	hdCfg   *hdconfig.HyperdriveConfig
 }
 
 // Generates a new Stakewise config
 func NewStakeWiseConfig(hdCfg *hdconfig.HyperdriveConfig) *StakeWiseConfig {
-	swCfg := newStakeWiseConfigImpl(hdCfg)
-	swCfg.updateResources()
-	return swCfg
-}
-
-// Generates a new Stakewise config with custom resources
-func NewStakeWiseConfigWithResources(hdCfg *hdconfig.HyperdriveConfig, resources *StakewiseResources) *StakeWiseConfig {
-	swCfg := newStakeWiseConfigImpl(hdCfg)
-	swCfg.resources = resources
-	return swCfg
-}
-
-// Internal constructor for Stakewise config
-func newStakeWiseConfigImpl(hdCfg *hdconfig.HyperdriveConfig) *StakeWiseConfig {
 	cfg := &StakeWiseConfig{
 		hdCfg: hdCfg,
 
@@ -72,7 +57,7 @@ func newStakeWiseConfigImpl(hdCfg *hdconfig.HyperdriveConfig) *StakeWiseConfig {
 				ID:                 ids.StakewiseEnableID,
 				Name:               "Enable",
 				Description:        "Enable support for Stakewise (see more at https://docs.nodeset.io).",
-				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseOperator},
+				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon, ContainerID_StakewiseOperator, ContainerID_StakewiseValidator},
 				CanBeBlank:         false,
 				OverwriteOnUpgrade: false,
 			},
@@ -113,7 +98,7 @@ func newStakeWiseConfigImpl(hdCfg *hdconfig.HyperdriveConfig) *StakeWiseConfig {
 			ParameterCommon: &config.ParameterCommon{
 				ID:                 ids.DaemonContainerTagID,
 				Name:               "Daemon Container Tag",
-				Description:        "The tag name of Hyperdrive's Stakewise Daemon image to use. See https://github.com/stakewise/v3-operator#using-docker for more details.",
+				Description:        "The tag name of Hyperdrive's Stakewise Daemon image to use.",
 				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon},
 				CanBeBlank:         false,
 				OverwriteOnUpgrade: true,
@@ -210,7 +195,6 @@ func (cfg *StakeWiseConfig) GetSubconfigs() map[string]config.IConfigSection {
 func (cfg *StakeWiseConfig) ChangeNetwork(oldNetwork config.Network, newNetwork config.Network) {
 	// Run the changes
 	config.ChangeNetwork(cfg, oldNetwork, newNetwork)
-	cfg.updateResources()
 }
 
 // Creates a copy of the configuration
@@ -218,13 +202,7 @@ func (cfg *StakeWiseConfig) Clone() hdconfig.IModuleConfig {
 	clone := NewStakeWiseConfig(cfg.hdCfg)
 	config.Clone(cfg, clone, cfg.hdCfg.Network.Value)
 	clone.Version = cfg.Version
-	clone.updateResources()
 	return clone
-}
-
-// Get the Stakewise resources for the selected network
-func (cfg *StakeWiseConfig) GetStakeWiseResources() *StakewiseResources {
-	return cfg.resources
 }
 
 // Updates the default parameters based on the current network value
@@ -263,15 +241,6 @@ func (cfg *StakeWiseConfig) Deserialize(configMap map[string]any, network config
 // Get the version of the module config
 func (cfg *StakeWiseConfig) GetVersion() string {
 	return cfg.Version
-}
-
-// =====================
-// === Field Helpers ===
-// =====================
-
-// Update the config's resource cache
-func (cfg *StakeWiseConfig) updateResources() {
-	cfg.resources = newStakewiseResources(cfg.hdCfg.Network.Value)
 }
 
 // ===================

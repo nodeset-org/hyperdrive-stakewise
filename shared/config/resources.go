@@ -32,7 +32,7 @@ type StakewiseResources struct {
 }
 
 // Creates a new resource collection for the given network
-func newStakewiseResources(network config.Network) *StakewiseResources {
+func NewStakewiseResources(network config.Network) *StakewiseResources {
 	// Mainnet
 	mainnetResources := &StakewiseResources{
 		HyperdriveResources: hdconfig.NewHyperdriveResources(config.Network_Mainnet),

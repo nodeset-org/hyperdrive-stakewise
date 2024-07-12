@@ -38,7 +38,7 @@ func (f *walletClaimRewardsContextFactory) Create(args url.Values) (*walletClaim
 
 func (f *walletClaimRewardsContextFactory) RegisterRoute(router *mux.Router) {
 	server.RegisterQuerylessGet[*walletClaimRewardsContext, swapi.WalletClaimRewardsData](
-		router, "claim-rewards", f, f.handler.logger.Logger, f.handler.serviceProvider.ServiceProvider,
+		router, "claim-rewards", f, f.handler.logger.Logger, f.handler.serviceProvider,
 	)
 }
 

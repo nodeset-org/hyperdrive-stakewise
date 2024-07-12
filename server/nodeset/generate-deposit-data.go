@@ -39,7 +39,7 @@ func (f *nodesetGenerateDepositDataContextFactory) Create(args url.Values) (*nod
 
 func (f *nodesetGenerateDepositDataContextFactory) RegisterRoute(router *mux.Router) {
 	duserver.RegisterQuerylessGet[*nodesetGenerateDepositDataContext, swapi.NodesetGenerateDepositDataData](
-		router, "generate-deposit-data", f, f.handler.logger.Logger, f.handler.serviceProvider.ServiceProvider,
+		router, "generate-deposit-data", f, f.handler.logger.Logger, f.handler.serviceProvider,
 	)
 }
 

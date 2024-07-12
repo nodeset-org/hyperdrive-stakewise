@@ -12,11 +12,11 @@ import (
 type ValidatorHandler struct {
 	logger          *log.Logger
 	ctx             context.Context
-	serviceProvider *swcommon.StakeWiseServiceProvider
+	serviceProvider swcommon.IStakeWiseServiceProvider
 	factories       []server.IContextFactory
 }
 
-func NewValidatorHandler(logger *log.Logger, ctx context.Context, serviceProvider *swcommon.StakeWiseServiceProvider) *ValidatorHandler {
+func NewValidatorHandler(logger *log.Logger, ctx context.Context, serviceProvider swcommon.IStakeWiseServiceProvider) *ValidatorHandler {
 	h := &ValidatorHandler{
 		logger:          logger,
 		ctx:             ctx,

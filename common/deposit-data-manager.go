@@ -29,11 +29,11 @@ const (
 // DepositDataManager manages the aggregated deposit data file that Stakewise uses
 type DepositDataManager struct {
 	dataPath string
-	sp       *StakeWiseServiceProvider
+	sp       IStakeWiseServiceProvider
 }
 
 // Creates a new manager
-func NewDepositDataManager(sp *StakeWiseServiceProvider) (*DepositDataManager, error) {
+func NewDepositDataManager(sp IStakeWiseServiceProvider) (*DepositDataManager, error) {
 	dataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile)
 
 	ddMgr := &DepositDataManager{

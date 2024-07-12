@@ -20,7 +20,7 @@ import (
 type UpdateDepositDataTask struct {
 	logger *log.Logger
 	ctx    context.Context
-	sp     *swcommon.StakeWiseServiceProvider
+	sp     swcommon.IStakeWiseServiceProvider
 	w      *swcommon.Wallet
 	hd     *client.ApiClient
 	ddMgr  *swcommon.DepositDataManager
@@ -29,7 +29,7 @@ type UpdateDepositDataTask struct {
 }
 
 // Create update deposit data task
-func NewUpdateDepositDataTask(ctx context.Context, sp *swcommon.StakeWiseServiceProvider, logger *log.Logger) *UpdateDepositDataTask {
+func NewUpdateDepositDataTask(ctx context.Context, sp swcommon.IStakeWiseServiceProvider, logger *log.Logger) *UpdateDepositDataTask {
 	return &UpdateDepositDataTask{
 		logger: logger,
 		ctx:    ctx,
@@ -37,7 +37,7 @@ func NewUpdateDepositDataTask(ctx context.Context, sp *swcommon.StakeWiseService
 		w:      sp.GetWallet(),
 		hd:     sp.GetHyperdriveClient(),
 		ddMgr:  sp.GetDepositDataManager(),
-		cfg:    sp.GetModuleConfig(),
+		cfg:    sp.GetConfig(),
 		res:    sp.GetResources(),
 	}
 }
