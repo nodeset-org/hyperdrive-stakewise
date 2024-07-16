@@ -70,7 +70,7 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 		return types.ResponseStatus_Error, err
 	}
 
-	nodesetStatusResponse, err := hd.NodeSet_StakeWise.GetRegisteredValidators(*res.Vault)
+	nodesetStatusResponse, err := hd.NodeSet_StakeWise.GetRegisteredValidators(res.Vault)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting nodeset statuses: %w", err)
 	}

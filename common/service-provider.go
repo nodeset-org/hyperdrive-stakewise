@@ -16,7 +16,7 @@ type IStakeWiseConfigProvider interface {
 	GetConfig() *swconfig.StakeWiseConfig
 
 	// Gets the StakeWise resources
-	GetResources() *swconfig.StakewiseResources
+	GetResources() *swconfig.MergedResources
 }
 
 // Provides the StakeWise wallet
@@ -50,25 +50,40 @@ type stakeWiseServiceProvider struct {
 	services.IModuleServiceProvider
 	swCfg              *swconfig.StakeWiseConfig
 	wallet             *Wallet
-	resources          *swconfig.StakewiseResources
+	resources          *swconfig.MergedResources
 	depositDataManager *DepositDataManager
 }
 
 // Create a new service provider with Stakewise daemon-specific features
-func NewStakeWiseServiceProvider(sp services.IModuleServiceProvider) (IStakeWiseServiceProvider, error) {
+func NewStakeWiseServiceProvider(sp services.IModuleServiceProvider, settingsList []*swconfig.StakeWiseSettings) (IStakeWiseServiceProvider, error) {
 	// Create the resources
 	swCfg, ok := sp.GetModuleConfig().(*swconfig.StakeWiseConfig)
 	if !ok {
 		return nil, fmt.Errorf("stakewise config is not the correct type, it's a %s", reflect.TypeOf(swCfg))
 	}
 	hdCfg := sp.GetHyperdriveConfig()
-	res := swconfig.NewStakewiseResources(hdCfg.Network.Value)
+	hdRes := sp.GetHyperdriveResources()
 
-	return NewStakeWiseServiceProviderFromCustomServices(sp, swCfg, res)
+	// Get the resources from the selected network
+	var selectedResources *swconfig.MergedResources
+	for _, network := range settingsList {
+		if network.Key == hdCfg.Network.Value {
+			selectedResources = &swconfig.MergedResources{
+				MergedResources:    hdRes,
+				StakeWiseResources: network.StakeWiseResources,
+			}
+			break
+		}
+	}
+	if selectedResources == nil {
+		return nil, fmt.Errorf("no stakewise resources found for selected network [%s]", hdCfg.Network.Value)
+	}
+
+	return NewStakeWiseServiceProviderFromCustomServices(sp, swCfg, selectedResources)
 }
 
 // Create a new service provider with Stakewise daemon-specific features, using custom services instead of loading them from the module service provider.
-func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServiceProvider, cfg *swconfig.StakeWiseConfig, resources *swconfig.StakewiseResources) (IStakeWiseServiceProvider, error) {
+func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServiceProvider, cfg *swconfig.StakeWiseConfig, resources *swconfig.MergedResources) (IStakeWiseServiceProvider, error) {
 	// Create the wallet
 	wallet, err := NewWallet(sp)
 	if err != nil {
@@ -96,7 +111,7 @@ func (s *stakeWiseServiceProvider) GetConfig() *swconfig.StakeWiseConfig {
 	return s.swCfg
 }
 
-func (s *stakeWiseServiceProvider) GetResources() *swconfig.StakewiseResources {
+func (s *stakeWiseServiceProvider) GetResources() *swconfig.MergedResources {
 	return s.resources
 }
 

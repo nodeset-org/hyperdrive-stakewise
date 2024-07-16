@@ -75,20 +75,13 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 		return types.ResponseStatus_Error, err
 	}
 
-	if res.SplitWarehouse == nil {
-		return types.ResponseStatus_InvalidChainState, fmt.Errorf("no SplitWarehouse contract has been set yet")
-	}
-	if res.Vault == nil {
-		return types.ResponseStatus_InvalidChainState, fmt.Errorf("no Stakewise Vault address has been set yet")
-	}
-
 	// Create bindings
 	logger.Debug("Preparing data for claim reward")
-	splitWarehouseContract, err := swcontracts.NewSplitWarehouse(*res.SplitWarehouse, ec, txMgr) // NOTE: need to parse the actual contract version once event support is added
+	splitWarehouseContract, err := swcontracts.NewSplitWarehouse(res.SplitWarehouse, ec, txMgr) // NOTE: need to parse the actual contract version once event support is added
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error creating SplitWarehouse binding: %w", err)
 	}
-	token, err := contracts.NewErc20Contract(*res.Vault, ec, qMgr, txMgr, nil)
+	token, err := contracts.NewErc20Contract(res.Vault, ec, qMgr, txMgr, nil)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error creating Stakewise token binding: %w", err)
 	}
@@ -106,7 +99,7 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 
 	// Get the claimable rewards
 	err = qMgr.Query(func(mc *batch.MultiCaller) error {
-		splitWarehouseContract.BalanceOf(mc, &data.WithdrawableToken, nodeAddress, *res.Vault)
+		splitWarehouseContract.BalanceOf(mc, &data.WithdrawableToken, nodeAddress, res.Vault)
 		splitWarehouseContract.BalanceOf(mc, &data.WithdrawableNativeToken, nodeAddress, data.NativeToken)
 		return nil
 	}, nil)
@@ -125,7 +118,7 @@ func (c *walletClaimRewardsContext) PrepareData(data *swapi.WalletClaimRewardsDa
 
 	if data.WithdrawableToken.Cmp(common.Big0) > 0 {
 		// Only withdraw tokens if there is a balance
-		tokensToWithdraw = append(tokensToWithdraw, *res.Vault)
+		tokensToWithdraw = append(tokensToWithdraw, res.Vault)
 		amountsToWithdraw = append(amountsToWithdraw, data.WithdrawableToken)
 	}
 

@@ -51,7 +51,11 @@ func NewStakeWiseTestManager(hdAddress string, swAddress string, nsAddress strin
 
 	// Make StakeWise resources
 	resources := GetTestResources(hdSp.GetResources())
-	swCfg := swconfig.NewStakeWiseConfig(hdCfg)
+	swCfg, err := swconfig.NewStakeWiseConfig(hdCfg, []*swconfig.StakeWiseSettings{})
+	if err != nil {
+		closeTestManager(tm)
+		return nil, fmt.Errorf("error creating StakeWise config: %v", err)
+	}
 
 	// Make the module directory
 	moduleDir := filepath.Join(hdCfg.UserDataPath.Value, hdconfig.ModulesName, swconfig.ModuleName)

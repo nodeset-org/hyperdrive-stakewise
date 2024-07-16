@@ -86,7 +86,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 
 	// Fetch status from NodeSet
-	response, err := hd.NodeSet_StakeWise.GetRegisteredValidators(*res.Vault)
+	response, err := hd.NodeSet_StakeWise.GetRegisteredValidators(res.Vault)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
 	}

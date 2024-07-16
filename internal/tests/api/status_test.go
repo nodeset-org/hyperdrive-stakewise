@@ -23,7 +23,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 
 	// Get some resources
 	sp := testMgr.GetStakeWiseServiceProvider()
-	vault := *sp.GetResources().Vault
+	vault := sp.GetResources().Vault
 	network := sp.GetResources().EthNetworkName
 	wallet := sp.GetWallet()
 	ddMgr := sp.GetDepositDataManager()

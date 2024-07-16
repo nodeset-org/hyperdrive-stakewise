@@ -50,7 +50,7 @@ func TestMain(m *testing.M) {
 	sp := testMgr.GetStakeWiseServiceProvider()
 	res := sp.GetResources()
 	nsServer := testMgr.GetNodeSetMockServer().GetManager()
-	err = nsServer.AddStakeWiseVault(*res.Vault, res.EthNetworkName)
+	err = nsServer.AddStakeWiseVault(res.Vault, res.EthNetworkName)
 	if err != nil {
 		fail("error adding stakewise vault to nodeset: %v", err)
 	}

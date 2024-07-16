@@ -59,12 +59,8 @@ func NewDepositDataManager(sp IStakeWiseServiceProvider) (*DepositDataManager, e
 func (m *DepositDataManager) GenerateDepositData(keys []*eth2types.BLSPrivateKey) ([]beacon.ExtendedDepositData, error) {
 	resources := m.sp.GetResources()
 
-	if resources.Vault == nil {
-		return nil, fmt.Errorf("stakewise vault address not set")
-	}
-
 	// Stakewise uses the same withdrawal creds for each validator
-	withdrawalCreds := validator.GetWithdrawalCredsFromAddress(*resources.Vault)
+	withdrawalCreds := validator.GetWithdrawalCredsFromAddress(resources.Vault)
 
 	// Create the new aggregated deposit data for all generated keys
 	dataList := make([]beacon.ExtendedDepositData, len(keys))

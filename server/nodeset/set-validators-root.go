@@ -70,11 +70,7 @@ func (c *nodesetSetValidatorsRootContext) PrepareData(data *types.TxInfoData, wa
 		return types.ResponseStatus_Error, err
 	}
 
-	if res.Vault == nil {
-		return types.ResponseStatus_InvalidChainState, fmt.Errorf("no Stakewise Vault address has been set yet")
-	}
-
-	vault, err := swcontracts.NewStakewiseVault(*res.Vault, ec, txMgr)
+	vault, err := swcontracts.NewStakewiseVault(res.Vault, ec, txMgr)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error creating Stakewise Vault binding: %w", err)
 	}

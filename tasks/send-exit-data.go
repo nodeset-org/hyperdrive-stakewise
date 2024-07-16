@@ -28,7 +28,7 @@ type SendExitDataTask struct {
 	w      *swcommon.Wallet
 	hd     *client.ApiClient
 	bc     beacon.IBeaconClient
-	res    *swconfig.StakewiseResources
+	res    *swconfig.MergedResources
 }
 
 // Create Exit data task
@@ -49,7 +49,7 @@ func (t *SendExitDataTask) Run() error {
 	t.logger.Info("Checking for missing signed exit data...")
 
 	// Get registered validators
-	resp, err := t.hd.NodeSet_StakeWise.GetRegisteredValidators(*t.res.Vault)
+	resp, err := t.hd.NodeSet_StakeWise.GetRegisteredValidators(t.res.Vault)
 	if err != nil {
 		return fmt.Errorf("error getting registered validators: %w", err)
 	}
