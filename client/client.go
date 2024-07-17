@@ -14,6 +14,7 @@ type ApiClient struct {
 	Nodeset   *NodesetRequester
 	Validator *ValidatorRequester
 	Wallet    *WalletRequester
+	Service   *ServiceRequester
 	Status    *StatusRequester
 }
 
@@ -26,6 +27,7 @@ func NewApiClient(apiUrl *url.URL, logger *slog.Logger, tracer *httptrace.Client
 		Nodeset:   NewNodesetRequester(context),
 		Validator: NewValidatorRequester(context),
 		Wallet:    NewWalletRequester(context),
+		Service:   NewServiceRequester(context),
 		Status:    NewStatusRequester(context),
 	}
 	return client

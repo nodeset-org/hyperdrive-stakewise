@@ -242,6 +242,10 @@ func (cfg *StakeWiseConfig) GetVersion() string {
 	return cfg.Version
 }
 
+func (cfg *StakeWiseConfig) GetNetworkSettings() []*StakeWiseSettings {
+	return cfg.networkSettings
+}
+
 // ===================
 // === Module Info ===
 // ===================

@@ -6,6 +6,7 @@ import (
 
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swnodeset "github.com/nodeset-org/hyperdrive-stakewise/server/nodeset"
+	swservice "github.com/nodeset-org/hyperdrive-stakewise/server/service"
 	swstatus "github.com/nodeset-org/hyperdrive-stakewise/server/status"
 	swvalidator "github.com/nodeset-org/hyperdrive-stakewise/server/validator"
 	swwallet "github.com/nodeset-org/hyperdrive-stakewise/server/wallet"
@@ -60,6 +61,7 @@ func createServer(sp swcommon.IStakeWiseServiceProvider, ip string, port uint16)
 
 	handlers := []server.IHandler{
 		swnodeset.NewNodesetHandler(apiLogger, ctx, sp),
+		swservice.NewServiceHandler(apiLogger, ctx, sp),
 		swvalidator.NewValidatorHandler(apiLogger, ctx, sp),
 		swwallet.NewWalletHandler(apiLogger, ctx, sp),
 		swstatus.NewStatusHandler(apiLogger, ctx, sp),
