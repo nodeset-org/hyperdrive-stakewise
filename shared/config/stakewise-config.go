@@ -242,6 +242,7 @@ func (cfg *StakeWiseConfig) GetVersion() string {
 	return cfg.Version
 }
 
+// Get all loaded network settings
 func (cfg *StakeWiseConfig) GetNetworkSettings() []*StakeWiseSettings {
 	return cfg.networkSettings
 }

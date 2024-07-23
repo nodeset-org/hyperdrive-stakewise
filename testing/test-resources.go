@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
+	"github.com/rocket-pool/node-manager-core/config"
 )
 
 const (
@@ -22,4 +23,9 @@ func GetTestResources(hdResources *hdconfig.MergedResources) *swconfig.MergedRes
 			PullSplit:      common.HexToAddress(""),
 		},
 	}
+}
+
+// Provisions a NetworkSettings instance with updated addresses
+func provisionNetworkSettings(networkSettings *config.NetworkSettings) *config.NetworkSettings {
+	return networkSettings
 }
