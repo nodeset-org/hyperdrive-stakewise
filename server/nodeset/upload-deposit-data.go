@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
-	apiv1 "github.com/nodeset-org/nodeset-client-go/api-v1"
+	"github.com/nodeset-org/nodeset-client-go/common/stakewise"
 	"github.com/rocket-pool/node-manager-core/eth"
 
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
@@ -118,7 +118,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	for _, validator := range response.Data.Validators {
 		_, exists := publicKeyMap[validator.Pubkey]
 		if exists {
-			if validator.Status != apiv1.StakeWiseStatus_Pending {
+			if validator.Status != stakewise.StakeWiseStatus_Pending {
 				activePubkeysOnNodeset = append(activePubkeysOnNodeset, validator.Pubkey)
 			} else {
 				pendingPubkeysOnNodeset = append(pendingPubkeysOnNodeset, validator.Pubkey)

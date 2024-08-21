@@ -8,9 +8,9 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.0.2-0.20240723171954-1424bf36fbbb
-	github.com/nodeset-org/nodeset-client-go v0.0.0-20240723171817-3ebe1c5bd16d
-	github.com/nodeset-org/osha v0.2.1-0.20240716181202-365d8870bd39
+	github.com/nodeset-org/hyperdrive-daemon v1.0.2-0.20240821041520-5d6791ea7d71
+	github.com/nodeset-org/nodeset-client-go v0.0.0-20240821000702-27baebc5c2f3
+	github.com/nodeset-org/osha v0.2.1-0.20240730134808-bc24a42c233e
 	github.com/rocket-pool/batch-query v1.0.0
 	github.com/rocket-pool/node-manager-core v0.5.2-0.20240722141309-0a3f0e72cf11
 	github.com/stretchr/testify v1.9.0

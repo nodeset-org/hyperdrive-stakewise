@@ -12,8 +12,8 @@ const (
 	StakeWiseVaultString string = "0x57ace215eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 )
 
-// GetTestResources returns a new StakewiseResources instance with test network values
-func GetTestResources(hdResources *hdconfig.MergedResources) *swconfig.MergedResources {
+// Returns a new StakewiseResources instance with test network values
+func getTestResources(hdResources *hdconfig.MergedResources) *swconfig.MergedResources {
 	return &swconfig.MergedResources{
 		MergedResources: hdResources,
 		StakeWiseResources: &swconfig.StakeWiseResources{

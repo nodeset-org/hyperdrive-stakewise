@@ -9,7 +9,7 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/client"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
-	apiv1 "github.com/nodeset-org/nodeset-client-go/api-v1"
+	"github.com/nodeset-org/nodeset-client-go/common"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/log"
 	"github.com/rocket-pool/node-manager-core/node/validator"
@@ -95,7 +95,7 @@ func (t *SendExitDataTask) Run() error {
 	}
 
 	// Get signed exit messages
-	exitData := []apiv1.ExitData{}
+	exitData := []common.ExitData{}
 	for _, pubkey := range missingExitPubkeys {
 		index := statuses[pubkey].Index
 		if index == "" {
@@ -121,10 +121,10 @@ func (t *SendExitDataTask) Run() error {
 			t.logger.Debug("Error getting signed exit message", slog.String(PubkeyKey, pubkey.HexWithPrefix()), log.Err(err))
 			continue
 		}
-		exitData = append(exitData, apiv1.ExitData{
+		exitData = append(exitData, common.ExitData{
 			Pubkey: pubkey.HexWithPrefix(),
-			ExitMessage: apiv1.ExitMessage{
-				Message: apiv1.ExitMessageDetails{
+			ExitMessage: common.ExitMessage{
+				Message: common.ExitMessageDetails{
 					Epoch:          strconv.FormatUint(epoch, 10),
 					ValidatorIndex: index,
 				},

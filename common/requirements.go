@@ -51,7 +51,7 @@ func (sp *stakeWiseServiceProvider) WaitForStakewiseWallet(ctx context.Context) 
 	}
 
 	// Wait for the Hyperdrive wallet first, then initialize the Stakewise one
-	err = sp.WaitForWallet(ctx)
+	_, err = sp.WaitForWallet(ctx)
 	if err != nil {
 		return err
 	}

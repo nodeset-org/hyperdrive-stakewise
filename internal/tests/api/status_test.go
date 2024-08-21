@@ -22,7 +22,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	defer status_cleanup(snapshotName)
 
 	// Get some resources
-	sp := testMgr.GetStakeWiseServiceProvider()
+	sp := mainNode.GetServiceProvider()
 	vault := sp.GetResources().Vault
 	network := sp.GetResources().EthNetworkName
 	wallet := sp.GetWallet()
@@ -41,7 +41,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	t.Log("Deposit data generated")
 
 	// Upload the deposit data to nodeset
-	err = nsMock.HandleDepositDataUpload(nodeAddress, depositData)
+	err = nsMock.HandleDepositDataUpload(mainNodeAddress, depositData)
 	require.NoError(t, err)
 	t.Log("Deposit data uploaded to nodeset")
 
@@ -77,7 +77,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	validator.Index = 1
 
 	// Run the status route
-	client := testMgr.GetApiClient()
+	client := mainNode.GetApiClient()
 	response, err := client.Status.GetValidatorStatuses()
 	require.NoError(t, err)
 	t.Log("Ran validator status check")
@@ -107,13 +107,13 @@ func status_cleanup(snapshotName string) {
 	}
 
 	// Reload the HD wallet to undo any changes made during the test
-	err = testMgr.GetServiceProvider().GetWallet().Reload(testMgr.GetLogger())
+	err = mainNode.GetHyperdriveNode().GetServiceProvider().GetWallet().Reload(testMgr.GetLogger())
 	if err != nil {
 		fail("Error reloading hyperdrive wallet: %v", err)
 	}
 
 	// Reload the SW wallet to undo any changes made during the test
-	err = testMgr.GetStakeWiseServiceProvider().GetWallet().Reload()
+	err = mainNode.GetServiceProvider().GetWallet().Reload()
 	if err != nil {
 		fail("Error reloading stakewise wallet: %v", err)
 	}

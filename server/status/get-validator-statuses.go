@@ -7,7 +7,7 @@ import (
 
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
-	apiv1 "github.com/nodeset-org/nodeset-client-go/api-v1"
+	"github.com/nodeset-org/nodeset-client-go/common/stakewise"
 
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
@@ -89,7 +89,7 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 		return types.ResponseStatus_Error, fmt.Errorf("error getting validator statuses: %w", err)
 	}
 
-	registeredPubkeysStatusMapping := make(map[beacon.ValidatorPubkey]apiv1.StakeWiseStatus)
+	registeredPubkeysStatusMapping := make(map[beacon.ValidatorPubkey]stakewise.StakeWiseStatus)
 	for _, pubkeyStatus := range nodesetStatusResponse.Data.Validators {
 		registeredPubkeysStatusMapping[pubkeyStatus.Pubkey] = pubkeyStatus.Status
 	}
