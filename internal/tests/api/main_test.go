@@ -3,11 +3,13 @@ package api_test
 import (
 	"fmt"
 	"log/slog"
+	"math/big"
 	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	swtesting "github.com/nodeset-org/hyperdrive-stakewise/testing"
+	"github.com/nodeset-org/nodeset-client-go/server-mock/db"
 	"github.com/nodeset-org/osha/keys"
 	"github.com/rocket-pool/node-manager-core/log"
 	"github.com/rocket-pool/node-manager-core/wallet"
@@ -52,10 +54,16 @@ func TestMain(m *testing.M) {
 	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
 	nsServer := testMgr.GetNodeSetMockServer().GetManager()
-	err = nsServer.AddStakeWiseVault(res.Vault, res.EthNetworkName)
+	err = nsServer.AddStakeWiseVault(res.DeploymentName, res.Vault)
 	if err != nil {
 		fail("error adding stakewise vault to nodeset: %v", err)
 	}
+	nsServer.SetDeployment(&db.Deployment{
+		DeploymentID:     res.DeploymentName,
+		WhitelistAddress: common.Address{},
+		SuperNodeAddress: common.Address{},
+		ChainID:          big.NewInt(int64(res.ChainID)),
+	})
 
 	// Make a NodeSet account
 	err = nsServer.AddUser(nsEmail)

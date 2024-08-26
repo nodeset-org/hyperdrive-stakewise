@@ -23,8 +23,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 
 	// Get some resources
 	sp := mainNode.GetServiceProvider()
-	vault := sp.GetResources().Vault
-	network := sp.GetResources().EthNetworkName
+	res := sp.GetResources()
 	wallet := sp.GetWallet()
 	ddMgr := sp.GetDepositDataManager()
 	nsMock := testMgr.GetNodeSetMockServer().GetManager()
@@ -41,34 +40,34 @@ func TestValidatorStatus_Active(t *testing.T) {
 	t.Log("Deposit data generated")
 
 	// Upload the deposit data to nodeset
-	err = nsMock.HandleDepositDataUpload(mainNodeAddress, depositData)
+	err = nsMock.HandleDepositDataUpload(mainNodeAddress, res.DeploymentName, res.Vault, depositData)
 	require.NoError(t, err)
 	t.Log("Deposit data uploaded to nodeset")
 
 	// Cut a new deposit data set
-	depositDataSet := nsMock.CreateNewDepositDataSet(network, 1)
+	depositDataSet := nsMock.CreateNewDepositDataSet(res.DeploymentName, 1)
 	require.Equal(t, depositData, depositDataSet)
 	t.Log("New deposit data set created")
 
 	// Upload the deposit data to StakeWise
-	err = nsMock.UploadDepositDataToStakeWise(vault, network, depositDataSet)
+	err = nsMock.UploadDepositDataToStakeWise(res.DeploymentName, res.Vault, depositDataSet)
 	require.NoError(t, err)
 	t.Log("Deposit data set uploaded to StakeWise")
 
 	// Mark the deposit data set as uploaded
-	err = nsMock.MarkDepositDataSetUploaded(vault, network, depositDataSet)
+	err = nsMock.MarkDepositDataSetUploaded(res.DeploymentName, res.Vault, depositDataSet)
 	require.NoError(t, err)
 	t.Log("Deposit data set marked as uploaded")
 
 	// Add the validator to Beacon
-	creds := validator.GetWithdrawalCredsFromAddress(vault)
+	creds := validator.GetWithdrawalCredsFromAddress(res.Vault)
 	bn := testMgr.GetBeaconMockManager()
 	validator, err := bn.AddValidator(pubkey, creds)
 	require.NoError(t, err)
 	t.Log("Validator added to the beacon chain")
 
 	// Mark the validator as active
-	err = nsMock.MarkValidatorsRegistered(vault, network, depositDataSet)
+	err = nsMock.MarkValidatorsRegistered(res.DeploymentName, res.Vault, depositDataSet)
 	require.NoError(t, err)
 	t.Log("Deposit data set marked as registered")
 

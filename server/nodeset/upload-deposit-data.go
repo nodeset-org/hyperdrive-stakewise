@@ -196,7 +196,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error generating deposit data: %w", err)
 	}
-	uploadResponse, err := hd.NodeSet_StakeWise.UploadDepositData(depositData)
+	uploadResponse, err := hd.NodeSet_StakeWise.UploadDepositData(res.Vault, depositData)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error uploading deposit data: %w", err)
 	}

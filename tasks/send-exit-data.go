@@ -135,7 +135,7 @@ func (t *SendExitDataTask) Run() error {
 
 	// Upload the messages to Nodeset
 	if len(exitData) > 0 {
-		_, err := t.hd.NodeSet_StakeWise.UploadSignedExits(exitData)
+		_, err := t.hd.NodeSet_StakeWise.UploadSignedExits(t.res.Vault, exitData)
 		if err != nil {
 			return fmt.Errorf("error uploading signed exit messages to NodeSet: %w", err)
 		}
