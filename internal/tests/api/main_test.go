@@ -9,7 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	swtesting "github.com/nodeset-org/hyperdrive-stakewise/testing"
-	"github.com/nodeset-org/nodeset-client-go/server-mock/db"
 	"github.com/nodeset-org/osha/keys"
 	"github.com/rocket-pool/node-manager-core/log"
 	"github.com/rocket-pool/node-manager-core/wallet"
@@ -53,20 +52,13 @@ func TestMain(m *testing.M) {
 	// Set up NodeSet with the StakeWise vault
 	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
-	nsServer := testMgr.GetNodeSetMockServer().GetManager()
-	err = nsServer.AddStakeWiseVault(res.DeploymentName, res.Vault)
-	if err != nil {
-		fail("error adding stakewise vault to nodeset: %v", err)
-	}
-	nsServer.SetDeployment(&db.Deployment{
-		DeploymentID:     res.DeploymentName,
-		WhitelistAddress: common.Address{},
-		SuperNodeAddress: common.Address{},
-		ChainID:          big.NewInt(int64(res.ChainID)),
-	})
+	nsMgr := testMgr.GetNodeSetMockServer().GetManager()
+	nsDB := nsMgr.GetDatabase()
+	deployment := nsDB.StakeWise.AddDeployment(res.DeploymentName, big.NewInt(int64(res.ChainID)))
+	_ = deployment.AddVault(res.Vault)
 
 	// Make a NodeSet account
-	err = nsServer.AddUser(nsEmail)
+	_, err = nsDB.Core.AddUser(nsEmail)
 	if err != nil {
 		fail("error adding user to nodeset: %v", err)
 	}
@@ -106,10 +98,9 @@ func cleanup() {
 func registerWithNodeset(node *swtesting.StakeWiseNode, address common.Address) error {
 	// whitelist the node with the nodeset.io account
 	nsServer := testMgr.GetNodeSetMockServer().GetManager()
-	err := nsServer.WhitelistNodeAccount(nsEmail, address)
-	if err != nil {
-		fail("error adding node account to nodeset: %v", err)
-	}
+	nsDB := nsServer.GetDatabase()
+	user := nsDB.Core.GetUser(nsEmail)
+	_ = user.WhitelistNode(address)
 
 	// Register with NodeSet
 	hd := node.GetHyperdriveNode().GetApiClient()

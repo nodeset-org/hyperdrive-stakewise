@@ -27,6 +27,10 @@ func TestValidatorStatus_Active(t *testing.T) {
 	wallet := sp.GetWallet()
 	ddMgr := sp.GetDepositDataManager()
 	nsMock := testMgr.GetNodeSetMockServer().GetManager()
+	nsDB := nsMock.GetDatabase()
+	deployment := nsDB.StakeWise.GetDeployment(res.DeploymentName)
+	vault := deployment.GetVault(res.Vault)
+	nsNode, _ := nsDB.Core.GetNode(mainNodeAddress)
 
 	// Generate a validator key
 	key, err := wallet.GenerateNewValidatorKey()
@@ -40,23 +44,21 @@ func TestValidatorStatus_Active(t *testing.T) {
 	t.Log("Deposit data generated")
 
 	// Upload the deposit data to nodeset
-	err = nsMock.HandleDepositDataUpload(mainNodeAddress, res.DeploymentName, res.Vault, depositData)
+	err = vault.HandleDepositDataUpload(nsNode, depositData)
 	require.NoError(t, err)
 	t.Log("Deposit data uploaded to nodeset")
 
 	// Cut a new deposit data set
-	depositDataSet := nsMock.CreateNewDepositDataSet(res.DeploymentName, 1)
+	depositDataSet := vault.CreateNewDepositDataSet(1)
 	require.Equal(t, depositData, depositDataSet)
 	t.Log("New deposit data set created")
 
 	// Upload the deposit data to StakeWise
-	err = nsMock.UploadDepositDataToStakeWise(res.DeploymentName, res.Vault, depositDataSet)
-	require.NoError(t, err)
+	vault.UploadDepositDataToStakeWise(depositDataSet)
 	t.Log("Deposit data set uploaded to StakeWise")
 
 	// Mark the deposit data set as uploaded
-	err = nsMock.MarkDepositDataSetUploaded(res.DeploymentName, res.Vault, depositDataSet)
-	require.NoError(t, err)
+	vault.MarkDepositDataSetUploaded(depositDataSet)
 	t.Log("Deposit data set marked as uploaded")
 
 	// Add the validator to Beacon
@@ -67,8 +69,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	t.Log("Validator added to the beacon chain")
 
 	// Mark the validator as active
-	err = nsMock.MarkValidatorsRegistered(res.DeploymentName, res.Vault, depositDataSet)
-	require.NoError(t, err)
+	vault.MarkValidatorsRegistered(depositDataSet)
 	t.Log("Deposit data set marked as registered")
 
 	// Set the validator to active
