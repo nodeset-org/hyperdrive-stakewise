@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -56,7 +57,7 @@ func NewDepositDataManager(sp IStakeWiseServiceProvider) (*DepositDataManager, e
 }
 
 // Generates deposit data for the provided keys
-func (m *DepositDataManager) GenerateDepositData(keys []*eth2types.BLSPrivateKey) ([]beacon.ExtendedDepositData, error) {
+func (m *DepositDataManager) GenerateDepositData(logger *slog.Logger, keys []*eth2types.BLSPrivateKey) ([]beacon.ExtendedDepositData, error) {
 	resources := m.sp.GetResources()
 
 	// Stakewise uses the same withdrawal creds for each validator
@@ -65,7 +66,7 @@ func (m *DepositDataManager) GenerateDepositData(keys []*eth2types.BLSPrivateKey
 	// Create the new aggregated deposit data for all generated keys
 	dataList := make([]beacon.ExtendedDepositData, len(keys))
 	for i, key := range keys {
-		depositData, err := validator.GetDepositData(key, withdrawalCreds, resources.GenesisForkVersion, StakewiseDepositAmount, resources.EthNetworkName)
+		depositData, err := validator.GetDepositData(logger, key, withdrawalCreds, resources.GenesisForkVersion, StakewiseDepositAmount, resources.EthNetworkName)
 		if err != nil {
 			pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
 			return nil, fmt.Errorf("error getting deposit data for key %s: %w", pubkey.HexWithPrefix(), err)

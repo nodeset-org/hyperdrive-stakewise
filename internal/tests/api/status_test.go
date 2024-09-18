@@ -39,7 +39,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	t.Logf("Validator key generated, pubkey = %s", pubkey.HexWithPrefix())
 
 	// Generate deposit data
-	depositData, err := ddMgr.GenerateDepositData([]*eth2types.BLSPrivateKey{key})
+	depositData, err := ddMgr.GenerateDepositData(logger, []*eth2types.BLSPrivateKey{key})
 	require.NoError(t, err)
 	t.Log("Deposit data generated")
 

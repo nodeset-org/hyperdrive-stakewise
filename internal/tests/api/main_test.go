@@ -19,7 +19,6 @@ var (
 	testMgr *swtesting.StakeWiseTestManager = nil
 	logger  *slog.Logger                    = nil
 	nsEmail string                          = "test@nodeset.io"
-	keygen  *keys.KeyGenerator              = nil
 
 	// CS nodes
 	mainNode        *swtesting.StakeWiseNode

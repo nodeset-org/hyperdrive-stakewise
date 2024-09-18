@@ -83,7 +83,7 @@ func (c *nodesetGenerateDepositDataContext) PrepareData(data *swapi.NodesetGener
 	}
 
 	// Generate deposit data
-	depositData, err := ddMgr.GenerateDepositData(keysToGenerate)
+	depositData, err := ddMgr.GenerateDepositData(c.handler.logger.Logger, keysToGenerate)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error generating deposit data: %w", err)
 	}
