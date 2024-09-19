@@ -16,6 +16,7 @@ import (
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	"github.com/nodeset-org/hyperdrive-stakewise/server"
+	swshared "github.com/nodeset-org/hyperdrive-stakewise/shared"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	swtasks "github.com/nodeset-org/hyperdrive-stakewise/tasks"
 	"github.com/urfave/cli/v2"
@@ -35,7 +36,7 @@ func main() {
 	// Set application info
 	app.Name = "stakewise-daemon"
 	app.Usage = "Hyperdrive Daemon for NodeSet StakeWise Module Management"
-	app.Version = shared.HyperdriveVersion
+	app.Version = swshared.StakewiseVersion
 	app.Authors = []*cli.Author{
 		{
 			Name:  "Nodeset",

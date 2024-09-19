@@ -73,9 +73,9 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	err = sp.RequireEthClientSynced(ctx)
 	if err != nil {
 		if errors.Is(err, services.ErrExecutionClientNotSynced) {
-			return types.ResponseStatus_Error, err
+			return types.ResponseStatus_ClientsNotSynced, err
 		}
-		return types.ResponseStatus_ClientsNotSynced, err
+		return types.ResponseStatus_Error, err
 	}
 	err = sp.RequireBeaconClientSynced(ctx)
 	if err != nil {
