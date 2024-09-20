@@ -12,11 +12,11 @@ import (
 type NodesetHandler struct {
 	logger          *log.Logger
 	ctx             context.Context
-	serviceProvider *swcommon.StakeWiseServiceProvider
+	serviceProvider swcommon.IStakeWiseServiceProvider
 	factories       []server.IContextFactory
 }
 
-func NewNodesetHandler(logger *log.Logger, ctx context.Context, serviceProvider *swcommon.StakeWiseServiceProvider) *NodesetHandler {
+func NewNodesetHandler(logger *log.Logger, ctx context.Context, serviceProvider swcommon.IStakeWiseServiceProvider) *NodesetHandler {
 	h := &NodesetHandler{
 		logger:          logger,
 		ctx:             ctx,

@@ -37,7 +37,7 @@ func (f *nodesetSetValidatorsRootContextFactory) Create(args url.Values) (*nodes
 
 func (f *nodesetSetValidatorsRootContextFactory) RegisterRoute(router *mux.Router) {
 	duserver.RegisterQuerylessGet[*nodesetSetValidatorsRootContext, types.TxInfoData](
-		router, "set-validators-root", f, f.handler.logger.Logger, f.handler.serviceProvider.ServiceProvider,
+		router, "set-validators-root", f, f.handler.logger.Logger, f.handler.serviceProvider,
 	)
 }
 
@@ -70,11 +70,7 @@ func (c *nodesetSetValidatorsRootContext) PrepareData(data *types.TxInfoData, wa
 		return types.ResponseStatus_Error, err
 	}
 
-	if res.Vault == nil {
-		return types.ResponseStatus_InvalidChainState, fmt.Errorf("no Stakewise Vault address has been set yet")
-	}
-
-	vault, err := swcontracts.NewStakewiseVault(*res.Vault, ec, txMgr)
+	vault, err := swcontracts.NewStakewiseVault(res.Vault, ec, txMgr)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error creating Stakewise Vault binding: %w", err)
 	}

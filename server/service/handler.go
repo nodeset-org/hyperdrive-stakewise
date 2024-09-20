@@ -1,4 +1,4 @@
-package swwallet
+package swservice
 
 import (
 	"context"
@@ -9,29 +9,29 @@ import (
 	"github.com/rocket-pool/node-manager-core/log"
 )
 
-type WalletHandler struct {
+type ServiceHandler struct {
 	logger          *log.Logger
 	ctx             context.Context
 	serviceProvider swcommon.IStakeWiseServiceProvider
 	factories       []server.IContextFactory
 }
 
-func NewWalletHandler(logger *log.Logger, ctx context.Context, serviceProvider swcommon.IStakeWiseServiceProvider) *WalletHandler {
-	h := &WalletHandler{
+func NewServiceHandler(logger *log.Logger, ctx context.Context, serviceProvider swcommon.IStakeWiseServiceProvider) *ServiceHandler {
+	h := &ServiceHandler{
 		logger:          logger,
 		ctx:             ctx,
 		serviceProvider: serviceProvider,
 	}
 	h.factories = []server.IContextFactory{
-		&walletClaimRewardsContextFactory{h},
-		&walletGenerateKeysContextFactory{h},
-		&walletInitializeContextFactory{h},
+		&serviceGetNetworkSettingsContextFactory{h},
+		&serviceGetResourcesContextFactory{h},
+		&serviceVersionContextFactory{h},
 	}
 	return h
 }
 
-func (h *WalletHandler) RegisterRoutes(router *mux.Router) {
-	subrouter := router.PathPrefix("/wallet").Subrouter()
+func (h *ServiceHandler) RegisterRoutes(router *mux.Router) {
+	subrouter := router.PathPrefix("/service").Subrouter()
 	for _, factory := range h.factories {
 		factory.RegisterRoute(subrouter)
 	}

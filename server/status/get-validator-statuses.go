@@ -7,7 +7,7 @@ import (
 
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
-	apiv1 "github.com/nodeset-org/nodeset-client-go/api-v1"
+	"github.com/nodeset-org/nodeset-client-go/common/stakewise"
 
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
@@ -37,7 +37,7 @@ func (f *statusGetValidatorsStatusesContextFactory) Create(args url.Values) (*st
 
 func (f *statusGetValidatorsStatusesContextFactory) RegisterRoute(router *mux.Router) {
 	server.RegisterQuerylessGet[*statusGetValidatorsStatusesContext, swapi.ValidatorStatusData](
-		router, "status", f, f.handler.logger.Logger, f.handler.serviceProvider.ServiceProvider,
+		router, "status", f, f.handler.logger.Logger, f.handler.serviceProvider,
 	)
 }
 
@@ -70,7 +70,7 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 		return types.ResponseStatus_Error, err
 	}
 
-	nodesetStatusResponse, err := hd.NodeSet_StakeWise.GetRegisteredValidators(*res.Vault)
+	nodesetStatusResponse, err := hd.NodeSet_StakeWise.GetRegisteredValidators(res.Vault)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting nodeset statuses: %w", err)
 	}
@@ -89,7 +89,7 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 		return types.ResponseStatus_Error, fmt.Errorf("error getting validator statuses: %w", err)
 	}
 
-	registeredPubkeysStatusMapping := make(map[beacon.ValidatorPubkey]apiv1.StakeWiseStatus)
+	registeredPubkeysStatusMapping := make(map[beacon.ValidatorPubkey]stakewise.StakeWiseStatus)
 	for _, pubkeyStatus := range nodesetStatusResponse.Data.Validators {
 		registeredPubkeysStatusMapping[pubkeyStatus.Pubkey] = pubkeyStatus.Status
 	}

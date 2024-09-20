@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
-	apiv1 "github.com/nodeset-org/nodeset-client-go/api-v1"
+	"github.com/nodeset-org/nodeset-client-go/common/stakewise"
 	"github.com/rocket-pool/node-manager-core/eth"
 
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
@@ -44,7 +44,7 @@ func (f *nodesetUploadDepositDataContextFactory) Create(args url.Values) (*nodes
 
 func (f *nodesetUploadDepositDataContextFactory) RegisterRoute(router *mux.Router) {
 	duserver.RegisterQuerylessGet[*nodesetUploadDepositDataContext, swapi.NodesetUploadDepositDataData](
-		router, "upload-deposit-data", f, f.handler.logger.Logger, f.handler.serviceProvider.ServiceProvider,
+		router, "upload-deposit-data", f, f.handler.logger.Logger, f.handler.serviceProvider,
 	)
 }
 
@@ -73,9 +73,9 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	err = sp.RequireEthClientSynced(ctx)
 	if err != nil {
 		if errors.Is(err, services.ErrExecutionClientNotSynced) {
-			return types.ResponseStatus_Error, err
+			return types.ResponseStatus_ClientsNotSynced, err
 		}
-		return types.ResponseStatus_ClientsNotSynced, err
+		return types.ResponseStatus_Error, err
 	}
 	err = sp.RequireBeaconClientSynced(ctx)
 	if err != nil {
@@ -86,7 +86,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 
 	// Fetch status from NodeSet
-	response, err := hd.NodeSet_StakeWise.GetRegisteredValidators(*res.Vault)
+	response, err := hd.NodeSet_StakeWise.GetRegisteredValidators(res.Vault)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
 	}
@@ -118,7 +118,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	for _, validator := range response.Data.Validators {
 		_, exists := publicKeyMap[validator.Pubkey]
 		if exists {
-			if validator.Status != apiv1.StakeWiseStatus_Pending {
+			if validator.Status != stakewise.StakeWiseStatus_Pending {
 				activePubkeysOnNodeset = append(activePubkeysOnNodeset, validator.Pubkey)
 			} else {
 				pendingPubkeysOnNodeset = append(pendingPubkeysOnNodeset, validator.Pubkey)
@@ -192,11 +192,11 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 
 	// Generate deposit data and submit
-	depositData, err := ddMgr.GenerateDepositData(registeredKeys)
+	depositData, err := ddMgr.GenerateDepositData(c.handler.logger.Logger, registeredKeys)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error generating deposit data: %w", err)
 	}
-	uploadResponse, err := hd.NodeSet_StakeWise.UploadDepositData(depositData)
+	uploadResponse, err := hd.NodeSet_StakeWise.UploadDepositData(res.Vault, depositData)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error uploading deposit data: %w", err)
 	}

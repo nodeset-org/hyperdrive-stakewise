@@ -3,8 +3,8 @@ package api_test
 import (
 	"fmt"
 	"log/slog"
+	"math/big"
 	"os"
-	"sync"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,65 +16,56 @@ import (
 
 // Various singleton variables used for testing
 var (
-	testMgr     *swtesting.StakeWiseTestManager = nil
-	wg          *sync.WaitGroup                 = nil
-	logger      *slog.Logger                    = nil
-	nodeAddress common.Address
-	nsEmail     string = "test@nodeset.io"
+	testMgr *swtesting.StakeWiseTestManager = nil
+	logger  *slog.Logger                    = nil
+	nsEmail string                          = "test@nodeset.io"
+
+	// CS nodes
+	mainNode        *swtesting.StakeWiseNode
+	mainNodeAddress common.Address
 )
 
 // Initialize a common server used by all tests
 func TestMain(m *testing.M) {
-	wg = &sync.WaitGroup{}
-	var err error
-
 	// Create a new test manager
-	testMgr, err = swtesting.NewStakeWiseTestManager("localhost", "localhost", "localhost")
+	var err error
+	testMgr, err = swtesting.NewStakeWiseTestManager()
 	if err != nil {
 		fail("error creating test manager: %v", err)
 	}
 	logger = testMgr.GetLogger()
+	mainNode = testMgr.GetNode()
 
 	// Generate a new wallet
 	derivationPath := string(wallet.DerivationPath_Default)
 	index := uint64(0)
 	password := "test_password123"
-	hdClient := testMgr.HyperdriveTestManager.GetApiClient()
-	recoverResponse, err := hdClient.Wallet.Recover(&derivationPath, keys.DefaultMnemonic, &index, password, true)
+	hdNode := mainNode.GetHyperdriveNode()
+	hd := hdNode.GetApiClient()
+	recoverResponse, err := hd.Wallet.Recover(&derivationPath, keys.DefaultMnemonic, &index, password, true)
 	if err != nil {
 		fail("error generating wallet: %v", err)
 	}
-	nodeAddress = recoverResponse.Data.AccountAddress
+	mainNodeAddress = recoverResponse.Data.AccountAddress
 
 	// Set up NodeSet with the StakeWise vault
-	sp := testMgr.GetStakeWiseServiceProvider()
+	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
-	nsServer := testMgr.GetNodeSetMockServer().GetManager()
-	err = nsServer.AddStakeWiseVault(*res.Vault, res.EthNetworkName)
-	if err != nil {
-		fail("error adding stakewise vault to nodeset: %v", err)
-	}
+	nsMgr := testMgr.GetNodeSetMockServer().GetManager()
+	nsDB := nsMgr.GetDatabase()
+	deployment := nsDB.StakeWise.AddDeployment(res.DeploymentName, big.NewInt(int64(res.ChainID)))
+	_ = deployment.AddVault(res.Vault)
 
 	// Make a NodeSet account
-	err = nsServer.AddUser(nsEmail)
+	_, err = nsDB.Core.AddUser(nsEmail)
 	if err != nil {
 		fail("error adding user to nodeset: %v", err)
 	}
-	err = nsServer.WhitelistNodeAccount(nsEmail, nodeAddress)
-	if err != nil {
-		fail("error adding node account to nodeset: %v", err)
-	}
 
-	// Register with NodeSet
-	response, err := hdClient.NodeSet.RegisterNode(nsEmail)
+	// Register the primary
+	err = registerWithNodeset(mainNode, mainNodeAddress)
 	if err != nil {
-		fail("error registering node with nodeset: %v", err)
-	}
-	if response.Data.AlreadyRegistered {
-		fail("node is already registered with nodeset")
-	}
-	if response.Data.NotWhitelisted {
-		fail("node is not whitelisted with a nodeset user account")
+		fail("error registering with nodeset: %v", err)
 	}
 
 	// Run tests
@@ -100,4 +91,27 @@ func cleanup() {
 		logger.Error("Error closing test manager", log.Err(err))
 	}
 	testMgr = nil
+}
+
+// Register a node with nodeset
+func registerWithNodeset(node *swtesting.StakeWiseNode, address common.Address) error {
+	// whitelist the node with the nodeset.io account
+	nsServer := testMgr.GetNodeSetMockServer().GetManager()
+	nsDB := nsServer.GetDatabase()
+	user := nsDB.Core.GetUser(nsEmail)
+	_ = user.WhitelistNode(address)
+
+	// Register with NodeSet
+	hd := node.GetHyperdriveNode().GetApiClient()
+	response, err := hd.NodeSet.RegisterNode(nsEmail)
+	if err != nil {
+		fail("error registering node with nodeset: %v", err)
+	}
+	if response.Data.AlreadyRegistered {
+		fail("node is already registered with nodeset")
+	}
+	if response.Data.NotWhitelisted {
+		fail("node is not whitelisted with a nodeset user account")
+	}
+	return nil
 }

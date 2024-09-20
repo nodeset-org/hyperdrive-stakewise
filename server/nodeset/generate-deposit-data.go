@@ -39,7 +39,7 @@ func (f *nodesetGenerateDepositDataContextFactory) Create(args url.Values) (*nod
 
 func (f *nodesetGenerateDepositDataContextFactory) RegisterRoute(router *mux.Router) {
 	duserver.RegisterQuerylessGet[*nodesetGenerateDepositDataContext, swapi.NodesetGenerateDepositDataData](
-		router, "generate-deposit-data", f, f.handler.logger.Logger, f.handler.serviceProvider.ServiceProvider,
+		router, "generate-deposit-data", f, f.handler.logger.Logger, f.handler.serviceProvider,
 	)
 }
 
@@ -83,7 +83,7 @@ func (c *nodesetGenerateDepositDataContext) PrepareData(data *swapi.NodesetGener
 	}
 
 	// Generate deposit data
-	depositData, err := ddMgr.GenerateDepositData(keysToGenerate)
+	depositData, err := ddMgr.GenerateDepositData(c.handler.logger.Logger, keysToGenerate)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error generating deposit data: %w", err)
 	}

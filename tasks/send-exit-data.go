@@ -9,7 +9,7 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/client"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
-	apiv1 "github.com/nodeset-org/nodeset-client-go/api-v1"
+	"github.com/nodeset-org/nodeset-client-go/common"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/log"
 	"github.com/rocket-pool/node-manager-core/node/validator"
@@ -24,15 +24,15 @@ const (
 type SendExitDataTask struct {
 	logger *log.Logger
 	ctx    context.Context
-	sp     *swcommon.StakeWiseServiceProvider
+	sp     swcommon.IStakeWiseServiceProvider
 	w      *swcommon.Wallet
 	hd     *client.ApiClient
 	bc     beacon.IBeaconClient
-	res    *swconfig.StakewiseResources
+	res    *swconfig.MergedResources
 }
 
 // Create Exit data task
-func NewSendExitDataTask(ctx context.Context, sp *swcommon.StakeWiseServiceProvider, logger *log.Logger) *SendExitDataTask {
+func NewSendExitDataTask(ctx context.Context, sp swcommon.IStakeWiseServiceProvider, logger *log.Logger) *SendExitDataTask {
 	return &SendExitDataTask{
 		logger: logger,
 		ctx:    ctx,
@@ -49,7 +49,7 @@ func (t *SendExitDataTask) Run() error {
 	t.logger.Info("Checking for missing signed exit data...")
 
 	// Get registered validators
-	resp, err := t.hd.NodeSet_StakeWise.GetRegisteredValidators(*t.res.Vault)
+	resp, err := t.hd.NodeSet_StakeWise.GetRegisteredValidators(t.res.Vault)
 	if err != nil {
 		return fmt.Errorf("error getting registered validators: %w", err)
 	}
@@ -95,7 +95,7 @@ func (t *SendExitDataTask) Run() error {
 	}
 
 	// Get signed exit messages
-	exitData := []apiv1.ExitData{}
+	exitData := []common.ExitData{}
 	for _, pubkey := range missingExitPubkeys {
 		index := statuses[pubkey].Index
 		if index == "" {
@@ -121,10 +121,10 @@ func (t *SendExitDataTask) Run() error {
 			t.logger.Debug("Error getting signed exit message", slog.String(PubkeyKey, pubkey.HexWithPrefix()), log.Err(err))
 			continue
 		}
-		exitData = append(exitData, apiv1.ExitData{
+		exitData = append(exitData, common.ExitData{
 			Pubkey: pubkey.HexWithPrefix(),
-			ExitMessage: apiv1.ExitMessage{
-				Message: apiv1.ExitMessageDetails{
+			ExitMessage: common.ExitMessage{
+				Message: common.ExitMessageDetails{
 					Epoch:          strconv.FormatUint(epoch, 10),
 					ValidatorIndex: index,
 				},
@@ -135,7 +135,7 @@ func (t *SendExitDataTask) Run() error {
 
 	// Upload the messages to Nodeset
 	if len(exitData) > 0 {
-		_, err := t.hd.NodeSet_StakeWise.UploadSignedExits(exitData)
+		_, err := t.hd.NodeSet_StakeWise.UploadSignedExits(t.res.Vault, exitData)
 		if err != nil {
 			return fmt.Errorf("error uploading signed exit messages to NodeSet: %w", err)
 		}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -29,11 +30,11 @@ const (
 // DepositDataManager manages the aggregated deposit data file that Stakewise uses
 type DepositDataManager struct {
 	dataPath string
-	sp       *StakeWiseServiceProvider
+	sp       IStakeWiseServiceProvider
 }
 
 // Creates a new manager
-func NewDepositDataManager(sp *StakeWiseServiceProvider) (*DepositDataManager, error) {
+func NewDepositDataManager(sp IStakeWiseServiceProvider) (*DepositDataManager, error) {
 	dataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile)
 
 	ddMgr := &DepositDataManager{
@@ -56,20 +57,16 @@ func NewDepositDataManager(sp *StakeWiseServiceProvider) (*DepositDataManager, e
 }
 
 // Generates deposit data for the provided keys
-func (m *DepositDataManager) GenerateDepositData(keys []*eth2types.BLSPrivateKey) ([]beacon.ExtendedDepositData, error) {
+func (m *DepositDataManager) GenerateDepositData(logger *slog.Logger, keys []*eth2types.BLSPrivateKey) ([]beacon.ExtendedDepositData, error) {
 	resources := m.sp.GetResources()
 
-	if resources.Vault == nil {
-		return nil, fmt.Errorf("stakewise vault address not set")
-	}
-
 	// Stakewise uses the same withdrawal creds for each validator
-	withdrawalCreds := validator.GetWithdrawalCredsFromAddress(*resources.Vault)
+	withdrawalCreds := validator.GetWithdrawalCredsFromAddress(resources.Vault)
 
 	// Create the new aggregated deposit data for all generated keys
 	dataList := make([]beacon.ExtendedDepositData, len(keys))
 	for i, key := range keys {
-		depositData, err := validator.GetDepositData(key, withdrawalCreds, resources.GenesisForkVersion, StakewiseDepositAmount, resources.EthNetworkName)
+		depositData, err := validator.GetDepositData(logger, key, withdrawalCreds, resources.GenesisForkVersion, StakewiseDepositAmount, resources.EthNetworkName)
 		if err != nil {
 			pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
 			return nil, fmt.Errorf("error getting deposit data for key %s: %w", pubkey.HexWithPrefix(), err)

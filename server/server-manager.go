@@ -6,6 +6,7 @@ import (
 
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swnodeset "github.com/nodeset-org/hyperdrive-stakewise/server/nodeset"
+	swservice "github.com/nodeset-org/hyperdrive-stakewise/server/service"
 	swstatus "github.com/nodeset-org/hyperdrive-stakewise/server/status"
 	swvalidator "github.com/nodeset-org/hyperdrive-stakewise/server/validator"
 	swwallet "github.com/nodeset-org/hyperdrive-stakewise/server/wallet"
@@ -20,7 +21,7 @@ type ServerManager struct {
 }
 
 // Creates a new server manager
-func NewServerManager(sp *swcommon.StakeWiseServiceProvider, ip string, port uint16, stopWg *sync.WaitGroup) (*ServerManager, error) {
+func NewServerManager(sp swcommon.IStakeWiseServiceProvider, ip string, port uint16, stopWg *sync.WaitGroup) (*ServerManager, error) {
 	// Start the API server
 	apiServer, err := createServer(sp, ip, port)
 	if err != nil {
@@ -54,12 +55,13 @@ func (m *ServerManager) Stop() {
 }
 
 // Creates a new Hyperdrive API server
-func createServer(sp *swcommon.StakeWiseServiceProvider, ip string, port uint16) (*server.NetworkSocketApiServer, error) {
+func createServer(sp swcommon.IStakeWiseServiceProvider, ip string, port uint16) (*server.NetworkSocketApiServer, error) {
 	apiLogger := sp.GetApiLogger()
 	ctx := apiLogger.CreateContextWithLogger(sp.GetBaseContext())
 
 	handlers := []server.IHandler{
 		swnodeset.NewNodesetHandler(apiLogger, ctx, sp),
+		swservice.NewServiceHandler(apiLogger, ctx, sp),
 		swvalidator.NewValidatorHandler(apiLogger, ctx, sp),
 		swwallet.NewWalletHandler(apiLogger, ctx, sp),
 		swstatus.NewStatusHandler(apiLogger, ctx, sp),

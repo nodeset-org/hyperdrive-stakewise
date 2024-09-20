@@ -1,6 +1,8 @@
 package swconfig
 
 import (
+	"fmt"
+
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	hdids "github.com/nodeset-org/hyperdrive-daemon/shared/config/ids"
 	"github.com/nodeset-org/hyperdrive-stakewise/shared"
@@ -16,7 +18,7 @@ const (
 
 // Configuration for Stakewise
 type StakeWiseConfig struct {
-	// Toggle for enabling access to the root filesystem (for multiple disk usage metrics)
+	// Toggle for enabling the module
 	Enabled config.Parameter[bool]
 
 	// Port to run the Stakewise API server on
@@ -43,36 +45,23 @@ type StakeWiseConfig struct {
 	Teku       *config.TekuVcConfig
 
 	// Internal fields
-	Version   string
-	hdCfg     *hdconfig.HyperdriveConfig
-	resources *StakewiseResources
+	Version         string
+	hdCfg           *hdconfig.HyperdriveConfig
+	networkSettings []*StakeWiseSettings
 }
 
 // Generates a new Stakewise config
-func NewStakeWiseConfig(hdCfg *hdconfig.HyperdriveConfig) *StakeWiseConfig {
-	swCfg := newStakeWiseConfigImpl(hdCfg)
-	swCfg.updateResources()
-	return swCfg
-}
-
-// Generates a new Stakewise config with custom resources
-func NewStakeWiseConfigWithResources(hdCfg *hdconfig.HyperdriveConfig, resources *StakewiseResources) *StakeWiseConfig {
-	swCfg := newStakeWiseConfigImpl(hdCfg)
-	swCfg.resources = resources
-	return swCfg
-}
-
-// Internal constructor for Stakewise config
-func newStakeWiseConfigImpl(hdCfg *hdconfig.HyperdriveConfig) *StakeWiseConfig {
+func NewStakeWiseConfig(hdCfg *hdconfig.HyperdriveConfig, networks []*StakeWiseSettings) (*StakeWiseConfig, error) {
 	cfg := &StakeWiseConfig{
-		hdCfg: hdCfg,
+		hdCfg:           hdCfg,
+		networkSettings: networks,
 
 		Enabled: config.Parameter[bool]{
 			ParameterCommon: &config.ParameterCommon{
 				ID:                 ids.StakewiseEnableID,
 				Name:               "Enable",
 				Description:        "Enable support for Stakewise (see more at https://docs.nodeset.io).",
-				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseOperator},
+				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon, ContainerID_StakewiseOperator, ContainerID_StakewiseValidator},
 				CanBeBlank:         false,
 				OverwriteOnUpgrade: false,
 			},
@@ -113,7 +102,7 @@ func newStakeWiseConfigImpl(hdCfg *hdconfig.HyperdriveConfig) *StakeWiseConfig {
 			ParameterCommon: &config.ParameterCommon{
 				ID:                 ids.DaemonContainerTagID,
 				Name:               "Daemon Container Tag",
-				Description:        "The tag name of Hyperdrive's Stakewise Daemon image to use. See https://github.com/stakewise/v3-operator#using-docker for more details.",
+				Description:        "The tag name of Hyperdrive's Stakewise Daemon image to use.",
 				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon},
 				CanBeBlank:         false,
 				OverwriteOnUpgrade: true,
@@ -159,22 +148,17 @@ func newStakeWiseConfigImpl(hdCfg *hdconfig.HyperdriveConfig) *StakeWiseConfig {
 	cfg.Prysm = config.NewPrysmVcConfig()
 	cfg.Teku = config.NewTekuVcConfig()
 
-	// Add test network support to the VC tags
-	cfg.Lighthouse.ContainerTag.Default[hdconfig.Network_HoleskyDev] = cfg.Lighthouse.ContainerTag.Default[config.Network_Holesky]
-	cfg.Lodestar.ContainerTag.Default[hdconfig.Network_HoleskyDev] = cfg.Lodestar.ContainerTag.Default[config.Network_Holesky]
-	cfg.Nimbus.ContainerTag.Default[hdconfig.Network_HoleskyDev] = cfg.Nimbus.ContainerTag.Default[config.Network_Holesky]
-	cfg.Prysm.ContainerTag.Default[hdconfig.Network_HoleskyDev] = cfg.Prysm.ContainerTag.Default[config.Network_Holesky]
-	cfg.Teku.ContainerTag.Default[hdconfig.Network_HoleskyDev] = cfg.Teku.ContainerTag.Default[config.Network_Holesky]
-
-	cfg.Lighthouse.ContainerTag.Default[hdconfig.Network_LocalTest] = cfg.Lighthouse.ContainerTag.Default[config.Network_Holesky]
-	cfg.Lodestar.ContainerTag.Default[hdconfig.Network_LocalTest] = cfg.Lodestar.ContainerTag.Default[config.Network_Holesky]
-	cfg.Nimbus.ContainerTag.Default[hdconfig.Network_LocalTest] = cfg.Nimbus.ContainerTag.Default[config.Network_Holesky]
-	cfg.Prysm.ContainerTag.Default[hdconfig.Network_LocalTest] = cfg.Prysm.ContainerTag.Default[config.Network_Holesky]
-	cfg.Teku.ContainerTag.Default[hdconfig.Network_LocalTest] = cfg.Teku.ContainerTag.Default[config.Network_Holesky]
+	// Provision the defaults for each network
+	for _, network := range networks {
+		err := config.SetDefaultsForNetworks(cfg, network.DefaultConfigSettings, network.Key)
+		if err != nil {
+			return nil, fmt.Errorf("could not set defaults for network %s: %w", network.Key, err)
+		}
+	}
 
 	// Apply the default values for the current network
 	config.ApplyDefaults(cfg, hdCfg.Network.Value)
-	return cfg
+	return cfg, nil
 }
 
 // The title for the config
@@ -210,21 +194,14 @@ func (cfg *StakeWiseConfig) GetSubconfigs() map[string]config.IConfigSection {
 func (cfg *StakeWiseConfig) ChangeNetwork(oldNetwork config.Network, newNetwork config.Network) {
 	// Run the changes
 	config.ChangeNetwork(cfg, oldNetwork, newNetwork)
-	cfg.updateResources()
 }
 
 // Creates a copy of the configuration
 func (cfg *StakeWiseConfig) Clone() hdconfig.IModuleConfig {
-	clone := NewStakeWiseConfig(cfg.hdCfg)
+	clone, _ := NewStakeWiseConfig(cfg.hdCfg, cfg.networkSettings)
 	config.Clone(cfg, clone, cfg.hdCfg.Network.Value)
 	clone.Version = cfg.Version
-	clone.updateResources()
 	return clone
-}
-
-// Get the Stakewise resources for the selected network
-func (cfg *StakeWiseConfig) GetStakeWiseResources() *StakewiseResources {
-	return cfg.resources
 }
 
 // Updates the default parameters based on the current network value
@@ -265,13 +242,9 @@ func (cfg *StakeWiseConfig) GetVersion() string {
 	return cfg.Version
 }
 
-// =====================
-// === Field Helpers ===
-// =====================
-
-// Update the config's resource cache
-func (cfg *StakeWiseConfig) updateResources() {
-	cfg.resources = newStakewiseResources(cfg.hdCfg.Network.Value)
+// Get all loaded network settings
+func (cfg *StakeWiseConfig) GetNetworkSettings() []*StakeWiseSettings {
+	return cfg.networkSettings
 }
 
 // ===================

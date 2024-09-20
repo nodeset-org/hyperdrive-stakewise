@@ -1,6 +1,7 @@
 package testing
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/config"
@@ -11,13 +12,20 @@ const (
 	StakeWiseVaultString string = "0x57ace215eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 )
 
-// GetTestResources returns a new StakewiseResources instance with test network values
-func GetTestResources(hdResources *hdconfig.HyperdriveResources) *swconfig.StakewiseResources {
-	return &swconfig.StakewiseResources{
-		HyperdriveResources: hdResources,
-		Vault:               config.HexToAddressPtr(StakeWiseVaultString),
-		FeeRecipient:        config.HexToAddressPtr(""),
-		SplitWarehouse:      config.HexToAddressPtr(""),
-		PullSplit:           config.HexToAddressPtr(""),
+// Returns a new StakewiseResources instance with test network values
+func getTestResources(hdResources *hdconfig.MergedResources) *swconfig.MergedResources {
+	return &swconfig.MergedResources{
+		MergedResources: hdResources,
+		StakeWiseResources: &swconfig.StakeWiseResources{
+			Vault:          common.HexToAddress(StakeWiseVaultString),
+			FeeRecipient:   common.HexToAddress(""),
+			SplitWarehouse: common.HexToAddress(""),
+			PullSplit:      common.HexToAddress(""),
+		},
 	}
+}
+
+// Provisions a NetworkSettings instance with updated addresses
+func provisionNetworkSettings(networkSettings *config.NetworkSettings) *config.NetworkSettings {
+	return networkSettings
 }

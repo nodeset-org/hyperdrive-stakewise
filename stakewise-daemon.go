@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
 	"os/signal"
@@ -11,9 +13,10 @@ import (
 
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	"github.com/nodeset-org/hyperdrive-daemon/shared"
-	"github.com/nodeset-org/hyperdrive-daemon/shared/config"
+	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	"github.com/nodeset-org/hyperdrive-stakewise/server"
+	swshared "github.com/nodeset-org/hyperdrive-stakewise/shared"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	swtasks "github.com/nodeset-org/hyperdrive-stakewise/tasks"
 	"github.com/urfave/cli/v2"
@@ -33,7 +36,7 @@ func main() {
 	// Set application info
 	app.Name = "stakewise-daemon"
 	app.Usage = "Hyperdrive Daemon for NodeSet StakeWise Module Management"
-	app.Version = shared.HyperdriveVersion
+	app.Version = swshared.StakewiseVersion
 	app.Authors = []*cli.Author{
 		{
 			Name:  "Nodeset",
@@ -52,7 +55,13 @@ func main() {
 		Name:    "hyperdrive-url",
 		Aliases: []string{"hd"},
 		Usage:   "The URL of the Hyperdrive API",
-		Value:   "http://127.0.0.1:" + strconv.FormatUint(uint64(config.DefaultApiPort), 10),
+		Value:   "http://127.0.0.1:" + strconv.FormatUint(uint64(hdconfig.DefaultApiPort), 10),
+	}
+	settingsFolderFlag := &cli.StringFlag{
+		Name:     "settings-folder",
+		Aliases:  []string{"s"},
+		Usage:    "The path to the folder containing the network settings files",
+		Required: true,
 	}
 	ipFlag := &cli.StringFlag{
 		Name:    "ip",
@@ -70,6 +79,7 @@ func main() {
 	app.Flags = []cli.Flag{
 		moduleDirFlag,
 		hyperdriveUrlFlag,
+		settingsFolderFlag,
 		ipFlag,
 		portFlag,
 	}
@@ -82,15 +92,37 @@ func main() {
 			return fmt.Errorf("error parsing Hyperdrive URL [%s]: %w", hdUrlString, err)
 		}
 
+		// Get the settings file path
+		settingsFolder := c.String(settingsFolderFlag.Name)
+		if settingsFolder == "" {
+			fmt.Println("No settings folder provided.")
+			os.Exit(1)
+		}
+		_, err = os.Stat(settingsFolder)
+		if errors.Is(err, fs.ErrNotExist) {
+			fmt.Printf("Settings folder not found at [%s].", settingsFolder)
+			os.Exit(1)
+		}
+
+		// Load the network settings
+		settingsList, err := swconfig.LoadSettingsFiles(settingsFolder)
+		if err != nil {
+			fmt.Printf("Error loading network settings: %s", err)
+			os.Exit(1)
+		}
+
 		// Wait group to handle the API server (separate because of error handling)
 		stopWg := new(sync.WaitGroup)
 
 		// Create the service provider
-		sp, err := services.NewServiceProvider(hyperdriveUrl, moduleDir, swconfig.ModuleName, swconfig.ClientLogName, swconfig.NewStakeWiseConfig, config.ClientTimeout)
+		configFactory := func(hdCfg *hdconfig.HyperdriveConfig) (*swconfig.StakeWiseConfig, error) {
+			return swconfig.NewStakeWiseConfig(hdCfg, settingsList)
+		}
+		sp, err := services.NewModuleServiceProvider(hyperdriveUrl, moduleDir, swconfig.ModuleName, swconfig.ClientLogName, configFactory, hdconfig.ClientTimeout)
 		if err != nil {
 			return fmt.Errorf("error creating service provider: %w", err)
 		}
-		stakewiseSp, err := swcommon.NewStakeWiseServiceProvider(sp)
+		stakewiseSp, err := swcommon.NewStakeWiseServiceProvider(sp, settingsList)
 		if err != nil {
 			return fmt.Errorf("error creating StakeWise service provider: %w", err)
 		}

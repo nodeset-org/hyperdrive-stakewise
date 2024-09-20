@@ -9,7 +9,7 @@ import (
 	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
-func (sp *StakeWiseServiceProvider) RequireStakewiseWalletReady(ctx context.Context, status wallet.WalletStatus) error {
+func (sp *stakeWiseServiceProvider) RequireStakewiseWalletReady(ctx context.Context, status wallet.WalletStatus) error {
 	// Get the logger
 	logger, exists := log.FromContext(ctx)
 	if !exists {
@@ -34,7 +34,7 @@ func (sp *StakeWiseServiceProvider) RequireStakewiseWalletReady(ctx context.Cont
 	return sp.initializeStakewiseWallet(logger)
 }
 
-func (sp *StakeWiseServiceProvider) WaitForStakewiseWallet(ctx context.Context) error {
+func (sp *stakeWiseServiceProvider) WaitForStakewiseWallet(ctx context.Context) error {
 	// Get the logger
 	logger, exists := log.FromContext(ctx)
 	if !exists {
@@ -51,14 +51,14 @@ func (sp *StakeWiseServiceProvider) WaitForStakewiseWallet(ctx context.Context) 
 	}
 
 	// Wait for the Hyperdrive wallet first, then initialize the Stakewise one
-	err = sp.WaitForWallet(ctx)
+	_, err = sp.WaitForWallet(ctx)
 	if err != nil {
 		return err
 	}
 	return sp.initializeStakewiseWallet(logger)
 }
 
-func (sp *StakeWiseServiceProvider) initializeStakewiseWallet(logger *log.Logger) error {
+func (sp *stakeWiseServiceProvider) initializeStakewiseWallet(logger *log.Logger) error {
 	// Get the wallet from Hyperdrive
 	logger.Warn("Stakewise wallet not found, initializing now")
 	ethkeyResponse, err := sp.GetHyperdriveClient().Wallet.ExportEthKey()

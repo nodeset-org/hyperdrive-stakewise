@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
 	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
-	"github.com/nodeset-org/osha"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/node/validator"
 	"github.com/stretchr/testify/require"
@@ -15,19 +15,22 @@ import (
 
 func TestValidatorStatus_Active(t *testing.T) {
 	// Take a snapshot, revert at the end
-	snapshotName, err := testMgr.CreateCustomSnapshot(osha.Service_EthClients | osha.Service_Filesystem)
+	snapshotName, err := testMgr.CreateCustomSnapshot(hdtesting.Service_EthClients | hdtesting.Service_Filesystem)
 	if err != nil {
 		fail("Error creating custom snapshot: %v", err)
 	}
 	defer status_cleanup(snapshotName)
 
 	// Get some resources
-	sp := testMgr.GetStakeWiseServiceProvider()
-	vault := *sp.GetResources().Vault
-	network := sp.GetResources().EthNetworkName
+	sp := mainNode.GetServiceProvider()
+	res := sp.GetResources()
 	wallet := sp.GetWallet()
 	ddMgr := sp.GetDepositDataManager()
 	nsMock := testMgr.GetNodeSetMockServer().GetManager()
+	nsDB := nsMock.GetDatabase()
+	deployment := nsDB.StakeWise.GetDeployment(res.DeploymentName)
+	vault := deployment.GetVault(res.Vault)
+	nsNode, _ := nsDB.Core.GetNode(mainNodeAddress)
 
 	// Generate a validator key
 	key, err := wallet.GenerateNewValidatorKey()
@@ -36,40 +39,37 @@ func TestValidatorStatus_Active(t *testing.T) {
 	t.Logf("Validator key generated, pubkey = %s", pubkey.HexWithPrefix())
 
 	// Generate deposit data
-	depositData, err := ddMgr.GenerateDepositData([]*eth2types.BLSPrivateKey{key})
+	depositData, err := ddMgr.GenerateDepositData(logger, []*eth2types.BLSPrivateKey{key})
 	require.NoError(t, err)
 	t.Log("Deposit data generated")
 
 	// Upload the deposit data to nodeset
-	err = nsMock.HandleDepositDataUpload(nodeAddress, depositData)
+	err = vault.HandleDepositDataUpload(nsNode, depositData)
 	require.NoError(t, err)
 	t.Log("Deposit data uploaded to nodeset")
 
 	// Cut a new deposit data set
-	depositDataSet := nsMock.CreateNewDepositDataSet(network, 1)
+	depositDataSet := vault.CreateNewDepositDataSet(1)
 	require.Equal(t, depositData, depositDataSet)
 	t.Log("New deposit data set created")
 
 	// Upload the deposit data to StakeWise
-	err = nsMock.UploadDepositDataToStakeWise(vault, network, depositDataSet)
-	require.NoError(t, err)
+	vault.UploadDepositDataToStakeWise(depositDataSet)
 	t.Log("Deposit data set uploaded to StakeWise")
 
 	// Mark the deposit data set as uploaded
-	err = nsMock.MarkDepositDataSetUploaded(vault, network, depositDataSet)
-	require.NoError(t, err)
+	vault.MarkDepositDataSetUploaded(depositDataSet)
 	t.Log("Deposit data set marked as uploaded")
 
 	// Add the validator to Beacon
-	creds := validator.GetWithdrawalCredsFromAddress(vault)
+	creds := validator.GetWithdrawalCredsFromAddress(res.Vault)
 	bn := testMgr.GetBeaconMockManager()
 	validator, err := bn.AddValidator(pubkey, creds)
 	require.NoError(t, err)
 	t.Log("Validator added to the beacon chain")
 
 	// Mark the validator as active
-	err = nsMock.MarkValidatorsRegistered(vault, network, depositDataSet)
-	require.NoError(t, err)
+	vault.MarkValidatorsRegistered(depositDataSet)
 	t.Log("Deposit data set marked as registered")
 
 	// Set the validator to active
@@ -77,7 +77,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	validator.Index = 1
 
 	// Run the status route
-	client := testMgr.GetApiClient()
+	client := mainNode.GetApiClient()
 	response, err := client.Status.GetValidatorStatuses()
 	require.NoError(t, err)
 	t.Log("Ran validator status check")
@@ -107,13 +107,13 @@ func status_cleanup(snapshotName string) {
 	}
 
 	// Reload the HD wallet to undo any changes made during the test
-	err = testMgr.GetServiceProvider().GetWallet().Reload(testMgr.GetLogger())
+	err = mainNode.GetHyperdriveNode().GetServiceProvider().GetWallet().Reload(testMgr.GetLogger())
 	if err != nil {
 		fail("Error reloading hyperdrive wallet: %v", err)
 	}
 
 	// Reload the SW wallet to undo any changes made during the test
-	err = testMgr.GetStakeWiseServiceProvider().GetWallet().Reload()
+	err = mainNode.GetServiceProvider().GetWallet().Reload()
 	if err != nil {
 		fail("Error reloading stakewise wallet: %v", err)
 	}

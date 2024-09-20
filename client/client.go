@@ -8,12 +8,13 @@ import (
 	"github.com/rocket-pool/node-manager-core/api/client"
 )
 
-// Binder for the Hyperdrive daemon API server
+// Binder for the StakeWise API server
 type ApiClient struct {
 	context   client.IRequesterContext
 	Nodeset   *NodesetRequester
 	Validator *ValidatorRequester
 	Wallet    *WalletRequester
+	Service   *ServiceRequester
 	Status    *StatusRequester
 }
 
@@ -26,6 +27,7 @@ func NewApiClient(apiUrl *url.URL, logger *slog.Logger, tracer *httptrace.Client
 		Nodeset:   NewNodesetRequester(context),
 		Validator: NewValidatorRequester(context),
 		Wallet:    NewWalletRequester(context),
+		Service:   NewServiceRequester(context),
 		Status:    NewStatusRequester(context),
 	}
 	return client

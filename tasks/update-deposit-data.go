@@ -20,16 +20,16 @@ import (
 type UpdateDepositDataTask struct {
 	logger *log.Logger
 	ctx    context.Context
-	sp     *swcommon.StakeWiseServiceProvider
+	sp     swcommon.IStakeWiseServiceProvider
 	w      *swcommon.Wallet
 	hd     *client.ApiClient
 	ddMgr  *swcommon.DepositDataManager
 	cfg    *swconfig.StakeWiseConfig
-	res    *swconfig.StakewiseResources
+	res    *swconfig.MergedResources
 }
 
 // Create update deposit data task
-func NewUpdateDepositDataTask(ctx context.Context, sp *swcommon.StakeWiseServiceProvider, logger *log.Logger) *UpdateDepositDataTask {
+func NewUpdateDepositDataTask(ctx context.Context, sp swcommon.IStakeWiseServiceProvider, logger *log.Logger) *UpdateDepositDataTask {
 	return &UpdateDepositDataTask{
 		logger: logger,
 		ctx:    ctx,
@@ -37,7 +37,7 @@ func NewUpdateDepositDataTask(ctx context.Context, sp *swcommon.StakeWiseService
 		w:      sp.GetWallet(),
 		hd:     sp.GetHyperdriveClient(),
 		ddMgr:  sp.GetDepositDataManager(),
-		cfg:    sp.GetModuleConfig(),
+		cfg:    sp.GetConfig(),
 		res:    sp.GetResources(),
 	}
 }
@@ -47,7 +47,7 @@ func (t *UpdateDepositDataTask) Run() error {
 	t.logger.Info("Checking version of NodeSet data on disk...")
 
 	// Get the version on the server
-	versionResponse, err := t.hd.NodeSet_StakeWise.GetDepositDataSetVersion(*t.res.Vault)
+	versionResponse, err := t.hd.NodeSet_StakeWise.GetDepositDataSetVersion(t.res.Vault)
 	if err != nil {
 		return fmt.Errorf("error getting latest deposit data version: %w", err)
 	}
@@ -66,7 +66,7 @@ func (t *UpdateDepositDataTask) Run() error {
 
 	// Get the new data
 	t.logger.Info("Deposit data is out of date retrieving latest data...", slog.Int("localVersion", localVersion), slog.Int("remoteVersion", remoteVersion))
-	setResponse, err := t.hd.NodeSet_StakeWise.GetDepositDataSet(*t.res.Vault)
+	setResponse, err := t.hd.NodeSet_StakeWise.GetDepositDataSet(t.res.Vault)
 	if err != nil {
 		return fmt.Errorf("error getting latest deposit data: %w", err)
 	}
@@ -121,10 +121,7 @@ func (t *UpdateDepositDataTask) verifyDepositsRoot(depositData []beacon.Extended
 	t.logger.Info("Computed Merkle root", slog.String("root", localRoot.Hex()))
 
 	// Get the Merkle root from the vault
-	if res.Vault == nil {
-		return false, fmt.Errorf("no Stakewise Vault address has been set yet")
-	}
-	vault, err := swcontracts.NewStakewiseVault(*res.Vault, ec, txMgr)
+	vault, err := swcontracts.NewStakewiseVault(res.Vault, ec, txMgr)
 	if err != nil {
 		return false, fmt.Errorf("error creating Stakewise Vault binding: %w", err)
 	}
