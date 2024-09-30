@@ -10,9 +10,9 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.1.0-b1
-	github.com/nodeset-org/nodeset-client-go v1.0.0
-	github.com/nodeset-org/osha v0.3.0
+	github.com/nodeset-org/hyperdrive-daemon v1.1.0-b1.0.20240927170333-9fee16a048f0
+	github.com/nodeset-org/nodeset-client-go v1.0.1-0.20240927160821-e348e05e2363
+	github.com/nodeset-org/osha v0.3.1-0.20240927160812-d66358d4e091
 	github.com/rocket-pool/batch-query v1.0.0
 	github.com/rocket-pool/node-manager-core v0.5.2-0.20240918224929-a9cee1201bee
 	github.com/stretchr/testify v1.9.0
@@ -56,7 +56,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker v27.0.3+incompatible // indirect
+	github.com/docker/docker v27.3.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
@@ -102,6 +102,7 @@ require (
 	github.com/moby/sys/signal v0.7.0 // indirect
 	github.com/moby/sys/symlink v0.2.0 // indirect
 	github.com/moby/sys/user v0.1.0 // indirect
+	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
