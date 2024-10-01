@@ -54,6 +54,9 @@ type StakeWiseSettings struct {
 
 // A collection of network-specific resources and getters for them
 type StakeWiseResources struct {
+	// The name of the deployment used by nodeset.io
+	DeploymentName string `yaml:"deploymentName" json:"deploymentName"`
+
 	// The address of the Stakewise v3 vault contract, the withdrawal address for all Stakewise validators on Beacon.
 	// It's also the address of an ERC-20 token on the EL, which is an LST for the NodeSet partner administrating the vault.
 	// See https://app.stakewise.io/vault/holesky/<vault_address> for details.

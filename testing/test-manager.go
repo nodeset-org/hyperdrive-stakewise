@@ -13,6 +13,10 @@ import (
 	"github.com/rocket-pool/node-manager-core/log"
 )
 
+const (
+	deploymentName string = "localtest"
+)
+
 // StakeWiseTestManager for managing testing resources and services
 type StakeWiseTestManager struct {
 	*hdtesting.HyperdriveTestManager
@@ -38,7 +42,7 @@ func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 	hdClient := hdNode.GetApiClient()
 
 	// Make StakeWise resources
-	resources := getTestResources(hdSp.GetResources())
+	resources := getTestResources(hdSp.GetResources(), deploymentName)
 	swCfg, err := swconfig.NewStakeWiseConfig(hdCfg, []*swconfig.StakeWiseSettings{})
 	if err != nil {
 		closeTestManager(tm)
