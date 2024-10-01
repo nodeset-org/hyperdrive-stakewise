@@ -118,7 +118,7 @@ func main() {
 		configFactory := func(hdCfg *hdconfig.HyperdriveConfig) (*swconfig.StakeWiseConfig, error) {
 			return swconfig.NewStakeWiseConfig(hdCfg, settingsList)
 		}
-		sp, err := services.NewModuleServiceProvider(hyperdriveUrl, moduleDir, swconfig.ModuleName, swconfig.ClientLogName, configFactory, hdconfig.ClientTimeout)
+		sp, err := services.NewModuleServiceProvider(hyperdriveUrl, moduleDir, swconfig.ModuleName, swconfig.ClientLogName, configFactory)
 		if err != nil {
 			return fmt.Errorf("error creating service provider: %w", err)
 		}
