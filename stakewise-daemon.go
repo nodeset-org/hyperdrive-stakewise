@@ -128,7 +128,7 @@ func main() {
 
 		// Make an incoming API auth manager
 		apiKeyPath := c.String(apiKeyFlag.Name)
-		moduleAuthMgr := auth.NewAuthorizationManager(apiKeyPath)
+		moduleAuthMgr := auth.NewAuthorizationManager(apiKeyPath, "sw-daemon-svr", auth.DefaultRequestLifespan)
 		err = moduleAuthMgr.LoadAuthKey()
 		if err != nil {
 			return fmt.Errorf("error loading module API key: %w", err)
@@ -136,7 +136,7 @@ func main() {
 
 		// Make an HD API auth manager
 		hdApiKeyPath := c.String(hyperdriveApiKeyFlag.Name)
-		hdAuthMgr := auth.NewAuthorizationManager(hdApiKeyPath)
+		hdAuthMgr := auth.NewAuthorizationManager(hdApiKeyPath, "sw-daemon-client", auth.DefaultRequestLifespan)
 		err = hdAuthMgr.LoadAuthKey()
 		if err != nil {
 			return fmt.Errorf("error loading Hyperdrive API key: %w", err)

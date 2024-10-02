@@ -48,9 +48,9 @@ func newStakeWiseNode(sp swcommon.IStakeWiseServiceProvider, address string, cli
 	// Create the server
 	wg := &sync.WaitGroup{}
 	cfg := sp.GetConfig()
-	authMgr := auth.NewAuthorizationManager("")
-	authMgr.SetKey([]byte(apiAuthKey))
-	serverMgr, err := swserver.NewServerManager(sp, address, cfg.ApiPort.Value, wg, authMgr)
+	serverAuthMgr := auth.NewAuthorizationManager("", "sw-server", auth.DefaultRequestLifespan)
+	serverAuthMgr.SetKey([]byte(apiAuthKey))
+	serverMgr, err := swserver.NewServerManager(sp, address, cfg.ApiPort.Value, wg, serverAuthMgr)
 	if err != nil {
 		return nil, fmt.Errorf("error creating constellation server: %v", err)
 	}
@@ -61,7 +61,9 @@ func newStakeWiseNode(sp swcommon.IStakeWiseServiceProvider, address string, cli
 	if err != nil {
 		return nil, fmt.Errorf("error parsing client URL [%s]: %v", urlString, err)
 	}
-	apiClient := swclient.NewApiClient(url, clientLogger, nil, authMgr)
+	clientAuthMgr := auth.NewAuthorizationManager("", "sw-client", auth.DefaultRequestLifespan)
+	clientAuthMgr.SetKey([]byte(apiAuthKey))
+	apiClient := swclient.NewApiClient(url, clientLogger, nil, clientAuthMgr)
 
 	return &StakeWiseNode{
 		sp:        sp,
