@@ -10,11 +10,11 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.1.0-b1.0.20241001192501-b11ba9e5209f
+	github.com/nodeset-org/hyperdrive-daemon v1.1.0-b1.0.20241002073218-07357eb81ca4
 	github.com/nodeset-org/nodeset-client-go v1.0.1-0.20240927160821-e348e05e2363
 	github.com/nodeset-org/osha v0.3.1-0.20240927160812-d66358d4e091
 	github.com/rocket-pool/batch-query v1.0.0
-	github.com/rocket-pool/node-manager-core v0.5.2-0.20241001041416-40f4fb819f98
+	github.com/rocket-pool/node-manager-core v0.5.2-0.20241002072934-89c9cc081cf6
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.2
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
@@ -71,6 +71,7 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect

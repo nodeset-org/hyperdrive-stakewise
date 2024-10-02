@@ -9,12 +9,17 @@ import (
 	"sync"
 
 	hdservices "github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
+	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swserver "github.com/nodeset-org/hyperdrive-stakewise/server"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
+)
+
+const (
+	apiAuthKey string = "sw-test-key"
 )
 
 // A complete StakeWise node instance
@@ -43,7 +48,9 @@ func newStakeWiseNode(sp swcommon.IStakeWiseServiceProvider, address string, cli
 	// Create the server
 	wg := &sync.WaitGroup{}
 	cfg := sp.GetConfig()
-	serverMgr, err := swserver.NewServerManager(sp, address, cfg.ApiPort.Value, wg)
+	authMgr := auth.NewAuthorizationManager("")
+	authMgr.SetKey([]byte(apiAuthKey))
+	serverMgr, err := swserver.NewServerManager(sp, address, cfg.ApiPort.Value, wg, authMgr)
 	if err != nil {
 		return nil, fmt.Errorf("error creating constellation server: %v", err)
 	}
@@ -54,7 +61,7 @@ func newStakeWiseNode(sp swcommon.IStakeWiseServiceProvider, address string, cli
 	if err != nil {
 		return nil, fmt.Errorf("error parsing client URL [%s]: %v", urlString, err)
 	}
-	apiClient := swclient.NewApiClient(url, clientLogger, nil)
+	apiClient := swclient.NewApiClient(url, clientLogger, nil, authMgr)
 
 	return &StakeWiseNode{
 		sp:        sp,

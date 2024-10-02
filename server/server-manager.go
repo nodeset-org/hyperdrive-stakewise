@@ -2,8 +2,11 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
+	"net/http"
 	"sync"
 
+	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swnodeset "github.com/nodeset-org/hyperdrive-stakewise/server/nodeset"
 	swservice "github.com/nodeset-org/hyperdrive-stakewise/server/service"
@@ -12,6 +15,7 @@ import (
 	swwallet "github.com/nodeset-org/hyperdrive-stakewise/server/wallet"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/api/server"
+	"github.com/rocket-pool/node-manager-core/log"
 )
 
 // ServerManager manages the API server run by the daemon
@@ -21,9 +25,9 @@ type ServerManager struct {
 }
 
 // Creates a new server manager
-func NewServerManager(sp swcommon.IStakeWiseServiceProvider, ip string, port uint16, stopWg *sync.WaitGroup) (*ServerManager, error) {
+func NewServerManager(sp swcommon.IStakeWiseServiceProvider, ip string, port uint16, stopWg *sync.WaitGroup, authMgr *auth.AuthorizationManager) (*ServerManager, error) {
 	// Start the API server
-	apiServer, err := createServer(sp, ip, port)
+	apiServer, err := createServer(sp, ip, port, authMgr)
 	if err != nil {
 		return nil, fmt.Errorf("error creating API server: %w", err)
 	}
@@ -55,10 +59,11 @@ func (m *ServerManager) Stop() {
 }
 
 // Creates a new Hyperdrive API server
-func createServer(sp swcommon.IStakeWiseServiceProvider, ip string, port uint16) (*server.NetworkSocketApiServer, error) {
+func createServer(sp swcommon.IStakeWiseServiceProvider, ip string, port uint16, authMgr *auth.AuthorizationManager) (*server.NetworkSocketApiServer, error) {
 	apiLogger := sp.GetApiLogger()
 	ctx := apiLogger.CreateContextWithLogger(sp.GetBaseContext())
 
+	// Create the API handlers
 	handlers := []server.IHandler{
 		swnodeset.NewNodesetHandler(apiLogger, ctx, sp),
 		swservice.NewServiceHandler(apiLogger, ctx, sp),
@@ -66,9 +71,30 @@ func createServer(sp swcommon.IStakeWiseServiceProvider, ip string, port uint16)
 		swwallet.NewWalletHandler(apiLogger, ctx, sp),
 		swstatus.NewStatusHandler(apiLogger, ctx, sp),
 	}
+
+	// Create the API server
 	server, err := server.NewNetworkSocketApiServer(apiLogger.Logger, ip, port, handlers, swconfig.DaemonBaseRoute, swconfig.ApiVersion)
 	if err != nil {
 		return nil, err
 	}
+
+	// Add the authorization middleware
+	server.GetApiRouter().Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			err = authMgr.ValidateRequest(r)
+			if err != nil {
+				apiLogger.Error("Error validating request authorization",
+					log.Err(err),
+					slog.String("path", r.URL.Path),
+					slog.String("method", r.Method),
+				)
+				http.Error(w, "Authorization failed", http.StatusUnauthorized)
+				return
+			}
+
+			// Valid request
+			next.ServeHTTP(w, r)
+		})
+	})
 	return server, nil
 }
