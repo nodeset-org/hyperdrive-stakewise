@@ -86,7 +86,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	}
 
 	// Fetch status from NodeSet
-	response, err := hd.NodeSet_StakeWise.GetRegisteredValidators(res.Vault)
+	response, err := hd.NodeSet_StakeWise.GetRegisteredValidators(res.DeploymentName, res.Vault)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
 	}
@@ -196,7 +196,7 @@ func (c *nodesetUploadDepositDataContext) PrepareData(data *swapi.NodesetUploadD
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error generating deposit data: %w", err)
 	}
-	uploadResponse, err := hd.NodeSet_StakeWise.UploadDepositData(res.Vault, depositData)
+	uploadResponse, err := hd.NodeSet_StakeWise.UploadDepositData(res.DeploymentName, res.Vault, depositData)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error uploading deposit data: %w", err)
 	}

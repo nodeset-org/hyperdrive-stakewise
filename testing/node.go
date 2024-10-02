@@ -105,7 +105,7 @@ func (n *StakeWiseNode) CreateSubNode(hdNode *hdtesting.HyperdriveNode, address 
 	hdClient := hdNode.GetApiClient()
 
 	// Make Constellation resources
-	resources := getTestResources(hdSp.GetResources())
+	resources := getTestResources(hdSp.GetResources(), deploymentName)
 	csCfg, err := swconfig.NewStakeWiseConfig(hdCfg, []*swconfig.StakeWiseSettings{})
 	if err != nil {
 		return nil, fmt.Errorf("error creating Constellation config: %v", err)

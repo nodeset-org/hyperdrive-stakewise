@@ -13,10 +13,11 @@ const (
 )
 
 // Returns a new StakewiseResources instance with test network values
-func getTestResources(hdResources *hdconfig.MergedResources) *swconfig.MergedResources {
+func getTestResources(hdResources *hdconfig.MergedResources, deploymentName string) *swconfig.MergedResources {
 	return &swconfig.MergedResources{
 		MergedResources: hdResources,
 		StakeWiseResources: &swconfig.StakeWiseResources{
+			DeploymentName: deploymentName,
 			Vault:          common.HexToAddress(StakeWiseVaultString),
 			FeeRecipient:   common.HexToAddress(""),
 			SplitWarehouse: common.HexToAddress(""),

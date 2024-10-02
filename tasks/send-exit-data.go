@@ -49,7 +49,7 @@ func (t *SendExitDataTask) Run() error {
 	t.logger.Info("Checking for missing signed exit data...")
 
 	// Get registered validators
-	resp, err := t.hd.NodeSet_StakeWise.GetRegisteredValidators(t.res.Vault)
+	resp, err := t.hd.NodeSet_StakeWise.GetRegisteredValidators(t.res.DeploymentName, t.res.Vault)
 	if err != nil {
 		return fmt.Errorf("error getting registered validators: %w", err)
 	}
@@ -135,7 +135,7 @@ func (t *SendExitDataTask) Run() error {
 
 	// Upload the messages to Nodeset
 	if len(exitData) > 0 {
-		_, err := t.hd.NodeSet_StakeWise.UploadSignedExits(t.res.Vault, exitData)
+		_, err := t.hd.NodeSet_StakeWise.UploadSignedExits(t.res.DeploymentName, t.res.Vault, exitData)
 		if err != nil {
 			return fmt.Errorf("error uploading signed exit messages to NodeSet: %w", err)
 		}

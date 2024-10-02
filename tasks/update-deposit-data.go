@@ -47,7 +47,7 @@ func (t *UpdateDepositDataTask) Run() error {
 	t.logger.Info("Checking version of NodeSet data on disk...")
 
 	// Get the version on the server
-	versionResponse, err := t.hd.NodeSet_StakeWise.GetDepositDataSetVersion(t.res.Vault)
+	versionResponse, err := t.hd.NodeSet_StakeWise.GetDepositDataSetVersion(t.res.DeploymentName, t.res.Vault)
 	if err != nil {
 		return fmt.Errorf("error getting latest deposit data version: %w", err)
 	}
@@ -66,7 +66,7 @@ func (t *UpdateDepositDataTask) Run() error {
 
 	// Get the new data
 	t.logger.Info("Deposit data is out of date retrieving latest data...", slog.Int("localVersion", localVersion), slog.Int("remoteVersion", remoteVersion))
-	setResponse, err := t.hd.NodeSet_StakeWise.GetDepositDataSet(t.res.Vault)
+	setResponse, err := t.hd.NodeSet_StakeWise.GetDepositDataSet(t.res.DeploymentName, t.res.Vault)
 	if err != nil {
 		return fmt.Errorf("error getting latest deposit data: %w", err)
 	}
