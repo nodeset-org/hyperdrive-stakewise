@@ -95,14 +95,16 @@ func (t *SendExitDataTask) Run() error {
 	}
 
 	// Get signed exit messages
-	exitData := []common.ExitData{}
+	exitData := []common.EncryptedExitData{}
 	for _, pubkey := range missingExitPubkeys {
+		// Check if it's been seen on Beacon
 		index := statuses[pubkey].Index
 		if index == "" {
 			t.logger.Debug("Validator doesn't have an index yet", slog.String(PubkeyKey, pubkey.HexWithPrefix()))
 			continue
 		}
 
+		// Make a signed exit message
 		t.logger.Info("Validator has been added to the Beacon queue but is missing a signed exit message.", slog.String(PubkeyKey, pubkey.HexWithPrefix()))
 		key, err := t.w.GetPrivateKeyForPubkey(pubkey)
 		if err != nil {
@@ -121,15 +123,27 @@ func (t *SendExitDataTask) Run() error {
 			t.logger.Debug("Error getting signed exit message", slog.String(PubkeyKey, pubkey.HexWithPrefix()), log.Err(err))
 			continue
 		}
-		exitData = append(exitData, common.ExitData{
-			Pubkey: pubkey.HexWithPrefix(),
-			ExitMessage: common.ExitMessage{
-				Message: common.ExitMessageDetails{
-					Epoch:          strconv.FormatUint(epoch, 10),
-					ValidatorIndex: index,
-				},
-				Signature: signature.HexWithPrefix(),
+		exitMessage := common.ExitMessage{
+			Message: common.ExitMessageDetails{
+				Epoch:          strconv.FormatUint(epoch, 10),
+				ValidatorIndex: index,
 			},
+			Signature: signature.HexWithPrefix(),
+		}
+
+		// Encrypt it
+		encryptedMessage, err := common.EncryptSignedExitMessage(exitMessage, t.res.EncryptionPubkey)
+		if err != nil {
+			t.logger.Warn("Error encrypting signed exit message",
+				slog.String("pubkey", pubkey.HexWithPrefix()),
+				log.Err(err),
+			)
+			continue
+		}
+
+		exitData = append(exitData, common.EncryptedExitData{
+			Pubkey:      pubkey.HexWithPrefix(),
+			ExitMessage: encryptedMessage,
 		})
 	}
 
