@@ -88,7 +88,7 @@ func (t *SendExitDataTask) Run() error {
 	if err != nil {
 		return fmt.Errorf("error getting beacon head: %w", err)
 	}
-	epoch := head.Epoch
+	epoch := head.FinalizedEpoch
 	signatureDomain, err := t.bc.GetDomainData(t.ctx, eth2types.DomainVoluntaryExit[:], epoch, false)
 	if err != nil {
 		return fmt.Errorf("error getting domain data: %w", err)
