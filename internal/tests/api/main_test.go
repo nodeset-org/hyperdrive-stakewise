@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
 	swtesting "github.com/nodeset-org/hyperdrive-stakewise/testing"
 	"github.com/nodeset-org/osha/keys"
 	"github.com/rocket-pool/node-manager-core/log"
@@ -55,6 +56,7 @@ func TestMain(m *testing.M) {
 	nsDB := nsMgr.GetDatabase()
 	deployment := nsDB.StakeWise.AddDeployment(res.DeploymentName, big.NewInt(int64(res.ChainID)))
 	_ = deployment.AddVault(res.Vault)
+	nsDB.SetSecretEncryptionIdentity(hdtesting.EncryptionIdentity)
 
 	// Make a NodeSet account
 	_, err = nsDB.Core.AddUser(nsEmail)

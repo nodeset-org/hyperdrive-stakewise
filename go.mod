@@ -10,11 +10,11 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.1.0-b2
-	github.com/nodeset-org/nodeset-client-go v1.1.0
+	github.com/nodeset-org/hyperdrive-daemon v1.1.0-rc1
+	github.com/nodeset-org/nodeset-client-go v1.2.0
 	github.com/nodeset-org/osha v0.3.1
 	github.com/rocket-pool/batch-query v1.0.0
-	github.com/rocket-pool/node-manager-core v0.5.2-0.20241003024529-05c829d805c6
+	github.com/rocket-pool/node-manager-core v0.5.2-0.20241008173134-e04f3c1b9051
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.2
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
@@ -23,6 +23,7 @@ require (
 )
 
 require (
+	filippo.io/age v1.2.0 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240716105424-66b64c4bb379 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20231105174938-2b5cbb29f3e2 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
