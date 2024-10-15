@@ -10,7 +10,7 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.1.0-rc1.0.20241011040058-749953f33ddd
+	github.com/nodeset-org/hyperdrive-daemon v1.1.0
 	github.com/nodeset-org/nodeset-client-go v1.2.1
 	github.com/nodeset-org/osha v0.3.1
 	github.com/rocket-pool/batch-query v1.0.0
