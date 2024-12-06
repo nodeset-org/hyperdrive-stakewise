@@ -380,6 +380,8 @@ github.com/nodeset-org/nodeset-client-go v1.2.1 h1:2Nybz1IONZBCD+j4+MgRBIvA3dNW4
 github.com/nodeset-org/nodeset-client-go v1.2.1/go.mod h1:TATOnCsIvDjC7C+h1izgw0+t35N40Hr/CxhgaLK78e4=
 github.com/nodeset-org/osha v0.3.1 h1:xHDjCswxGDazY/UsZ0QOpcu7gTVnEuUwXcKGVAz72lI=
 github.com/nodeset-org/osha v0.3.1/go.mod h1:47D6kYMuxYDTbul3w/YtE1LKA0hfzbXzCEC3M9oQlOU=
+github.com/nodeset-org/osha v0.3.2-0.20241206173120-878046c6bd56 h1:2M39erdPKR/zBNU+CaS1BeeOR03m2Op6w6SY4rUFe/Q=
+github.com/nodeset-org/osha v0.3.2-0.20241206173120-878046c6bd56/go.mod h1:47D6kYMuxYDTbul3w/YtE1LKA0hfzbXzCEC3M9oQlOU=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
 github.com/olekukonko/tablewriter v0.0.5 h1:P2Ga83D34wi1o9J6Wh1mRuqd4mF/x/lgBS7N7AbDhec=

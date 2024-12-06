@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/google/uuid"
 	hdservices "github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
@@ -23,6 +24,9 @@ type StakeWiseTestManager struct {
 
 	// The complete StakeWise node
 	node *StakeWiseNode
+
+	// The ID of the baseline snapshot
+	baselineSnapshotID string
 }
 
 // Creates a new TestManager instance
@@ -84,11 +88,27 @@ func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 	}
 
 	// Return
-	m := &StakeWiseTestManager{
+	module := &StakeWiseTestManager{
 		HyperdriveTestManager: tm,
 		node:                  node,
 	}
-	return m, nil
+
+	tm.RegisterModule(module)
+	baselineSnapshot, err := tm.CreateSnapshot()
+	if err != nil {
+		return nil, fmt.Errorf("error creating baseline snapshot: %w", err)
+	}
+	module.baselineSnapshotID = baselineSnapshot
+
+	return module, nil
+}
+
+// ===============
+// === Getters ===
+// ===============
+
+func (m *StakeWiseTestManager) GetModuleName() string {
+	return "hyperdrive-stakewise"
 }
 
 // Get the node handle
@@ -96,8 +116,23 @@ func (m *StakeWiseTestManager) GetNode() *StakeWiseNode {
 	return m.node
 }
 
+// ====================
+// === Snapshotting ===
+// ====================
+
+// Takes a snapshot of the service states
+func (m *StakeWiseTestManager) TakeModuleSnapshot() (any, error) {
+	snapshotName := uuid.New().String()
+	return snapshotName, nil
+}
+
+func (m *StakeWiseTestManager) RevertModuleToSnapshot(moduleState any) error {
+	// TODO: Implement
+	return nil
+}
+
 // Closes the test manager, shutting down the nodeset mock server and all other resources
-func (m *StakeWiseTestManager) Close() error {
+func (m *StakeWiseTestManager) CloseModule() error {
 	err := m.node.Close()
 	if err != nil {
 		return fmt.Errorf("error closing StakeWise node: %w", err)

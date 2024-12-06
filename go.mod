@@ -12,7 +12,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/nodeset-org/hyperdrive-daemon v1.1.0
 	github.com/nodeset-org/nodeset-client-go v1.2.1
-	github.com/nodeset-org/osha v0.3.1
+	github.com/nodeset-org/osha v0.3.2-0.20241206173120-878046c6bd56
 	github.com/rocket-pool/batch-query v1.0.0
 	github.com/rocket-pool/node-manager-core v0.5.2-0.20241011014615-2cf2a45afa0a
 	github.com/stretchr/testify v1.9.0
