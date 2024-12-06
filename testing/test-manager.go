@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/uuid"
 	hdservices "github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
@@ -120,14 +119,30 @@ func (m *StakeWiseTestManager) GetNode() *StakeWiseNode {
 // === Snapshotting ===
 // ====================
 
+// Reverts the service states to the baseline snapshot
+func (m *StakeWiseTestManager) DependsOnStakewiseBaseline() error {
+	err := m.RevertSnapshot(m.baselineSnapshotID)
+	if err != nil {
+		return fmt.Errorf("error reverting to baseline snapshot: %w", err)
+	}
+	return nil
+}
+
 // Takes a snapshot of the service states
 func (m *StakeWiseTestManager) TakeModuleSnapshot() (any, error) {
-	snapshotName := uuid.New().String()
+	snapshotName, err := m.HyperdriveTestManager.TakeModuleSnapshot()
+	if err != nil {
+		return nil, fmt.Errorf("error taking snapshot: %w", err)
+	}
 	return snapshotName, nil
 }
 
 func (m *StakeWiseTestManager) RevertModuleToSnapshot(moduleState any) error {
 	// TODO: Implement
+	err := m.HyperdriveTestManager.RevertModuleToSnapshot(moduleState)
+	if err != nil {
+		return fmt.Errorf("error reverting to snapshot: %w", err)
+	}
 	return nil
 }
 

@@ -1,11 +1,10 @@
 package api_test
 
 import (
-	"runtime/debug"
+	"fmt"
 	"strconv"
 	"testing"
 
-	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
 	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/node/validator"
@@ -14,13 +13,9 @@ import (
 )
 
 func TestValidatorStatus_Active(t *testing.T) {
-	// Take a snapshot, revert at the end
-	snapshotName, err := testMgr.CreateCustomSnapshot(hdtesting.Service_EthClients | hdtesting.Service_Filesystem)
-	if err != nil {
-		fail("Error creating custom snapshot: %v", err)
-	}
-	defer status_cleanup(snapshotName)
-
+	err := testMgr.DependsOnStakewiseBaseline()
+	require.NoError(t, err)
+	fmt.Printf("!!! Reverted to Stakewise Baseline")
 	// Get some resources
 	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
@@ -89,32 +84,4 @@ func TestValidatorStatus_Active(t *testing.T) {
 	require.Equal(t, beacon.ValidatorState_ActiveOngoing, responseValidator.BeaconStatus)
 	require.Equal(t, strconv.FormatUint(validator.Index, 10), responseValidator.Index)
 	t.Logf("Validator was active, index = %s", responseValidator.Index)
-}
-
-// Clean up after each test
-func status_cleanup(snapshotName string) {
-	// Handle panics
-	r := recover()
-	if r != nil {
-		debug.PrintStack()
-		fail("Recovered from panic: %v", r)
-	}
-
-	// Revert to the snapshot taken at the start of the test
-	err := testMgr.RevertToCustomSnapshot(snapshotName)
-	if err != nil {
-		fail("Error reverting to custom snapshot: %v", err)
-	}
-
-	// Reload the HD wallet to undo any changes made during the test
-	err = mainNode.GetHyperdriveNode().GetServiceProvider().GetWallet().Reload(testMgr.GetLogger())
-	if err != nil {
-		fail("Error reloading hyperdrive wallet: %v", err)
-	}
-
-	// Reload the SW wallet to undo any changes made during the test
-	err = mainNode.GetServiceProvider().GetWallet().Reload()
-	if err != nil {
-		fail("Error reloading stakewise wallet: %v", err)
-	}
 }
