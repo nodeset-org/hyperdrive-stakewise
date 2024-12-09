@@ -2,15 +2,19 @@ package testing
 
 import (
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 
+	"github.com/ethereum/go-ethereum/common"
 	hdservices "github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
+	"github.com/nodeset-org/osha/keys"
 	"github.com/rocket-pool/node-manager-core/log"
+	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
 const (
@@ -26,6 +30,10 @@ type StakeWiseTestManager struct {
 
 	// The ID of the baseline snapshot
 	baselineSnapshotID string
+
+	mainNode        *StakeWiseNode
+	mainNodeAddress common.Address
+	nsEmail         string
 }
 
 // Creates a new TestManager instance
@@ -92,6 +100,11 @@ func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 		node:                  node,
 	}
 
+	err = module.SetupTest()
+	if err != nil {
+		return nil, fmt.Errorf("error setting up test: %w", err)
+	}
+
 	tm.RegisterModule(module)
 	baselineSnapshot, err := tm.CreateSnapshot()
 	if err != nil {
@@ -102,9 +115,52 @@ func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 	return module, nil
 }
 
+// Initialize test manager by generating a new wallet, starting the StakeWise node, and registering with NodeSet
+func (m *StakeWiseTestManager) SetupTest() error {
+	m.mainNode = m.GetNode()
+	m.nsEmail = "test@nodeset.io"
+	// Generate a new wallet
+	derivationPath := string(wallet.DerivationPath_Default)
+	index := uint64(0)
+	password := "test_password123"
+	hdNode := m.mainNode.GetHyperdriveNode()
+	hd := hdNode.GetApiClient()
+	recoverResponse, err := hd.Wallet.Recover(&derivationPath, keys.DefaultMnemonic, &index, password, true)
+	if err != nil {
+		return fmt.Errorf("error generating wallet: %v", err)
+	}
+	m.mainNodeAddress = recoverResponse.Data.AccountAddress
+
+	// Set up NodeSet with the StakeWise vault
+	sp := m.mainNode.GetServiceProvider()
+	res := sp.GetResources()
+	nsMgr := m.GetNodeSetMockServer().GetManager()
+	nsDB := nsMgr.GetDatabase()
+	deployment := nsDB.StakeWise.AddDeployment(res.DeploymentName, big.NewInt(int64(res.ChainID)))
+	_ = deployment.AddVault(res.Vault)
+	nsDB.SetSecretEncryptionIdentity(hdtesting.EncryptionIdentity)
+
+	// Make a NodeSet account
+	_, err = nsDB.Core.AddUser(m.nsEmail)
+	if err != nil {
+		return fmt.Errorf("error adding user to nodeset: %v", err)
+	}
+
+	// Register the primary
+	err = m.registerWithNodeset(m.mainNode, m.mainNodeAddress)
+	if err != nil {
+		return fmt.Errorf("error registering with nodeset: %v", err)
+	}
+	return nil
+}
+
 // ===============
 // === Getters ===
 // ===============
+
+func (m *StakeWiseTestManager) GetMainNode() *StakeWiseNode {
+	return m.mainNode
+}
 
 func (m *StakeWiseTestManager) GetModuleName() string {
 	return "hyperdrive-stakewise"
@@ -113,6 +169,10 @@ func (m *StakeWiseTestManager) GetModuleName() string {
 // Get the node handle
 func (m *StakeWiseTestManager) GetNode() *StakeWiseNode {
 	return m.node
+}
+
+func (m *StakeWiseTestManager) GetMainNodeAddress() common.Address {
+	return m.mainNodeAddress
 }
 
 // ====================
@@ -138,7 +198,6 @@ func (m *StakeWiseTestManager) TakeModuleSnapshot() (any, error) {
 }
 
 func (m *StakeWiseTestManager) RevertModuleToSnapshot(moduleState any) error {
-	// TODO: Implement
 	err := m.HyperdriveTestManager.RevertModuleToSnapshot(moduleState)
 	if err != nil {
 		return fmt.Errorf("error reverting to snapshot: %w", err)
@@ -172,4 +231,27 @@ func closeTestManager(tm *hdtesting.HyperdriveTestManager) {
 	if err != nil {
 		tm.GetLogger().Error("Error closing test manager", log.Err(err))
 	}
+}
+
+// Register a node with nodeset
+func (m *StakeWiseTestManager) registerWithNodeset(node *StakeWiseNode, address common.Address) error {
+	// whitelist the node with the nodeset.io account
+	nsServer := m.GetNodeSetMockServer().GetManager()
+	nsDB := nsServer.GetDatabase()
+	user := nsDB.Core.GetUser(m.nsEmail)
+	_ = user.WhitelistNode(address)
+
+	// Register with NodeSet
+	hd := node.GetHyperdriveNode().GetApiClient()
+	response, err := hd.NodeSet.RegisterNode(m.nsEmail)
+	if err != nil {
+		return fmt.Errorf("error registering node with nodeset: %v", err)
+	}
+	if response.Data.AlreadyRegistered {
+		return fmt.Errorf("node is already registered with nodeset")
+	}
+	if response.Data.NotWhitelisted {
+		return fmt.Errorf("node is not whitelisted with a nodeset user account")
+	}
+	return nil
 }

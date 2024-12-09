@@ -1,7 +1,6 @@
 package api_test
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -14,8 +13,8 @@ import (
 
 func TestValidatorStatus_Active(t *testing.T) {
 	err := testMgr.DependsOnStakewiseBaseline()
+	mainNode := testMgr.GetMainNode()
 	require.NoError(t, err)
-	fmt.Printf("!!! Reverted to Stakewise Baseline")
 	// Get some resources
 	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
@@ -25,7 +24,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	nsDB := nsMock.GetDatabase()
 	deployment := nsDB.StakeWise.GetDeployment(res.DeploymentName)
 	vault := deployment.GetVault(res.Vault)
-	nsNode, _ := nsDB.Core.GetNode(mainNodeAddress)
+	nsNode, _ := nsDB.Core.GetNode(testMgr.GetMainNodeAddress())
 
 	// Generate a validator key
 	key, err := wallet.GenerateNewValidatorKey()
