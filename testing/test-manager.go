@@ -31,7 +31,6 @@ type StakeWiseTestManager struct {
 	// The ID of the baseline snapshot
 	baselineSnapshotID string
 
-	mainNode        *StakeWiseNode
 	mainNodeAddress common.Address
 	nsEmail         string
 }
@@ -117,13 +116,13 @@ func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 
 // Initialize test manager by generating a new wallet, starting the StakeWise node, and registering with NodeSet
 func (m *StakeWiseTestManager) SetupTest() error {
-	m.mainNode = m.GetNode()
+	mainNode := m.GetNode()
 	m.nsEmail = "test@nodeset.io"
 	// Generate a new wallet
 	derivationPath := string(wallet.DerivationPath_Default)
 	index := uint64(0)
 	password := "test_password123"
-	hdNode := m.mainNode.GetHyperdriveNode()
+	hdNode := mainNode.GetHyperdriveNode()
 	hd := hdNode.GetApiClient()
 	recoverResponse, err := hd.Wallet.Recover(&derivationPath, keys.DefaultMnemonic, &index, password, true)
 	if err != nil {
@@ -132,7 +131,7 @@ func (m *StakeWiseTestManager) SetupTest() error {
 	m.mainNodeAddress = recoverResponse.Data.AccountAddress
 
 	// Set up NodeSet with the StakeWise vault
-	sp := m.mainNode.GetServiceProvider()
+	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
 	nsMgr := m.GetNodeSetMockServer().GetManager()
 	nsDB := nsMgr.GetDatabase()
@@ -147,7 +146,7 @@ func (m *StakeWiseTestManager) SetupTest() error {
 	}
 
 	// Register the primary
-	err = m.registerWithNodeset(m.mainNode, m.mainNodeAddress)
+	err = m.registerWithNodeset(mainNode, m.mainNodeAddress)
 	if err != nil {
 		return fmt.Errorf("error registering with nodeset: %v", err)
 	}
@@ -157,10 +156,6 @@ func (m *StakeWiseTestManager) SetupTest() error {
 // ===============
 // === Getters ===
 // ===============
-
-func (m *StakeWiseTestManager) GetMainNode() *StakeWiseNode {
-	return m.mainNode
-}
 
 func (m *StakeWiseTestManager) GetModuleName() string {
 	return "hyperdrive-stakewise"
