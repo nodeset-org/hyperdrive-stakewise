@@ -13,9 +13,9 @@ import (
 
 func TestValidatorStatus_Active(t *testing.T) {
 	err := testMgr.DependsOnStakewiseBaseline()
+	require.NoError(t, err)
 
 	mainNode := testMgr.GetNode()
-	require.NoError(t, err)
 	// Get some resources
 	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
