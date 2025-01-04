@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/terminal"
 	"github.com/urfave/cli/v2"
 )
 
@@ -15,6 +16,6 @@ func ValidateArgCount(c *cli.Context, expectedCount int) {
 	}
 
 	// Handle invalid arg count
-	fmt.Fprintf(os.Stderr, "%sIncorrect argument count - expected %d but have %d%s\n\n", ColorRed, expectedCount, argCount, ColorReset)
+	fmt.Fprintf(os.Stderr, "%sIncorrect argument count - expected %d but have %d%s\n\n", terminal.ColorRed, expectedCount, argCount, terminal.ColorReset)
 	cli.ShowSubcommandHelpAndExit(c, 1)
 }

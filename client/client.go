@@ -8,8 +8,10 @@ import (
 	"path/filepath"
 
 	docker "github.com/docker/docker/client"
+	"github.com/fatih/color"
 
 	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
+	hdclient "github.com/nodeset-org/hyperdrive-stakewise/adapter/client"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/config"
 	"github.com/nodeset-org/hyperdrive-stakewise/client/utils"
 
@@ -17,6 +19,10 @@ import (
 	"github.com/rocket-pool/node-manager-core/log"
 	"github.com/urfave/cli/v2"
 )
+
+const terminalLogColor color.Attribute = color.FgHiYellow
+
+var hdApiKeyRelPath string = filepath.Join(config.SecretsDir, config.DaemonKeyFilename)
 
 // Binder for the StakeWise API server
 type ApiClient struct {
@@ -52,7 +58,7 @@ func NewHyperdriveClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext) (*Hype
 	var tracer *httptrace.ClientTrace
 	if hdCtx.HttpTraceFile != nil {
 		var err error
-		tracer, err = createTracer(hdCtx.HttpTraceFile, logger)
+		tracer, err = hdclient.CreateTracer(hdCtx.HttpTraceFile, logger)
 		if err != nil {
 			logger.Error("Error creating HTTP trace", log.Err(err))
 		}

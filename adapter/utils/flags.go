@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/terminal"
 	"github.com/urfave/cli/v2"
 )
 
