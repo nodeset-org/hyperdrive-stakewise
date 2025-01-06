@@ -1,32 +1,21 @@
 package utils
 
 import (
+	"fmt"
 	"math/big"
 	"net/url"
 	"os"
+	"path/filepath"
 
-	"github.com/nodeset-org/hyperdrive-stakewise/adapter/config"
 	"github.com/urfave/cli/v2"
+
+	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
+	sharedconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 )
 
 const (
 	contextMetadataName string = "hd-context"
 )
-
-// Holds information about Hyperdrive's installation on the system
-type InstallationInfo struct {
-	// The system path for Hyperdrive scripts used in the Docker containers
-	ScriptsDir string
-
-	// The system path for Hyperdrive templates
-	TemplatesDir string
-
-	// The system path for the source files to put in the user's override directory
-	OverrideSourceDir string
-
-	// The system path for built-in network settings and resource definitions
-	NetworksDir string
-}
 
 // Context for global settings
 type HyperdriveContext struct {
@@ -57,7 +46,30 @@ type HyperdriveContext struct {
 	HttpTraceFile *os.File
 
 	// The list of networks options and corresponding settings for Hyperdrive itself
-	HyperdriveNetworkSettings []*config.HyperdriveSettings
+	HyperdriveNetworkSettings []*hdconfig.HyperdriveSettings
+
+	// The list of networks options and corresponding settings for the StakeWise module
+	StakeWiseNetworkSettings []*sharedconfig.StakeWiseSettings
+}
+
+// Load the network settings
+func (c *HyperdriveContext) LoadNetworkSettings() error {
+	var err error
+	installInfo := NewInstallationInfo()
+	c.InstallationInfo = installInfo
+
+	c.HyperdriveNetworkSettings, err = hdconfig.LoadSettingsFiles(installInfo.NetworksDir)
+	if err != nil {
+		return fmt.Errorf("error loading hyperdrive network settings from path [%s]: %s", installInfo.NetworksDir, err.Error())
+	}
+
+	swNetSettingsDir := filepath.Join(installInfo.NetworksDir, hdconfig.ModulesName, sharedconfig.ModuleName)
+	c.StakeWiseNetworkSettings, err = sharedconfig.LoadSettingsFiles(swNetSettingsDir)
+	if err != nil {
+		return fmt.Errorf("error loading stakewise network settings from path [%s]: %s", swNetSettingsDir, err.Error())
+	}
+
+	return nil
 }
 
 // Get the Hyperdrive context from a CLI context
