@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	hdtemplate "github.com/nodeset-org/hyperdrive/hyperdrive-cli/client/template"
+	clitemplate "github.com/nodeset-org/hyperdrive-stakewise/adapter/client/template"
 
 	docker "github.com/docker/docker/client"
 	"github.com/fatih/color"
@@ -17,9 +17,9 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/adapter/client"
-
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/config"
 	"github.com/nodeset-org/hyperdrive-stakewise/client/utils"
+	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 
 	"github.com/rocket-pool/node-manager-core/api/client"
 	"github.com/rocket-pool/node-manager-core/log"
@@ -38,6 +38,8 @@ const (
 	metricsDir         string = "metrics"
 
 	terminalLogColor color.Attribute = color.FgHiYellow
+
+	cliIssuer string = "hd-cli"
 )
 
 var hdApiKeyRelPath string = filepath.Join(config.SecretsDir, config.DaemonKeyFilename)
@@ -118,7 +120,7 @@ func NewHyperdriveClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext) (*Hype
 	authMgr := auth.NewAuthorizationManager(authPath, cliIssuer, auth.DefaultRequestLifespan)
 
 	// Create the API client
-	swClient.Api = client.NewApiClient(url, logger, tracer, authMgr)
+	swClient.Api = NewApiClient(url, logger, tracer, authMgr)
 	return swClient, nil
 }
 
@@ -148,7 +150,7 @@ func (c *HyperdriveClient) LoadConfig() (*GlobalConfig, bool, error) {
 		return nil, false, fmt.Errorf("error expanding settings file path: %w", err)
 	}
 
-	cfg, err := LoadConfigFromFile(expandedPath, c.Context.HyperdriveNetworkSettings, c.Context.StakeWiseNetworkSettings, c.Context.ConstellationNetworkSettings)
+	cfg, err := LoadConfigFromFile(expandedPath, c.Context.HyperdriveNetworkSettings, c.Context.StakeWiseNetworkSettings)
 	if err != nil {
 		return nil, false, err
 	}
@@ -164,7 +166,11 @@ func (c *HyperdriveClient) LoadConfig() (*GlobalConfig, bool, error) {
 	if err != nil {
 		return nil, false, fmt.Errorf("error creating Hyperdrive config: %w", err)
 	}
-	c.cfg, err = GlobalConfig(hdCfg, c.Context.HyperdriveNetworkSettings, swCfg, c.Context.StakeWiseNetworkSettings, csCfg)
+	swCfg, err := swconfig.NewStakeWiseConfig(hdCfg, c.Context.StakeWiseNetworkSettings)
+	if err != nil {
+		return nil, false, fmt.Errorf("error creating StakeWise config: %w", err)
+	}
+	c.cfg, err = NewGlobalConfig(hdCfg, c.Context.HyperdriveNetworkSettings, swCfg, c.Context.StakeWiseNetworkSettings)
 	if err != nil {
 		return nil, false, fmt.Errorf("error creating global config: %w", err)
 	}
@@ -233,7 +239,7 @@ func updatePrometheusConfiguration(ctx *utils.HyperdriveContext, config *GlobalC
 		return fmt.Errorf("error expanding Prometheus config target path: %w", err)
 	}
 
-	t := hdtemplate.Template{
+	t := clitemplate.Template{
 		Src: prometheusConfigTemplatePath,
 		Dst: prometheusConfigTargetPath,
 	}
@@ -253,10 +259,43 @@ func updateGrafanaDatabaseConfiguration(ctx *utils.HyperdriveContext, config *Gl
 		return fmt.Errorf("error expanding Grafana config target path: %w", err)
 	}
 
-	t := hdtemplate.Template{
+	t := clitemplate.Template{
 		Src: grafanaConfigTemplatePath,
 		Dst: grafanaConfigTargetPath,
 	}
 
 	return t.Write(config)
+}
+
+// Loads a config without updating it if it exists
+func LoadConfigFromFile(configPath string, hdSettings []*hdconfig.HyperdriveSettings, swSettings []*swconfig.StakeWiseSettings) (*GlobalConfig, error) {
+	// Make sure the config file exists
+	_, err := os.Stat(configPath)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	// Get the Hyperdrive config
+	hdCfg, err := hdconfig.LoadFromFile(configPath, hdSettings)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the StakeWise config
+	swCfg, err := swconfig.NewStakeWiseConfig(hdCfg, swSettings)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the module configs
+	cfg, err := NewGlobalConfig(hdCfg, hdSettings, swCfg, swSettings)
+	if err != nil {
+		return nil, fmt.Errorf("error creating global configuration: %w", err)
+	}
+	err = cfg.DeserializeModules()
+	if err != nil {
+		return nil, fmt.Errorf("error loading module configs from [%s]: %w", configPath, err)
+	}
+
+	return cfg, nil
 }
