@@ -9,11 +9,13 @@ import (
 	"path/filepath"
 
 	clitemplate "github.com/nodeset-org/hyperdrive-stakewise/adapter/client/template"
+	"github.com/nodeset-org/hyperdrive/hyperdrive-cli/utils/context"
 
 	docker "github.com/docker/docker/client"
 	"github.com/fatih/color"
 	"github.com/mitchellh/go-homedir"
 
+	hdclient "github.com/nodeset-org/hyperdrive-daemon/client"
 	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/adapter/client"
@@ -43,9 +45,10 @@ const (
 )
 
 var hdApiKeyRelPath string = filepath.Join(config.SecretsDir, config.DaemonKeyFilename)
+var swApiKeyRelPath string = filepath.Join(moduleApiKeyRelPath, swconfig.ModuleName, hdconfig.DaemonKeyFilename)
 
 // Binder for the StakeWise API server
-type ApiClient struct {
+type SwApiClient struct {
 	context   client.IRequesterContext
 	Nodeset   *NodesetRequester
 	Validator *ValidatorRequester
@@ -56,12 +59,19 @@ type ApiClient struct {
 
 // Hyperdrive client
 type HyperdriveClient struct {
-	Api      *ApiClient
+	Api      *hdclient.ApiClient
 	Context  *utils.HyperdriveContext
 	Logger   *slog.Logger
 	docker   *docker.Client
 	cfg      *GlobalConfig
 	isNewCfg bool
+}
+
+// Stakewise client
+type StakewiseClient struct {
+	Api     *SwApiClient
+	Context *context.HyperdriveContext
+	Logger  *slog.Logger
 }
 
 // Create new Hyperdrive client from CLI context
@@ -72,7 +82,7 @@ func NewHyperdriveClientFromCtx(c *cli.Context) (*HyperdriveClient, error) {
 
 // Create new Hyperdrive client from a custom context
 func NewHyperdriveClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext) (*HyperdriveClient, error) {
-	logger := log.NewTerminalLogger(hdCtx.DebugEnabled, terminalLogColor).With(slog.String(log.OriginKey, config.HyperdriveDaemonRoute))
+	logger := log.NewTerminalLogger(hdCtx.DebugEnabled, terminalLogColor).With(slog.String(log.OriginKey, hdconfig.HyperdriveDaemonRoute))
 
 	// Create the tracer if required
 	var tracer *httptrace.ClientTrace
@@ -91,7 +101,7 @@ func NewHyperdriveClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext) (*Hype
 	}
 
 	// Make the client
-	swClient := &HyperdriveClient{
+	hdClient := &HyperdriveClient{
 		Context: hdCtx,
 		Logger:  logger,
 	}
@@ -100,7 +110,7 @@ func NewHyperdriveClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext) (*Hype
 	url := hdCtx.ApiUrl
 	if url == nil {
 		// Load the config to get the API port
-		cfg, _, err := swClient.LoadConfig()
+		cfg, _, err := hdClient.LoadConfig()
 		if err != nil {
 			return nil, fmt.Errorf("error loading config: %w", err)
 		}
@@ -120,15 +130,15 @@ func NewHyperdriveClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext) (*Hype
 	authMgr := auth.NewAuthorizationManager(authPath, cliIssuer, auth.DefaultRequestLifespan)
 
 	// Create the API client
-	swClient.Api = NewApiClient(url, logger, tracer, authMgr)
-	return swClient, nil
+	hdClient.Api = hdclient.NewApiClient(url, logger, tracer, authMgr)
+	return hdClient, nil
 }
 
 // Creates a new API client instance
-func NewApiClient(apiUrl *url.URL, logger *slog.Logger, tracer *httptrace.ClientTrace, authMgr *auth.AuthorizationManager) *ApiClient {
+func NewSwApiClient(apiUrl *url.URL, logger *slog.Logger, tracer *httptrace.ClientTrace, authMgr *auth.AuthorizationManager) *SwApiClient {
 	context := client.NewNetworkRequesterContext(apiUrl, logger, tracer, authMgr.AddAuthHeader)
 
-	client := &ApiClient{
+	client := &SwApiClient{
 		context:   context,
 		Nodeset:   NewNodesetRequester(context),
 		Validator: NewValidatorRequester(context),
@@ -298,4 +308,62 @@ func LoadConfigFromFile(configPath string, hdSettings []*hdconfig.HyperdriveSett
 	}
 
 	return cfg, nil
+}
+
+// Create new Stakewise client from CLI context
+// Only use this function from commands that may work if the Daemon service doesn't exist
+func NewStakewiseClientFromCtx(c *cli.Context, hdClient *HyperdriveClient) (*StakewiseClient, error) {
+	hdCtx := context.GetHyperdriveContext(c)
+	return NewStakewiseClientFromHyperdriveCtx(hdCtx, hdClient)
+}
+
+// Create new Stakewise client from a custom context
+// Only use this function from commands that may work if the Daemon service doesn't exist
+func NewStakewiseClientFromHyperdriveCtx(hdCtx *context.HyperdriveContext, hdClient *HyperdriveClient) (*StakewiseClient, error) {
+	logger := log.NewTerminalLogger(hdCtx.DebugEnabled, terminalLogColor).With(slog.String(log.OriginKey, swconfig.ModuleName))
+
+	// Create the tracer if required
+	var tracer *httptrace.ClientTrace
+	if hdCtx.HttpTraceFile != nil {
+		var err error
+		tracer, err = swclient.CreateTracer(hdCtx.HttpTraceFile, logger)
+		if err != nil {
+			logger.Error("Error creating HTTP trace", log.Err(err))
+		}
+	}
+
+	// Make the client
+	swClient := &StakewiseClient{
+		Context: hdCtx,
+		Logger:  logger,
+	}
+
+	// Get the API URL
+	url := hdCtx.ApiUrl
+	if url == nil {
+		var err error
+		url, err = url.Parse(fmt.Sprintf("http://localhost:%d/%s", hdClient.cfg.StakeWise.ApiPort.Value, swconfig.ApiClientRoute))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing StakeWise API URL: %w", err)
+		}
+	} else {
+		host := fmt.Sprintf("%s://%s:%d/%s", url.Scheme, url.Hostname(), hdClient.cfg.StakeWise.ApiPort.Value, swconfig.ApiClientRoute)
+		var err error
+		url, err = url.Parse(host)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing StakeWise API URL: %w", err)
+		}
+	}
+
+	// Create the auth manager
+	authPath := filepath.Join(hdCtx.UserDirPath, swApiKeyRelPath)
+	err := auth.GenerateAuthKeyIfNotPresent(authPath, auth.DefaultKeyLength)
+	if err != nil {
+		return nil, fmt.Errorf("error generating StakeWise module API key: %w", err)
+	}
+	authMgr := auth.NewAuthorizationManager(authPath, cliIssuer, auth.DefaultRequestLifespan)
+
+	// Create the API client
+	swClient.Api = NewSwApiClient(url, logger, tracer, authMgr)
+	return swClient, nil
 }
