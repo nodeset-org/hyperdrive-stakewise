@@ -9,9 +9,8 @@ import (
 	"path/filepath"
 
 	clitemplate "github.com/nodeset-org/hyperdrive-stakewise/adapter/client/template"
-	"github.com/nodeset-org/hyperdrive/hyperdrive-cli/utils/context"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/config"
 
-	docker "github.com/docker/docker/client"
 	"github.com/fatih/color"
 	"github.com/mitchellh/go-homedir"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/adapter/client"
-	"github.com/nodeset-org/hyperdrive-stakewise/adapter/config"
 	"github.com/nodeset-org/hyperdrive-stakewise/client/utils"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 
@@ -59,10 +57,10 @@ type SwApiClient struct {
 
 // Hyperdrive client
 type HyperdriveClient struct {
-	Api      *hdclient.ApiClient
-	Context  *utils.HyperdriveContext
-	Logger   *slog.Logger
-	docker   *docker.Client
+	Api     *hdclient.ApiClient
+	Context *utils.HyperdriveContext
+	Logger  *slog.Logger
+	// docker   *docker.Client
 	cfg      *GlobalConfig
 	isNewCfg bool
 }
@@ -70,7 +68,7 @@ type HyperdriveClient struct {
 // Stakewise client
 type StakewiseClient struct {
 	Api     *SwApiClient
-	Context *context.HyperdriveContext
+	Context *utils.HyperdriveContext
 	Logger  *slog.Logger
 }
 
@@ -313,13 +311,13 @@ func LoadConfigFromFile(configPath string, hdSettings []*hdconfig.HyperdriveSett
 // Create new Stakewise client from CLI context
 // Only use this function from commands that may work if the Daemon service doesn't exist
 func NewStakewiseClientFromCtx(c *cli.Context, hdClient *HyperdriveClient) (*StakewiseClient, error) {
-	hdCtx := context.GetHyperdriveContext(c)
+	hdCtx := utils.GetHyperdriveContext(c)
 	return NewStakewiseClientFromHyperdriveCtx(hdCtx, hdClient)
 }
 
 // Create new Stakewise client from a custom context
 // Only use this function from commands that may work if the Daemon service doesn't exist
-func NewStakewiseClientFromHyperdriveCtx(hdCtx *context.HyperdriveContext, hdClient *HyperdriveClient) (*StakewiseClient, error) {
+func NewStakewiseClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext, hdClient *HyperdriveClient) (*StakewiseClient, error) {
 	logger := log.NewTerminalLogger(hdCtx.DebugEnabled, terminalLogColor).With(slog.String(log.OriginKey, swconfig.ModuleName))
 
 	// Create the tracer if required

@@ -63,7 +63,7 @@ func newStakeWiseNode(sp swcommon.IStakeWiseServiceProvider, address string, cli
 	}
 	clientAuthMgr := auth.NewAuthorizationManager("", "sw-client", auth.DefaultRequestLifespan)
 	clientAuthMgr.SetKey([]byte(apiAuthKey))
-	apiClient := swclient.NewApiClient(url, clientLogger, nil, clientAuthMgr)
+	apiClient := swclient.NewSwApiClient(url, clientLogger, nil, clientAuthMgr)
 
 	return &StakeWiseNode{
 		sp:        sp,

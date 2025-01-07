@@ -1,8 +1,33 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/terminal"
 	"github.com/urfave/cli/v2"
+)
+
+var (
+	generateKeysCountFlag *cli.Uint64Flag = &cli.Uint64Flag{
+		Name:    "count",
+		Aliases: []string{"c"},
+		Usage:   "The number of keys to generate",
+	}
+	generateKeysNoRestartFlag *cli.BoolFlag = &cli.BoolFlag{
+		Name:  "no-restart",
+		Usage: fmt.Sprintf("Don't automatically restart the Stakewise Operator or Validator Client containers after generating keys. %sOnly use this if you know what you're doing and can restart them manually.%s", terminal.ColorRed, terminal.ColorReset),
+	}
+	generatePubkeyFlag *cli.StringSliceFlag = &cli.StringSliceFlag{
+		Name:    "pubkey",
+		Aliases: []string{"p"},
+		Usage:   "The pubkey of the validator to generate deposit data for. Can be specified multiple times for more than one pubkey. If not specified, deposit data for all validator keys will be generated.",
+	}
+	generateIndentFlag *cli.BoolFlag = &cli.BoolFlag{
+		Name:    "indent",
+		Aliases: []string{"i"},
+		Usage:   "Specify this to indent (pretty-print) the deposit data output.",
+	}
 )
 
 // Handles `hd-module` commands
