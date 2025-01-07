@@ -53,6 +53,26 @@ var (
 		Aliases: []string{"e"},
 		Usage:   "Email address to register with NodeSet.",
 	}
+	ForceGasLimitFlag *cli.Uint64Flag = &cli.Uint64Flag{
+		Name:    "force-gas-limit",
+		Aliases: []string{"fgl"},
+		Usage:   fmt.Sprintf("Force a specific gas limit for all transactions produced by the command being run, overriding the gas limit estimated by transaction simulation. %sOnly use this if you know what you're doing.%s", terminal.ColorRed, terminal.ColorReset),
+	}
+	PrintTxDataFlag *cli.BoolFlag = &cli.BoolFlag{
+		Name:    "print-tx-data",
+		Aliases: []string{"pt"},
+		Usage:   "Print any TX data for transactions without signing or submitting them. Useful for masquerade mode or offline wallet operations.",
+	}
+	IgnoreTxSimFailureFlag *cli.BoolFlag = &cli.BoolFlag{
+		Name:    "ignore-tx-sim-failure",
+		Aliases: []string{"itsf"},
+		Usage:   fmt.Sprintf("Ignore any transaction simulation failures and sign / submit transactions even if they will revert. %sThis can result in failed transactions and loss of funds. Only use this if you absolutely know what you're doing.%s", terminal.ColorRed, terminal.ColorReset),
+	}
+	SignTxOnlyFlag *cli.BoolFlag = &cli.BoolFlag{
+		Name:    "sign-tx-only",
+		Aliases: []string{"st"},
+		Usage:   "Sign any TXs and print the results, but don't submit it to the network. Useful if you want to save a TX for later or bundle it up with a service like Flashbots.",
+	}
 )
 
 func InstantiateFlag[FlagType cli.Flag](prototype FlagType, description string) cli.Flag {
