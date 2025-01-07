@@ -48,6 +48,11 @@ var (
 		Name:  "no-restart",
 		Usage: fmt.Sprintf("Don't automatically restart the Stakewise Operator or Validator Client containers after generating keys. %sOnly use this if you know what you're doing and can restart them manually.%s", terminal.ColorRed, terminal.ColorReset),
 	}
+	RegisterEmailFlag *cli.StringFlag = &cli.StringFlag{
+		Name:    "email",
+		Aliases: []string{"e"},
+		Usage:   "Email address to register with NodeSet.",
+	}
 )
 
 func InstantiateFlag[FlagType cli.Flag](prototype FlagType, description string) cli.Flag {

@@ -5,20 +5,24 @@ go 1.22
 toolchain go1.22.7
 
 require (
-	github.com/ethereum/go-ethereum v1.14.8
+	github.com/alessio/shellescape v1.4.2
+	github.com/ethereum/go-ethereum v1.14.11
 	github.com/fatih/color v1.17.0
 	github.com/goccy/go-json v0.10.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.1.0
-	github.com/nodeset-org/nodeset-client-go v1.2.1
+	github.com/mitchellh/go-homedir v1.1.0
+	github.com/nodeset-org/hyperdrive v1.1.1
+	github.com/nodeset-org/hyperdrive-daemon v1.1.1
+	github.com/nodeset-org/nodeset-client-go v1.2.2
 	github.com/nodeset-org/osha v0.3.1
 	github.com/rocket-pool/batch-query v1.0.0
-	github.com/rocket-pool/node-manager-core v0.5.2-0.20241011014615-2cf2a45afa0a
+	github.com/rocket-pool/node-manager-core v0.5.2-0.20241029172412-6cb22253be3f
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.2
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.4.1
+	golang.org/x/term v0.22.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -29,7 +33,6 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.12.5 // indirect
-	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
 	github.com/btcsuite/btcd v0.24.2 // indirect
@@ -51,6 +54,7 @@ require (
 	github.com/containerd/ttrpc v1.2.5 // indirect
 	github.com/containerd/typeurl/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
+	github.com/crate-crypto/go-ipa v0.0.0-20240223125850-b1e8a79f509c // indirect
 	github.com/crate-crypto/go-kzg-4844 v1.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
@@ -63,6 +67,7 @@ require (
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.2 // indirect
+	github.com/ethereum/go-verkle v0.1.1-0.20240829091221-dffa7562dbe9 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/ferranbt/fastssz v0.1.3 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
@@ -80,6 +85,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-memdb v1.3.4 // indirect
+	github.com/hashicorp/go-uuid v1.0.1 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/herumi/bls-eth-go-binary v1.36.1 // indirect
@@ -92,7 +98,6 @@ require (
 	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/minio/highwayhash v1.0.3 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
@@ -131,13 +136,13 @@ require (
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20240328144219-a1caa50c3a1e // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.4-beta.0.20240624100937-73632381301b // indirect
 	github.com/prysmaticlabs/prysm/v5 v5.1.0 // indirect
-	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/rs/cors v1.10.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sethvargo/go-password v0.3.1 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/supranational/blst v0.3.12 // indirect
+	github.com/supranational/blst v0.3.13 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
@@ -166,6 +171,7 @@ require (
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
+	google.golang.org/api v0.171.0 // indirect
 	google.golang.org/genproto v0.0.0-20240711142825-46eb208f015d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240711142825-46eb208f015d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240711142825-46eb208f015d // indirect
