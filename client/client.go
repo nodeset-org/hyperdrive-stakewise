@@ -43,7 +43,19 @@ const (
 )
 
 var hdApiKeyRelPath string = filepath.Join(config.SecretsDir, config.DaemonKeyFilename)
+var moduleApiKeyRelPath string = filepath.Join(hdconfig.SecretsDir, hdconfig.ModulesName)
 var swApiKeyRelPath string = filepath.Join(moduleApiKeyRelPath, swconfig.ModuleName, hdconfig.DaemonKeyFilename)
+
+// TODO: Remove and reference from hyperdrive repo
+// Hyperdrive client
+type HyperdriveClient struct {
+	Api     *hdclient.ApiClient
+	Context *utils.HyperdriveContext
+	Logger  *slog.Logger
+	// docker   *docker.Client
+	cfg      *GlobalConfig
+	isNewCfg bool
+}
 
 // Binder for the StakeWise API server
 type SwApiClient struct {
@@ -53,16 +65,6 @@ type SwApiClient struct {
 	Wallet    *WalletRequester
 	Service   *ServiceRequester
 	Status    *StatusRequester
-}
-
-// Hyperdrive client
-type HyperdriveClient struct {
-	Api     *hdclient.ApiClient
-	Context *utils.HyperdriveContext
-	Logger  *slog.Logger
-	// docker   *docker.Client
-	cfg      *GlobalConfig
-	isNewCfg bool
 }
 
 // Stakewise client
@@ -133,7 +135,7 @@ func NewHyperdriveClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext) (*Hype
 }
 
 // Creates a new API client instance
-func NewSwApiClient(apiUrl *url.URL, logger *slog.Logger, tracer *httptrace.ClientTrace, authMgr *auth.AuthorizationManager) *SwApiClient {
+func NewApiClient(apiUrl *url.URL, logger *slog.Logger, tracer *httptrace.ClientTrace, authMgr *auth.AuthorizationManager) *SwApiClient {
 	context := client.NewNetworkRequesterContext(apiUrl, logger, tracer, authMgr.AddAuthHeader)
 
 	client := &SwApiClient{
@@ -362,6 +364,6 @@ func NewStakewiseClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext, hdClien
 	authMgr := auth.NewAuthorizationManager(authPath, cliIssuer, auth.DefaultRequestLifespan)
 
 	// Create the API client
-	swClient.Api = NewSwApiClient(url, logger, tracer, authMgr)
+	swClient.Api = NewApiClient(url, logger, tracer, authMgr)
 	return swClient, nil
 }
