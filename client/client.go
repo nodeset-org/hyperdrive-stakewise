@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 
-	clitemplate "github.com/nodeset-org/hyperdrive-stakewise/adapter/client/template"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/config"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/context"
 
@@ -27,12 +26,6 @@ import (
 )
 
 const (
-	metricsDirMode           os.FileMode = 0755
-	prometheusConfigTemplate string      = "prometheus-cfg.tmpl"
-	prometheusConfigTarget   string      = "prometheus.yml"
-	grafanaConfigTemplate    string      = "grafana-prometheus-datasource.tmpl"
-	grafanaConfigTarget      string      = "grafana-prometheus-datasource.yml"
-
 	SettingsFile       string = "user-settings.yml"
 	BackupSettingsFile string = "user-settings-backup.yml"
 	metricsDir         string = "metrics"
@@ -49,10 +42,9 @@ var swApiKeyRelPath string = filepath.Join(moduleApiKeyRelPath, swconfig.ModuleN
 // TODO: Remove and reference from hyperdrive repo
 // Hyperdrive client
 type HyperdriveClient struct {
-	Api     *hdclient.ApiClient
-	Context *context.HyperdriveContext
-	Logger  *slog.Logger
-	// docker   *docker.Client
+	Api      *hdclient.ApiClient
+	Context  *context.HyperdriveContext
+	Logger   *slog.Logger
 	cfg      *GlobalConfig
 	isNewCfg bool
 }
@@ -214,67 +206,6 @@ func (c *HyperdriveClient) SaveConfig(cfg *GlobalConfig) error {
 	c.cfg = cfg
 	c.isNewCfg = false
 	return nil
-}
-
-// Create the metrics and modules folders, and deploy the config templates for Prometheus and Grafana
-func (c *HyperdriveClient) DeployMetricsConfigurations(config *GlobalConfig) error {
-	// Make sure the metrics path exists
-	metricsDirPath := filepath.Join(c.Context.UserDirPath, metricsDir)
-	modulesDirPath := filepath.Join(metricsDirPath, hdconfig.ModulesName)
-	err := os.MkdirAll(modulesDirPath, metricsDirMode)
-	if err != nil {
-		return fmt.Errorf("error creating metrics and modules directories [%s]: %w", modulesDirPath, err)
-	}
-
-	err = updatePrometheusConfiguration(c.Context, config, metricsDirPath)
-	if err != nil {
-		return fmt.Errorf("error updating Prometheus configuration: %w", err)
-	}
-	err = updateGrafanaDatabaseConfiguration(c.Context, config, metricsDirPath)
-	if err != nil {
-		return fmt.Errorf("error updating Grafana configuration: %w", err)
-	}
-	return nil
-}
-
-// Load the Prometheus config template, do a template variable substitution, and save it
-func updatePrometheusConfiguration(ctx *context.HyperdriveContext, config *GlobalConfig, metricsDirPath string) error {
-	prometheusConfigTemplatePath, err := homedir.Expand(filepath.Join(ctx.TemplatesDir, prometheusConfigTemplate))
-	if err != nil {
-		return fmt.Errorf("error expanding Prometheus config template path: %w", err)
-	}
-
-	prometheusConfigTargetPath, err := homedir.Expand(filepath.Join(metricsDirPath, prometheusConfigTarget))
-	if err != nil {
-		return fmt.Errorf("error expanding Prometheus config target path: %w", err)
-	}
-
-	t := clitemplate.Template{
-		Src: prometheusConfigTemplatePath,
-		Dst: prometheusConfigTargetPath,
-	}
-
-	return t.Write(config)
-}
-
-// Load the Grafana config template, do a template variable substitution, and save it
-func updateGrafanaDatabaseConfiguration(ctx *context.HyperdriveContext, config *GlobalConfig, metricsDirPath string) error {
-	grafanaConfigTemplatePath, err := homedir.Expand(filepath.Join(ctx.TemplatesDir, grafanaConfigTemplate))
-	if err != nil {
-		return fmt.Errorf("error expanding Grafana config template path: %w", err)
-	}
-
-	grafanaConfigTargetPath, err := homedir.Expand(filepath.Join(metricsDirPath, grafanaConfigTarget))
-	if err != nil {
-		return fmt.Errorf("error expanding Grafana config target path: %w", err)
-	}
-
-	t := clitemplate.Template{
-		Src: grafanaConfigTemplatePath,
-		Dst: grafanaConfigTargetPath,
-	}
-
-	return t.Write(config)
 }
 
 // Loads a config without updating it if it exists
