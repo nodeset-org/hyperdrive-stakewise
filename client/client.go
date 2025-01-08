@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	clitemplate "github.com/nodeset-org/hyperdrive-stakewise/adapter/client/template"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/config"
 
 	"github.com/fatih/color"
@@ -18,7 +19,6 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/adapter/client"
-	"github.com/nodeset-org/hyperdrive-stakewise/client/utils"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 
 	"github.com/rocket-pool/node-manager-core/api/client"
