@@ -44,7 +44,7 @@ type HyperdriveConfig struct {
 	Modules map[string]any
 
 	// Internal fields
-	Version                 string
-	hyperdriveUserDirectory string
-	networkSettings         []*HyperdriveSettings
+	Version string
+	// hyperdriveUserDirectory string
+	// networkSettings []*HyperdriveSettings
 }

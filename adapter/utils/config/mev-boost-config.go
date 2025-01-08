@@ -6,7 +6,7 @@ import (
 
 // Constants
 const (
-	mevBoostTag string = "flashbots/mev-boost:1.8.1"
+// mevBoostTag string = "flashbots/mev-boost:1.8.1"
 )
 
 type MevSelectionMode string
@@ -66,7 +66,7 @@ type MevBoostConfig struct {
 	// Non-editable settings //
 	///////////////////////////
 
-	parent   *HyperdriveConfig
-	relays   []MevRelay
-	relayMap map[MevRelayID]MevRelay
+	// parent   *HyperdriveConfig
+	// relays   []MevRelay
+	// relayMap map[MevRelayID]MevRelay
 }
