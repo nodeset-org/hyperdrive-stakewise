@@ -31,7 +31,7 @@ type StakeWiseNode struct {
 	serverMgr *swserver.ServerManager
 
 	// An HTTP API client for the daemon
-	client *swclient.SwApiClient
+	client *swclient.ApiClient
 
 	// The client logger
 	logger *slog.Logger
@@ -97,7 +97,7 @@ func (n *StakeWiseNode) GetServerManager() *swserver.ServerManager {
 }
 
 // Get the HTTP API client for interacting with the node's daemon server
-func (n *StakeWiseNode) GetApiClient() *swclient.SwApiClient {
+func (n *StakeWiseNode) GetApiClient() *swclient.ApiClient {
 	return n.client
 }
 

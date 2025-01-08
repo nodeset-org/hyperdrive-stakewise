@@ -58,7 +58,7 @@ type HyperdriveClient struct {
 }
 
 // Binder for the StakeWise API server
-type SwApiClient struct {
+type ApiClient struct {
 	context   client.IRequesterContext
 	Nodeset   *NodesetRequester
 	Validator *ValidatorRequester
@@ -69,7 +69,7 @@ type SwApiClient struct {
 
 // Stakewise client
 type StakewiseClient struct {
-	Api     *SwApiClient
+	Api     *ApiClient
 	Context *utils.HyperdriveContext
 	Logger  *slog.Logger
 }
@@ -135,10 +135,10 @@ func NewHyperdriveClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext) (*Hype
 }
 
 // Creates a new API client instance
-func NewApiClient(apiUrl *url.URL, logger *slog.Logger, tracer *httptrace.ClientTrace, authMgr *auth.AuthorizationManager) *SwApiClient {
+func NewApiClient(apiUrl *url.URL, logger *slog.Logger, tracer *httptrace.ClientTrace, authMgr *auth.AuthorizationManager) *ApiClient {
 	context := client.NewNetworkRequesterContext(apiUrl, logger, tracer, authMgr.AddAuthHeader)
 
-	client := &SwApiClient{
+	client := &ApiClient{
 		context:   context,
 		Nodeset:   NewNodesetRequester(context),
 		Validator: NewValidatorRequester(context),

@@ -1,15 +1,17 @@
-package config
+package command
 
 import (
 	"fmt"
 
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/terminal"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
 	"github.com/urfave/cli/v2"
 )
 
-func uploadDepositData(c *cli.Context) error {
-	// Get the client
+func initialize(c *cli.Context) error {
+	// Get client
+
 	hd, err := swclient.NewHyperdriveClientFromCtx(c)
 	if err != nil {
 		return err
@@ -27,7 +29,21 @@ func uploadDepositData(c *cli.Context) error {
 		return nil
 	}
 
-	// Upload to the server
-	_, err = utils.UploadDepositData(c, hd, sw)
-	return err
+	// Check wallet status
+	_, ready, err := utils.CheckIfWalletReady(hd)
+	if err != nil {
+		return err
+	}
+	if !ready {
+		return nil
+	}
+
+	// Initialize the Stakewise wallet
+	swResponse, err := sw.Api.Wallet.Initialize()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Your node wallet has been successfully copied to the Stakewise module with address %s%s%s.", terminal.ColorBlue, swResponse.Data.AccountAddress.Hex(), terminal.ColorReset)
+	return nil
 }
