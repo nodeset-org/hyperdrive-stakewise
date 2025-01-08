@@ -6,6 +6,7 @@ import (
 
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/terminal"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/wallet"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
 	nutils "github.com/rocket-pool/node-manager-core/cli/utils"
 
@@ -51,7 +52,7 @@ func exit(c *cli.Context) error {
 	}
 
 	// Check wallet status
-	_, ready, err := utils.CheckIfWalletReady(hd)
+	_, ready, err := wallet.CheckIfWalletReady(hd)
 	if err != nil {
 		return err
 	}

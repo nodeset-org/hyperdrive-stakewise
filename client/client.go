@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 
 	clitemplate "github.com/nodeset-org/hyperdrive-stakewise/adapter/client/template"
-	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/config"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/context"
 
 	"github.com/fatih/color"
 	"github.com/mitchellh/go-homedir"
@@ -50,7 +50,7 @@ var swApiKeyRelPath string = filepath.Join(moduleApiKeyRelPath, swconfig.ModuleN
 // Hyperdrive client
 type HyperdriveClient struct {
 	Api     *hdclient.ApiClient
-	Context *utils.HyperdriveContext
+	Context *context.HyperdriveContext
 	Logger  *slog.Logger
 	// docker   *docker.Client
 	cfg      *GlobalConfig
@@ -70,18 +70,18 @@ type ApiClient struct {
 // Stakewise client
 type StakewiseClient struct {
 	Api     *ApiClient
-	Context *utils.HyperdriveContext
+	Context *context.HyperdriveContext
 	Logger  *slog.Logger
 }
 
 // Create new Hyperdrive client from CLI context
 func NewHyperdriveClientFromCtx(c *cli.Context) (*HyperdriveClient, error) {
-	hdCtx := utils.GetHyperdriveContext(c)
+	hdCtx := context.GetHyperdriveContext(c)
 	return NewHyperdriveClientFromHyperdriveCtx(hdCtx)
 }
 
 // Create new Hyperdrive client from a custom context
-func NewHyperdriveClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext) (*HyperdriveClient, error) {
+func NewHyperdriveClientFromHyperdriveCtx(hdCtx *context.HyperdriveContext) (*HyperdriveClient, error) {
 	logger := log.NewTerminalLogger(hdCtx.DebugEnabled, terminalLogColor).With(slog.String(log.OriginKey, hdconfig.HyperdriveDaemonRoute))
 
 	// Create the tracer if required
@@ -238,7 +238,7 @@ func (c *HyperdriveClient) DeployMetricsConfigurations(config *GlobalConfig) err
 }
 
 // Load the Prometheus config template, do a template variable substitution, and save it
-func updatePrometheusConfiguration(ctx *utils.HyperdriveContext, config *GlobalConfig, metricsDirPath string) error {
+func updatePrometheusConfiguration(ctx *context.HyperdriveContext, config *GlobalConfig, metricsDirPath string) error {
 	prometheusConfigTemplatePath, err := homedir.Expand(filepath.Join(ctx.TemplatesDir, prometheusConfigTemplate))
 	if err != nil {
 		return fmt.Errorf("error expanding Prometheus config template path: %w", err)
@@ -258,7 +258,7 @@ func updatePrometheusConfiguration(ctx *utils.HyperdriveContext, config *GlobalC
 }
 
 // Load the Grafana config template, do a template variable substitution, and save it
-func updateGrafanaDatabaseConfiguration(ctx *utils.HyperdriveContext, config *GlobalConfig, metricsDirPath string) error {
+func updateGrafanaDatabaseConfiguration(ctx *context.HyperdriveContext, config *GlobalConfig, metricsDirPath string) error {
 	grafanaConfigTemplatePath, err := homedir.Expand(filepath.Join(ctx.TemplatesDir, grafanaConfigTemplate))
 	if err != nil {
 		return fmt.Errorf("error expanding Grafana config template path: %w", err)
@@ -313,13 +313,13 @@ func LoadConfigFromFile(configPath string, hdSettings []*hdconfig.HyperdriveSett
 // Create new Stakewise client from CLI context
 // Only use this function from commands that may work if the Daemon service doesn't exist
 func NewStakewiseClientFromCtx(c *cli.Context, hdClient *HyperdriveClient) (*StakewiseClient, error) {
-	hdCtx := utils.GetHyperdriveContext(c)
+	hdCtx := context.GetHyperdriveContext(c)
 	return NewStakewiseClientFromHyperdriveCtx(hdCtx, hdClient)
 }
 
 // Create new Stakewise client from a custom context
 // Only use this function from commands that may work if the Daemon service doesn't exist
-func NewStakewiseClientFromHyperdriveCtx(hdCtx *utils.HyperdriveContext, hdClient *HyperdriveClient) (*StakewiseClient, error) {
+func NewStakewiseClientFromHyperdriveCtx(hdCtx *context.HyperdriveContext, hdClient *HyperdriveClient) (*StakewiseClient, error) {
 	logger := log.NewTerminalLogger(hdCtx.DebugEnabled, terminalLogColor).With(slog.String(log.OriginKey, swconfig.ModuleName))
 
 	// Create the tracer if required

@@ -3,8 +3,8 @@ package command
 import (
 	"fmt"
 
-	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/terminal"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/wallet"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
 	"github.com/urfave/cli/v2"
 )
@@ -30,7 +30,7 @@ func initialize(c *cli.Context) error {
 	}
 
 	// Check wallet status
-	_, ready, err := utils.CheckIfWalletReady(hd)
+	_, ready, err := wallet.CheckIfWalletReady(hd)
 	if err != nil {
 		return err
 	}

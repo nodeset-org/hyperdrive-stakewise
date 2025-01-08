@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/terminal"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/wallet"
 	"github.com/rocket-pool/node-manager-core/eth"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/sync/errgroup"
@@ -108,7 +109,7 @@ func handleTxImpl(c *cli.Context, hd *swclient.HyperdriveClient, txInfo *eth.Tra
 	}
 
 	// Wait for it
-	utils.PrintTransactionHash(hd, response.Data.TxHash)
+	wallet.PrintTransactionHash(hd, response.Data.TxHash)
 	if _, err = hd.Api.Tx.WaitForTransaction(response.Data.TxHash); err != nil {
 		return false, fmt.Errorf("error waiting for transaction: %w", err)
 	}
@@ -213,7 +214,7 @@ func HandleTxBatch(c *cli.Context, hd *swclient.HyperdriveClient, txInfos []*eth
 	}
 
 	// Wait for them
-	utils.PrintTransactionBatchHashes(hd, response.Data.TxHashes)
+	wallet.PrintTransactionBatchHashes(hd, response.Data.TxHashes)
 	return true, waitForTransactions(hd, response.Data.TxHashes, identifierFunc)
 }
 

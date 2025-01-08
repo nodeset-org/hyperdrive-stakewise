@@ -6,6 +6,7 @@ import (
 
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/terminal"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/wallet"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/utils/input"
@@ -33,7 +34,7 @@ func generateKeys(c *cli.Context) error {
 	noRestart := c.Bool(generateKeysNoRestartFlag.Name)
 
 	// Check wallet status
-	_, ready, err := utils.CheckIfWalletReady(hd)
+	_, ready, err := wallet.CheckIfWalletReady(hd)
 	if err != nil {
 		return err
 	}

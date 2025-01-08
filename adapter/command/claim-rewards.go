@@ -5,8 +5,8 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/tx"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/wallet"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
 	"github.com/rocket-pool/node-manager-core/eth"
 	"github.com/urfave/cli/v2"
@@ -32,7 +32,7 @@ func claimRewards(c *cli.Context) error {
 	}
 
 	// Check if there's a node address ready
-	_, ready, err := utils.CheckIfAddressReady(hd)
+	_, ready, err := wallet.CheckIfAddressReady(hd)
 	if err != nil {
 		return err
 	}

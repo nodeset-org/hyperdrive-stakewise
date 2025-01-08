@@ -5,6 +5,7 @@ import (
 	"net/mail"
 
 	"github.com/nodeset-org/hyperdrive-daemon/shared/types/api"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/wallet"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
 
 	"github.com/urfave/cli/v2"
@@ -37,7 +38,7 @@ func CheckRegistrationStatus(c *cli.Context, hd *swclient.HyperdriveClient) (boo
 // Returns true if the node should register because it hasn't yet and is able to
 func checkRegistrationStatusImpl(hd *swclient.HyperdriveClient) (bool, bool, error) {
 	// Check wallet status
-	_, ready, err := CheckIfWalletReady(hd)
+	_, ready, err := wallet.CheckIfWalletReady(hd)
 	if err != nil {
 		return false, false, err
 	}
