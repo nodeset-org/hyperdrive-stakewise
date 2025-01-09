@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/config"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/context"
 
 	"github.com/fatih/color"
@@ -26,16 +25,20 @@ import (
 )
 
 const (
+	SecretsDir        string = "secrets"
+	DaemonKeyFilename string = "daemon.key"
+
 	SettingsFile       string = "user-settings.yml"
 	BackupSettingsFile string = "user-settings-backup.yml"
 	metricsDir         string = "metrics"
 
-	terminalLogColor color.Attribute = color.FgHiYellow
+	terminalLogColor      color.Attribute = color.FgHiYellow
+	HyperdriveDaemonRoute string          = "hyperdrive"
 
 	cliIssuer string = "hd-cli"
 )
 
-var hdApiKeyRelPath string = filepath.Join(config.SecretsDir, config.DaemonKeyFilename)
+var hdApiKeyRelPath string = filepath.Join(SecretsDir, DaemonKeyFilename)
 var moduleApiKeyRelPath string = filepath.Join(hdconfig.SecretsDir, hdconfig.ModulesName)
 var swApiKeyRelPath string = filepath.Join(moduleApiKeyRelPath, swconfig.ModuleName, hdconfig.DaemonKeyFilename)
 
@@ -74,7 +77,7 @@ func NewHyperdriveClientFromCtx(c *cli.Context) (*HyperdriveClient, error) {
 
 // Create new Hyperdrive client from a custom context
 func NewHyperdriveClientFromHyperdriveCtx(hdCtx *context.HyperdriveContext) (*HyperdriveClient, error) {
-	logger := log.NewTerminalLogger(hdCtx.DebugEnabled, terminalLogColor).With(slog.String(log.OriginKey, hdconfig.HyperdriveDaemonRoute))
+	logger := log.NewTerminalLogger(hdCtx.DebugEnabled, terminalLogColor).With(slog.String(log.OriginKey, HyperdriveDaemonRoute))
 
 	// Create the tracer if required
 	var tracer *httptrace.ClientTrace
