@@ -6,8 +6,8 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils/terminal"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
-	"github.com/nodeset-org/hyperdrive/hyperdrive-cli/utils/terminal"
 	"github.com/rocket-pool/node-manager-core/eth"
 	"github.com/rocket-pool/node-manager-core/gas"
 	"github.com/urfave/cli/v2"

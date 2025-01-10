@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/nodeset-org/hyperdrive v1.1.1
+	github.com/nodeset-org/hyperdrive v1.1.2-0.20250106215109-78519b2bef69
 	github.com/nodeset-org/hyperdrive-daemon v1.1.1
 	github.com/nodeset-org/nodeset-client-go v1.2.2
 	github.com/nodeset-org/osha v0.3.1

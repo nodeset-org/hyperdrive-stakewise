@@ -73,6 +73,12 @@ var (
 		Aliases: []string{"st"},
 		Usage:   "Sign any TXs and print the results, but don't submit it to the network. Useful if you want to save a TX for later or bundle it up with a service like Flashbots.",
 	}
+	KeyFileFlag *cli.StringFlag = &cli.StringFlag{
+		Name:    "secret",
+		Aliases: []string{"s"},
+		Usage:   "The path to the secret key file for authentication",
+		Value:   "/hd/secret",
+	}
 )
 
 func InstantiateFlag[FlagType cli.Flag](prototype FlagType, description string) cli.Flag {
