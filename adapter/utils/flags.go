@@ -79,6 +79,18 @@ var (
 		Usage:   "The path to the secret key file for authentication",
 		Value:   "/hd/secret",
 	}
+	ConfigDirFlag *cli.StringFlag = &cli.StringFlag{
+		Name:    "config-dir",
+		Aliases: []string{"c"},
+		Usage:   "The path to the directory for module configuration files",
+		Value:   "/hd/config",
+	}
+	LogDirFlag *cli.StringFlag = &cli.StringFlag{
+		Name:    "log-dir",
+		Aliases: []string{"l"},
+		Usage:   "The path to the directory for module log files",
+		Value:   "/hd/logs",
+	}
 )
 
 func InstantiateFlag[FlagType cli.Flag](prototype FlagType, description string) cli.Flag {

@@ -92,6 +92,7 @@ require (
 	github.com/herumi/bls-eth-go-binary v1.36.1 // indirect
 	github.com/holiman/uint256 v1.3.1 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
