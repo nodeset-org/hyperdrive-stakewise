@@ -15,6 +15,7 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/shared"
 	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/config"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	"github.com/nodeset-org/hyperdrive-stakewise/server"
 	swshared "github.com/nodeset-org/hyperdrive-stakewise/shared"
@@ -146,8 +147,8 @@ func main() {
 		stopWg := new(sync.WaitGroup)
 
 		// Create the service provider
-		configFactory := func(hdCfg *hdconfig.HyperdriveConfig) (*swconfig.StakeWiseConfig, error) {
-			return swconfig.NewStakeWiseConfig(hdCfg, settingsList)
+		configFactory := func(hdCfg *hdconfig.HyperdriveConfig) (*config.StakeWiseConfig, error) {
+			return config.NewStakeWiseConfig(), nil
 		}
 		sp, err := services.NewModuleServiceProvider(hyperdriveUrl, moduleDir, swconfig.ModuleName, swconfig.ClientLogName, configFactory, hdAuthMgr)
 		if err != nil {

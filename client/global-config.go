@@ -1,16 +1,15 @@
 package swclient
 
+// TODO: Talk to Joe about removing this entirely
 import (
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"reflect"
 
 	"github.com/alessio/shellescape"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
-	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"gopkg.in/yaml.v2"
 )
 
@@ -21,10 +20,6 @@ type GlobalConfig struct {
 	// Hyperdrive
 	Hyperdrive          *hdconfig.HyperdriveConfig
 	HyperdriveResources *hdconfig.MergedResources
-
-	// StakeWise
-	StakeWise          *swconfig.StakeWiseConfig
-	StakeWiseResources *swconfig.StakeWiseResources
 }
 
 // Serialize the config and all modules
@@ -34,9 +29,7 @@ func (c *GlobalConfig) Serialize() map[string]any {
 
 // Get the configs for all of the modules in the system
 func (c *GlobalConfig) GetAllModuleConfigs() []hdconfig.IModuleConfig {
-	return []hdconfig.IModuleConfig{
-		c.StakeWise,
-	}
+	return []hdconfig.IModuleConfig{}
 }
 
 // Saves a config
@@ -103,11 +96,10 @@ func SaveConfig(cfg *GlobalConfig, directory string, filename string) error {
 }
 
 // Make a new global config
-func NewGlobalConfig(hdCfg *hdconfig.HyperdriveConfig, hdSettings []*hdconfig.HyperdriveSettings, swCfg *swconfig.StakeWiseConfig, swSettings []*swconfig.StakeWiseSettings) (*GlobalConfig, error) {
+func NewGlobalConfig(hdCfg *hdconfig.HyperdriveConfig, hdSettings []*hdconfig.HyperdriveSettings) (*GlobalConfig, error) {
 	// Make the config
 	cfg := &GlobalConfig{
 		Hyperdrive: hdCfg,
-		StakeWise:  swCfg,
 	}
 
 	// Get the HD resources
@@ -124,39 +116,11 @@ func NewGlobalConfig(hdCfg *hdconfig.HyperdriveConfig, hdSettings []*hdconfig.Hy
 	if cfg.HyperdriveResources == nil {
 		return nil, fmt.Errorf("could not find hyperdrive resources for network [%s]", network)
 	}
-
-	// Get the StakeWise resources
-	for _, setting := range swSettings {
-		if setting.Key == network {
-			cfg.StakeWiseResources = setting.StakeWiseResources
-			break
-		}
-	}
-	if cfg.StakeWiseResources == nil {
-		return nil, fmt.Errorf("could not find stakewise resources for network [%s]", network)
-	}
-	/*
-		for _, module := range cfg.GetAllModuleConfigs() {
-			config.ApplyDefaults(module, hdCfg.Network.Value)
-		}
-	*/
 	return cfg, nil
 }
 
 // Deserialize the config's modules (assumes the Hyperdrive config itself has already been deserialized)
 func (c *GlobalConfig) DeserializeModules() error {
-	// Load Stakewise
-	stakewiseName := c.StakeWise.GetModuleName()
-	section, exists := c.Hyperdrive.Modules[stakewiseName]
-	if exists {
-		configMap, ok := section.(map[string]any)
-		if !ok {
-			return fmt.Errorf("config module section [%s] is not a map, it's a %s", stakewiseName, reflect.TypeOf(section))
-		}
-		err := c.StakeWise.Deserialize(configMap, c.Hyperdrive.Network.Value)
-		if err != nil {
-			return fmt.Errorf("error deserializing stakewise configuration: %w", err)
-		}
-	}
+
 	return nil
 }

@@ -171,11 +171,8 @@ func (c *HyperdriveClient) LoadConfig() (*GlobalConfig, bool, error) {
 	if err != nil {
 		return nil, false, fmt.Errorf("error creating Hyperdrive config: %w", err)
 	}
-	swCfg, err := swconfig.NewStakeWiseConfig(hdCfg, c.Context.StakeWiseNetworkSettings)
-	if err != nil {
-		return nil, false, fmt.Errorf("error creating StakeWise config: %w", err)
-	}
-	c.cfg, err = NewGlobalConfig(hdCfg, c.Context.HyperdriveNetworkSettings, swCfg, c.Context.StakeWiseNetworkSettings)
+
+	c.cfg, err = NewGlobalConfig(hdCfg, c.Context.HyperdriveNetworkSettings)
 	if err != nil {
 		return nil, false, fmt.Errorf("error creating global config: %w", err)
 	}
@@ -225,14 +222,8 @@ func LoadConfigFromFile(configPath string, hdSettings []*hdconfig.HyperdriveSett
 		return nil, err
 	}
 
-	// Get the StakeWise config
-	swCfg, err := swconfig.NewStakeWiseConfig(hdCfg, swSettings)
-	if err != nil {
-		return nil, err
-	}
-
 	// Load the module configs
-	cfg, err := NewGlobalConfig(hdCfg, hdSettings, swCfg, swSettings)
+	cfg, err := NewGlobalConfig(hdCfg, hdSettings)
 	if err != nil {
 		return nil, fmt.Errorf("error creating global configuration: %w", err)
 	}
