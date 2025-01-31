@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/config"
+
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/wallet"
@@ -13,7 +15,7 @@ import (
 // Provides the StakeWise module config and resources
 type IStakeWiseConfigProvider interface {
 	// Gets the StakeWise config
-	GetConfig() *swconfig.StakeWiseConfig
+	GetConfig() *config.StakeWiseConfig
 
 	// Gets the StakeWise resources
 	GetResources() *swconfig.MergedResources
@@ -48,7 +50,7 @@ type IStakeWiseServiceProvider interface {
 
 type stakeWiseServiceProvider struct {
 	services.IModuleServiceProvider
-	swCfg              *swconfig.StakeWiseConfig
+	swCfg              *config.StakeWiseConfig
 	wallet             *Wallet
 	resources          *swconfig.MergedResources
 	depositDataManager *DepositDataManager
@@ -57,7 +59,7 @@ type stakeWiseServiceProvider struct {
 // Create a new service provider with Stakewise daemon-specific features
 func NewStakeWiseServiceProvider(sp services.IModuleServiceProvider, settingsList []*swconfig.StakeWiseSettings) (IStakeWiseServiceProvider, error) {
 	// Create the resources
-	swCfg, ok := sp.GetModuleConfig().(*swconfig.StakeWiseConfig)
+	swCfg, ok := sp.GetModuleConfig().(*config.StakeWiseConfig)
 	if !ok {
 		return nil, fmt.Errorf("stakewise config is not the correct type, it's a %s", reflect.TypeOf(swCfg))
 	}
@@ -83,7 +85,7 @@ func NewStakeWiseServiceProvider(sp services.IModuleServiceProvider, settingsLis
 }
 
 // Create a new service provider with Stakewise daemon-specific features, using custom services instead of loading them from the module service provider.
-func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServiceProvider, cfg *swconfig.StakeWiseConfig, resources *swconfig.MergedResources) (IStakeWiseServiceProvider, error) {
+func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServiceProvider, cfg *config.StakeWiseConfig, resources *swconfig.MergedResources) (IStakeWiseServiceProvider, error) {
 	// Create the wallet
 	wallet, err := NewWallet(sp)
 	if err != nil {
@@ -107,7 +109,7 @@ func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServicePro
 	return stakewiseSp, nil
 }
 
-func (s *stakeWiseServiceProvider) GetConfig() *swconfig.StakeWiseConfig {
+func (s *stakeWiseServiceProvider) GetConfig() *config.StakeWiseConfig {
 	return s.swCfg
 }
 

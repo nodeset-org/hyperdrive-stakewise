@@ -3,8 +3,6 @@ package config
 import (
 	"fmt"
 
-	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
-	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
 	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
 
 	"github.com/rocket-pool/node-manager-core/beacon"
@@ -12,60 +10,60 @@ import (
 )
 
 func getNodeStatus(c *cli.Context) error {
-	// Get the client
-	hd, err := swclient.NewHyperdriveClientFromCtx(c)
-	if err != nil {
-		return err
-	}
-	sw, err := swclient.NewStakewiseClientFromCtx(c, hd)
-	if err != nil {
-		return err
-	}
-	cfg, _, err := hd.LoadConfig()
-	if err != nil {
-		return fmt.Errorf("error loading Hyperdrive config: %w", err)
-	}
-	if !cfg.StakeWise.Enabled.Value {
-		fmt.Println("The StakeWise module is not enabled in your Hyperdrive configuration.")
-		return nil
-	}
+	// // Get the client
+	// hd, err := swclient.NewHyperdriveClientFromCtx(c)
+	// if err != nil {
+	// 	return err
+	// }
+	// sw, err := swclient.NewStakewiseClientFromCtx(c, hd)
+	// if err != nil {
+	// 	return err
+	// }
+	// cfg, _, err := hd.LoadConfig()
+	// if err != nil {
+	// 	return fmt.Errorf("error loading Hyperdrive config: %w", err)
+	// }
+	// if !cfg.StakeWise.Enabled.Value {
+	// 	fmt.Println("The StakeWise module is not enabled in your Hyperdrive configuration.")
+	// 	return nil
+	// }
 
-	// Check the registration status first
-	shouldContinue, err := utils.CheckRegistrationStatus(c, hd)
-	if err != nil {
-		return fmt.Errorf("error checking nodeset registration status: %w", err)
-	}
-	if !shouldContinue {
-		return nil
-	}
+	// // Check the registration status first
+	// shouldContinue, err := utils.CheckRegistrationStatus(c, hd)
+	// if err != nil {
+	// 	return fmt.Errorf("error checking nodeset registration status: %w", err)
+	// }
+	// if !shouldContinue {
+	// 	return nil
+	// }
 
-	// Get the validator statuses
-	response, err := sw.Api.Status.GetValidatorStatuses()
-	if err != nil {
-		fmt.Printf("error fetching validator statuses: %v\n", err)
-		return err
-	}
+	// // Get the validator statuses
+	// response, err := sw.Api.Status.GetValidatorStatuses()
+	// if err != nil {
+	// 	fmt.Printf("error fetching validator statuses: %v\n", err)
+	// 	return err
+	// }
 
-	if len(response.Data.States) == 0 {
-		fmt.Println("You do not have any validators.")
-		return nil
-	}
+	// if len(response.Data.States) == 0 {
+	// 	fmt.Println("You do not have any validators.")
+	// 	return nil
+	// }
 
-	for _, state := range response.Data.States {
-		fmt.Printf("%s:\n", state.Pubkey.HexWithPrefix())
+	// for _, state := range response.Data.States {
+	// 	fmt.Printf("%s:\n", state.Pubkey.HexWithPrefix())
 
-		// Print Beacon status
-		if state.Index == "" {
-			fmt.Println("\tBeacon State: Not seen by Beacon Chain yet")
-		} else {
-			fmt.Printf("\tBeacon Index: %s\n", state.Index)
-			fmt.Printf("\tBeacon State: %s\n", getBeaconStatusLabel(state.BeaconStatus))
-		}
+	// 	// Print Beacon status
+	// 	if state.Index == "" {
+	// 		fmt.Println("\tBeacon State: Not seen by Beacon Chain yet")
+	// 	} else {
+	// 		fmt.Printf("\tBeacon Index: %s\n", state.Index)
+	// 		fmt.Printf("\tBeacon State: %s\n", getBeaconStatusLabel(state.BeaconStatus))
+	// 	}
 
-		// Print NodeSet status
-		fmt.Printf("\tNodeSet State: %s\n", getNodeSetStateLabel(state.NodesetStatus))
-		fmt.Println()
-	}
+	// 	// Print NodeSet status
+	// 	fmt.Printf("\tNodeSet State: %s\n", getNodeSetStateLabel(state.NodesetStatus))
+	// 	fmt.Println()
+	// }
 
 	return nil
 }

@@ -1,11 +1,7 @@
 package hdmodule
 
 import (
-	"fmt"
-
-	"github.com/nodeset-org/hyperdrive-stakewise/adapter/config"
 	"github.com/nodeset-org/hyperdrive-stakewise/adapter/utils"
-	hdconfig "github.com/nodeset-org/hyperdrive/modules/config"
 	"github.com/urfave/cli/v2"
 )
 
@@ -19,30 +15,30 @@ type setConfigRequest struct {
 
 // Handle the `set-config` command
 func setSettings(c *cli.Context) error {
-	// Get the request
-	request, err := utils.HandleKeyedRequest[*setConfigRequest](c)
-	if err != nil {
-		return err
-	}
+	// // Get the request
+	// request, err := utils.HandleKeyedRequest[*setConfigRequest](c)
+	// if err != nil {
+	// 	return err
+	// }
 
-	// Get the config
-	cfg := config.NewStakeWiseConfig()
-	err = hdconfig.UnmarshalConfigurationInstanceIntoMetadata(request.Config, cfg)
-	if err != nil {
-		return err
-	}
+	// // Get the config
+	// cfg := config.NewStakeWiseConfig()
+	// err = hdconfig.UnmarshalConfigurationInstanceIntoMetadata(request.Config, cfg)
+	// if err != nil {
+	// 	return err
+	// }
 
-	// Make a config manager
-	cfgMgr, err := config.NewAdapterConfigManager(c)
-	if err != nil {
-		return fmt.Errorf("error creating config manager: %w", err)
-	}
-	cfgMgr.AdapterConfig = cfg
+	// // Make a config manager
+	// cfgMgr, err := config.NewAdapterConfigManager(c)
+	// if err != nil {
+	// 	return fmt.Errorf("error creating config manager: %w", err)
+	// }
+	// cfgMgr.AdapterConfig = cfg
 
-	// Save it
-	err = cfgMgr.SaveConfigToDisk()
-	if err != nil {
-		return fmt.Errorf("error saving config: %w", err)
-	}
+	// // Save it
+	// err = cfgMgr.SaveConfigToDisk()
+	// if err != nil {
+	// 	return fmt.Errorf("error saving config: %w", err)
+	// }
 	return nil
 }
