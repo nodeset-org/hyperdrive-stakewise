@@ -1,4 +1,4 @@
-package swconfig
+package config
 
 import (
 	"github.com/rocket-pool/node-manager-core/config"

@@ -16,6 +16,24 @@ fail() {
 }
 
 
+# Builds the adapter image and pushes it to Docker Hub
+# NOTE: You must install qemu first; e.g. sudo apt-get install -y qemu qemu-user-static
+build_adapter() {
+    echo "Building adapter image..."
+    # If uploading, make and push a manifest
+    if [ "$UPLOAD" = true ]; then
+        docker buildx build --rm --platform=linux/amd64,linux/arm64 --build-arg BINARIES_PATH=build/$VERSION -t nodeset/hyperdrive-stakewise-adapter:$VERSION -f docker/adapter.dockerfile --push . || fail "Error building adapter image."
+    elif [ "$LOCAL_UPLOAD" = true ]; then
+        if [ -z "$LOCAL_DOCKER_REGISTRY" ]; then
+            fail "LOCAL_DOCKER_REGISTRY must be set to upload to a local registry."
+        fi
+        docker buildx build --rm --platform=linux/amd64,linux/arm64 --build-arg BINARIES_PATH=build/$VERSION -t $LOCAL_DOCKER_REGISTRY/nodeset/hyperdrive-stakewise-adapter:$VERSION -f docker/adapter.dockerfile --push . || fail "Error building adapter image."
+    else
+        docker buildx build --rm --load --build-arg BINARIES_PATH=build/$VERSION -t nodeset/hyperdrive-stakewise-adapter:$VERSION -f docker/adapter.dockerfile . || fail "Error building adapter image."
+    fi
+    echo "done!"
+}
+
 # Builds the Stakewise daemon image and pushes it to Docker Hub
 # NOTE: You must install qemu first; e.g. sudo apt-get install -y qemu qemu-user-static
 build_daemon() {
