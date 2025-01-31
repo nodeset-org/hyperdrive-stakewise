@@ -29,7 +29,7 @@ type processConfigResponse struct {
 }
 
 // Handle the `process-config` command
-func processConfig(c *cli.Context) error {
+func processSetting(c *cli.Context) error {
 	// Get the request
 	request, err := utils.HandleKeyedRequest[*processConfigRequest](c)
 	if err != nil {
@@ -37,7 +37,7 @@ func processConfig(c *cli.Context) error {
 	}
 
 	// Get the config
-	cfg := config.NewExampleConfig()
+	cfg := config.NewStakeWiseConfig()
 	err = hdconfig.UnmarshalConfigurationInstanceIntoMetadata(request.Config, cfg)
 	if err != nil {
 		return err

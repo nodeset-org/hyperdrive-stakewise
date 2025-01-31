@@ -18,7 +18,7 @@ type setConfigRequest struct {
 }
 
 // Handle the `set-config` command
-func setConfig(c *cli.Context) error {
+func setSettings(c *cli.Context) error {
 	// Get the request
 	request, err := utils.HandleKeyedRequest[*setConfigRequest](c)
 	if err != nil {
@@ -26,7 +26,7 @@ func setConfig(c *cli.Context) error {
 	}
 
 	// Get the config
-	cfg := config.NewExampleConfig()
+	cfg := config.NewStakeWiseConfig()
 	err = hdconfig.UnmarshalConfigurationInstanceIntoMetadata(request.Config, cfg)
 	if err != nil {
 		return err

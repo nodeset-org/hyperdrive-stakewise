@@ -30,7 +30,7 @@ func getConfigMetadata(c *cli.Context) error {
 
 	// Handle no config file by using the default
 	if cfg == nil {
-		cfg = config.NewExampleConfig()
+		cfg = config.NewStakeWiseConfig()
 	}
 
 	// Create the response

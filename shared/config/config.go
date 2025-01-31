@@ -1,4 +1,4 @@
-package ids
+package config
 
 import (
 	"errors"
@@ -13,43 +13,28 @@ const (
 	ConfigFileMode os.FileMode = 0644
 )
 
-// Example of a choice option, like an enum
-type ExampleOption string
+type NativeStakeWiseConfigSettings struct {
+	Enabled              bool   `json:"enabled"`
+	ApiPort              uint16 `json:"apiPort"`
+	VerifyDepositsRoot   bool   `json:"verifyDepositsRoot"`
+	DaemonContainerTag   string `json:"daemonContainerTag"`
+	OperatorContainerTag string `json:"operatorContainerTag"`
+	AdditionalOpFlags    string `json:"additionalOpFlags"`
 
-const (
-	ExampleOption_One   ExampleOption = "one"
-	ExampleOption_Two   ExampleOption = "two"
-	ExampleOption_Three ExampleOption = "three"
-)
+	// VcCommon   *config.ValidatorClientCommonConfig `json:"vcCommon"`
+	// Lighthouse *config.LighthouseVcConfig          `json:"lighthouse"`
+	// Lodestar   *config.LodestarVcConfig            `json:"lodestar"`
+	// Nimbus     *config.NimbusVcConfig              `json:"nimbus"`
+	// Prysm      *config.PrysmVcConfig               `json:"prysm"`
+	// Teku       *config.TekuVcConfig                `json:"teku"`
 
-// Example of a configuration for a service
-type NativeExampleConfig struct {
-	ExampleBool bool `json:"exampleBool" yaml:"exampleBool"`
-
-	ExampleInt int64 `json:"exampleInt" yaml:"exampleInt"`
-
-	ExampleUint uint64 `json:"exampleUint" yaml:"exampleUint"`
-
-	ExampleFloat float64 `json:"exampleFloat" yaml:"exampleFloat"`
-
-	ExampleString string `json:"exampleString" yaml:"exampleString"`
-
-	ExampleChoice ExampleOption `json:"exampleChoice" yaml:"exampleChoice"`
-
-	SubConfig NativeSubConfig `json:"subConfig" yaml:"subConfig"`
-}
-
-// Example of a section under the service's top-level configuration
-type NativeSubConfig struct {
-	SubExampleBool bool `json:"subExampleBool" yaml:"subExampleBool"`
-
-	SubExampleChoice ExampleOption `json:"subExampleChoice" yaml:"subExampleChoice"`
+	Version string `json:"Version"`
 }
 
 // Configuration manager
 type ConfigManager struct {
 	// The configuration
-	Config *NativeExampleConfig
+	Config *NativeStakeWiseConfigSettings
 
 	// The path to the configuration file
 	ConfigPath string
@@ -63,7 +48,7 @@ func NewConfigManager(path string) *ConfigManager {
 }
 
 // Load the configuration from a file
-func (m *ConfigManager) LoadConfigFromFile() (*NativeExampleConfig, error) {
+func (m *ConfigManager) LoadConfigFromFile() (*NativeStakeWiseConfigSettings, error) {
 	// Check if the file exists
 	_, err := os.Stat(m.ConfigPath)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -77,7 +62,7 @@ func (m *ConfigManager) LoadConfigFromFile() (*NativeExampleConfig, error) {
 	}
 
 	// Deserialize it
-	cfg := NativeExampleConfig{}
+	cfg := NativeStakeWiseConfigSettings{}
 	err = yaml.Unmarshal(bytes, &cfg)
 	if err != nil {
 		return nil, fmt.Errorf("error deserializing config file [%s]: %w", m.ConfigPath, err)

@@ -1,4 +1,4 @@
-package swconfig
+package config
 
 import (
 	"fmt"

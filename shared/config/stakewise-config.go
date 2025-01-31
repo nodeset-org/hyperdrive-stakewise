@@ -1,5 +1,6 @@
-package swconfig
+package config
 
+// TODO(HN): REMOVE ALL THIS
 import (
 	"fmt"
 
