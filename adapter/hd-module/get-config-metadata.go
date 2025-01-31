@@ -19,22 +19,10 @@ func getConfigMetadata(c *cli.Context) error {
 	}
 
 	// Get the config
-	cfgMgr, err := config.NewAdapterConfigManager(c)
-	if err != nil {
-		return fmt.Errorf("error creating config manager: %w", err)
-	}
-	cfg, err := cfgMgr.LoadConfigFromDisk()
-	if err != nil {
-		return fmt.Errorf("error loading config: %w", err)
-	}
-
-	// Handle no config file by using the default
-	if cfg == nil {
-		cfg = config.NewStakeWiseConfig()
-	}
+	cfg := config.NewStakeWiseConfig()
 
 	// Create the response
-	cfgMap := hdconfig.MarshalConfigurationMetadataToMap(cfg)
+	cfgMap := hdconfig.MarshalConfigurationToMap(cfg)
 	bytes, err := json.Marshal(cfgMap)
 	if err != nil {
 		return fmt.Errorf("error marshalling config: %w", err)

@@ -9,10 +9,6 @@ import (
 	"github.com/rocket-pool/node-manager-core/config"
 )
 
-const (
-	FloatThreshold float64 = 75.0
-)
-
 type PortMode string
 
 const (
@@ -113,15 +109,24 @@ func (cfg StakeWiseConfig) GetSections() []hdconfig.ISection {
 
 func CreateInstanceFromNativeConfig(native *sharedconfig.NativeStakeWiseConfigSettings) *StakeWiseConfigSettings {
 	instance := &StakeWiseConfigSettings{
-		Enabled: native.Enabled,
-		ApiPort: native.ApiPort,
+		Enabled:              native.Enabled,
+		ApiPort:              native.ApiPort,
+		VerifyDepositsRoot:   native.VerifyDepositsRoot,
+		DaemonContainerTag:   native.DaemonContainerTag,
+		OperatorContainerTag: native.OperatorContainerTag,
+		AdditionalOpFlags:    native.AdditionalOpFlags,
 	}
 	return instance
 }
 
 func ConvertInstanceToNativeConfig(instance *StakeWiseConfigSettings) *sharedconfig.NativeStakeWiseConfigSettings {
 	native := &sharedconfig.NativeStakeWiseConfigSettings{
-		ApiPort: instance.ApiPort,
+		Enabled:              instance.Enabled,
+		ApiPort:              instance.ApiPort,
+		VerifyDepositsRoot:   instance.VerifyDepositsRoot,
+		DaemonContainerTag:   instance.DaemonContainerTag,
+		OperatorContainerTag: instance.OperatorContainerTag,
+		AdditionalOpFlags:    instance.AdditionalOpFlags,
 	}
 	return native
 }
