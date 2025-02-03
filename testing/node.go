@@ -12,6 +12,7 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/config"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swserver "github.com/nodeset-org/hyperdrive-stakewise/server"
@@ -115,15 +116,12 @@ func (n *StakeWiseNode) CreateSubNode(hdNode *hdtesting.HyperdriveNode, address 
 
 	// Make Constellation resources
 	resources := getTestResources(hdSp.GetResources(), deploymentName)
-	csCfg, err := swconfig.NewStakeWiseConfig(hdCfg, []*swconfig.StakeWiseSettings{})
-	if err != nil {
-		return nil, fmt.Errorf("error creating Constellation config: %v", err)
-	}
-	csCfg.ApiPort.Value = port
+	csCfg := config.NewStakeWiseConfig()
+	// csCfg.ApiPort.Value = port
 
 	// Make sure the module directory exists
 	moduleDir := filepath.Join(hdCfg.UserDataPath.Value, hdconfig.ModulesName, swconfig.ModuleName)
-	err = os.MkdirAll(moduleDir, 0755)
+	err := os.MkdirAll(moduleDir, 0755)
 	if err != nil {
 		return nil, fmt.Errorf("error creating data and modules directories [%s]: %v", moduleDir, err)
 	}

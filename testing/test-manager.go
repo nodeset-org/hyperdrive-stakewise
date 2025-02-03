@@ -8,6 +8,7 @@ import (
 	hdservices "github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
+	"github.com/nodeset-org/hyperdrive-stakewise/adapter/config"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/log"
@@ -43,11 +44,7 @@ func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 
 	// Make StakeWise resources
 	resources := getTestResources(hdSp.GetResources(), deploymentName)
-	swCfg, err := swconfig.NewStakeWiseConfig(hdCfg, []*swconfig.StakeWiseSettings{})
-	if err != nil {
-		closeTestManager(tm)
-		return nil, fmt.Errorf("error creating StakeWise config: %v", err)
-	}
+	swCfg := config.NewStakeWiseConfig()
 
 	// Make the module directory
 	moduleDir := filepath.Join(hdCfg.UserDataPath.Value, hdconfig.ModulesName, swconfig.ModuleName)

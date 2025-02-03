@@ -16,7 +16,7 @@ import (
 	hdclient "github.com/nodeset-org/hyperdrive-daemon/client"
 	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
-	swclient "github.com/nodeset-org/hyperdrive-stakewise/adapter/client"
+	adapterclient "github.com/nodeset-org/hyperdrive-stakewise/adapter/client"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 
 	"github.com/rocket-pool/node-manager-core/api/client"
@@ -83,7 +83,7 @@ func NewHyperdriveClientFromHyperdriveCtx(hdCtx *context.HyperdriveContext) (*Hy
 	var tracer *httptrace.ClientTrace
 	if hdCtx.HttpTraceFile != nil {
 		var err error
-		tracer, err = swclient.CreateTracer(hdCtx.HttpTraceFile, logger)
+		tracer, err = adapterclient.CreateTracer(hdCtx.HttpTraceFile, logger)
 		if err != nil {
 			logger.Error("Error creating HTTP trace", log.Err(err))
 		}
@@ -245,50 +245,51 @@ func NewStakewiseClientFromCtx(c *cli.Context, hdClient *HyperdriveClient) (*Sta
 // Create new Stakewise client from a custom context
 // Only use this function from commands that may work if the Daemon service doesn't exist
 func NewStakewiseClientFromHyperdriveCtx(hdCtx *context.HyperdriveContext, hdClient *HyperdriveClient) (*StakewiseClient, error) {
-	logger := log.NewTerminalLogger(hdCtx.DebugEnabled, terminalLogColor).With(slog.String(log.OriginKey, swconfig.ModuleName))
+	return &StakewiseClient{}, nil
+	// logger := log.NewTerminalLogger(hdCtx.DebugEnabled, terminalLogColor).With(slog.String(log.OriginKey, swconfig.ModuleName))
 
-	// Create the tracer if required
-	var tracer *httptrace.ClientTrace
-	if hdCtx.HttpTraceFile != nil {
-		var err error
-		tracer, err = swclient.CreateTracer(hdCtx.HttpTraceFile, logger)
-		if err != nil {
-			logger.Error("Error creating HTTP trace", log.Err(err))
-		}
-	}
+	// // Create the tracer if required
+	// var tracer *httptrace.ClientTrace
+	// if hdCtx.HttpTraceFile != nil {
+	// 	var err error
+	// 	tracer, err = adapterclient.CreateTracer(hdCtx.HttpTraceFile, logger)
+	// 	if err != nil {
+	// 		logger.Error("Error creating HTTP trace", log.Err(err))
+	// 	}
+	// }
 
-	// Make the client
-	swClient := &StakewiseClient{
-		Context: hdCtx,
-		Logger:  logger,
-	}
+	// // Make the client
+	// swClient := &StakewiseClient{
+	// 	Context: hdCtx,
+	// 	Logger:  logger,
+	// }
 
-	// Get the API URL
-	url := hdCtx.ApiUrl
-	if url == nil {
-		var err error
-		url, err = url.Parse(fmt.Sprintf("http://localhost:%d/%s", hdClient.cfg.StakeWise.ApiPort.Value, swconfig.ApiClientRoute))
-		if err != nil {
-			return nil, fmt.Errorf("error parsing StakeWise API URL: %w", err)
-		}
-	} else {
-		host := fmt.Sprintf("%s://%s:%d/%s", url.Scheme, url.Hostname(), hdClient.cfg.StakeWise.ApiPort.Value, swconfig.ApiClientRoute)
-		var err error
-		url, err = url.Parse(host)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing StakeWise API URL: %w", err)
-		}
-	}
+	// // Get the API URL
+	// url := hdCtx.ApiUrl
+	// if url == nil {
+	// 	var err error
+	// 	url, err = url.Parse(fmt.Sprintf("http://localhost:%d/%s", hdClient.cfg.StakeWise.ApiPort.Value, swconfig.ApiClientRoute))
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("error parsing StakeWise API URL: %w", err)
+	// 	}
+	// } else {
+	// 	host := fmt.Sprintf("%s://%s:%d/%s", url.Scheme, url.Hostname(), hdClient.cfg.StakeWise.ApiPort.Value, swconfig.ApiClientRoute)
+	// 	var err error
+	// 	url, err = url.Parse(host)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("error parsing StakeWise API URL: %w", err)
+	// 	}
+	// }
 
-	// Create the auth manager
-	authPath := filepath.Join(hdCtx.UserDirPath, swApiKeyRelPath)
-	err := auth.GenerateAuthKeyIfNotPresent(authPath, auth.DefaultKeyLength)
-	if err != nil {
-		return nil, fmt.Errorf("error generating StakeWise module API key: %w", err)
-	}
-	authMgr := auth.NewAuthorizationManager(authPath, cliIssuer, auth.DefaultRequestLifespan)
+	// // Create the auth manager
+	// authPath := filepath.Join(hdCtx.UserDirPath, swApiKeyRelPath)
+	// err := auth.GenerateAuthKeyIfNotPresent(authPath, auth.DefaultKeyLength)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("error generating StakeWise module API key: %w", err)
+	// }
+	// authMgr := auth.NewAuthorizationManager(authPath, cliIssuer, auth.DefaultRequestLifespan)
 
-	// Create the API client
-	swClient.Api = NewApiClient(url, logger, tracer, authMgr)
-	return swClient, nil
+	// // Create the API client
+	// swClient.Api = NewApiClient(url, logger, tracer, authMgr)
+	// return swClient, nil
 }

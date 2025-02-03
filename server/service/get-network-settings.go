@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/gorilla/mux"
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
+	"github.com/nodeset-org/hyperdrive-stakewise/client"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/wallet"
@@ -45,7 +46,7 @@ func (c *serviceGetNetworkSettingsContext) PrepareData(data *swapi.ServiceGetNet
 	sp := c.handler.serviceProvider
 	hdCfg := sp.GetHyperdriveConfig()
 	swCfg := sp.GetConfig()
-	settingsList := swCfg.GetNetworkSettings()
+	settingsList := client.GetNetworkSettings()
 	network := hdCfg.Network.Value
 	for _, settings := range settingsList {
 		if settings.Key == network {
