@@ -25,6 +25,7 @@ type StakeWiseConfig struct {
 	OperatorContainerTag hdconfig.StringParameter
 	AdditionalOpFlags    hdconfig.StringParameter
 
+	// TODO: (HN) - Recreate all this stuff
 	VcCommon   *config.ValidatorClientCommonConfig
 	Lighthouse *config.LighthouseVcConfig
 	Lodestar   *config.LodestarVcConfig
@@ -104,7 +105,9 @@ func (cfg StakeWiseConfig) GetParameters() []hdconfig.IParameter {
 }
 
 func (cfg StakeWiseConfig) GetSections() []hdconfig.ISection {
-	return []hdconfig.ISection{}
+	return []hdconfig.ISection{
+		// TODO: Clients need to get added here after porting
+	}
 }
 
 func CreateInstanceFromNativeConfig(native *sharedconfig.NativeStakeWiseConfigSettings) *StakeWiseConfigSettings {
