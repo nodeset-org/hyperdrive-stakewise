@@ -13,7 +13,7 @@ import (
 const (
 	// Tags
 	daemonTag   string = "nodeset/hyperdrive-stakewise:v" + shared.StakewiseVersion
-	operatorTag string = "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:v2.1.3"
+	operatorTag string = "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:v3.0.3"
 )
 
 // Configuration for Stakewise
