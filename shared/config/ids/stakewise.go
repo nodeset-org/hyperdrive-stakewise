@@ -4,6 +4,7 @@ const (
 	// Param IDs
 	StakewiseEnableID      string = "enable"
 	ApiPortID              string = "apiPort"
+	RelayPortID            string = "relayPort"
 	DaemonContainerTagID   string = "daemonContainerTag"
 	OperatorContainerTagID string = "operatorContainerTag"
 	AdditionalOpFlagsID    string = "additionalOpFlags"

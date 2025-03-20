@@ -28,7 +28,6 @@ type WalletClaimRewardsData struct {
 }
 
 type WalletGetAvailableKeysData struct {
-	UnregisteredNode     bool                     `json:"unregisteredNode"`
 	SufficientBalance    bool                     `json:"sufficientBalance"`
 	Balance              float64                  `json:"balance"`
 	AvailablePubkeys     []beacon.ValidatorPubkey `json:"availablePubkeys"`

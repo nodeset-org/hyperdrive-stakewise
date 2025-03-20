@@ -54,13 +54,11 @@ type walletGetAvailableKeysContext struct {
 
 func (c *walletGetAvailableKeysContext) PrepareData(data *api.WalletGetAvailableKeysData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
 	sp := c.handler.serviceProvider
-	hd := sp.GetHyperdriveClient()
 	keyMgr := sp.GetAvailableKeyManager()
 	qMgr := sp.GetQueryManager()
 	ec := sp.GetEthClient()
 	ctx := c.handler.ctx
 	nodeAddress := walletStatus.Address.NodeAddress
-	res := sp.GetResources()
 
 	// Requirements
 	err := sp.RequireStakewiseWalletReady(ctx, walletStatus)
@@ -80,16 +78,6 @@ func (c *walletGetAvailableKeysContext) PrepareData(data *api.WalletGetAvailable
 			return types.ResponseStatus_ClientsNotSynced, err
 		}
 		return types.ResponseStatus_Error, err
-	}
-
-	// Fetch status from NodeSet
-	response, err := hd.NodeSet_StakeWise.GetRegisteredValidators(res.DeploymentName, res.Vault)
-	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators from Nodeset: %w", err)
-	}
-	if response.Data.NotRegistered {
-		data.UnregisteredNode = true
-		return types.ResponseStatus_Success, nil
 	}
 
 	// Get the current Beacon deposit root
