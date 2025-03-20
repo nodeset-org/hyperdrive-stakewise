@@ -26,9 +26,6 @@ const (
 type stakewiseWalletData struct {
 	// The next account to generate the key for
 	NextAccount uint64 `json:"nextAccount"`
-
-	// The ID of the nodeset deposit data stored on disk
-	NodeSetDepositDataVersion int `json:"nodeSetDepositDataVersion"`
 }
 
 // Wallet manager for the Stakewise daemon
@@ -68,8 +65,7 @@ func (w *Wallet) Reload() error {
 	if errors.Is(err, fs.ErrNotExist) {
 		// No data yet, so make some
 		w.data = stakewiseWalletData{
-			NextAccount:               0,
-			NodeSetDepositDataVersion: 0,
+			NextAccount: 0,
 		}
 
 		// Save it
@@ -193,17 +189,6 @@ func (w *Wallet) GetAllPrivateKeys() ([]*eth2types.BLSPrivateKey, error) {
 	}
 
 	return keys, nil
-}
-
-// Get the version of the aggregated deposit data from the NodeSet server that's stored on disk
-func (w *Wallet) GetLatestDepositDataVersion() int {
-	return w.data.NodeSetDepositDataVersion
-}
-
-// Set the latest deposit data version and save the wallet data
-func (w *Wallet) SetLatestDepositDataVersion(version int) error {
-	w.data.NodeSetDepositDataVersion = version
-	return w.saveData()
 }
 
 // Saves the Stakewise wallet and password files

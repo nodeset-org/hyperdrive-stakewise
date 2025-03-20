@@ -48,8 +48,6 @@ type TaskLoop struct {
 	wg     *sync.WaitGroup
 
 	// Tasks
-	updateDepositData *UpdateDepositDataTask
-	sendExitData      *SendExitDataTask
 
 	// Internal
 	wasExecutionClientSynced bool
@@ -60,12 +58,10 @@ func NewTaskLoop(sp swcommon.IStakeWiseServiceProvider, wg *sync.WaitGroup) *Tas
 	logger := sp.GetTasksLogger()
 	ctx := logger.CreateContextWithLogger(sp.GetBaseContext())
 	taskLoop := &TaskLoop{
-		sp:                sp,
-		logger:            logger,
-		ctx:               ctx,
-		wg:                wg,
-		updateDepositData: NewUpdateDepositDataTask(ctx, sp, logger),
-		sendExitData:      NewSendExitDataTask(ctx, sp, logger),
+		sp:     sp,
+		logger: logger,
+		ctx:    ctx,
+		wg:     wg,
 
 		wasExecutionClientSynced: true,
 		wasBeaconClientSynced:    true,
@@ -76,7 +72,7 @@ func NewTaskLoop(sp swcommon.IStakeWiseServiceProvider, wg *sync.WaitGroup) *Tas
 // Run daemon
 func (t *TaskLoop) Run() error {
 	// Wait until the HD daemon has tried logging into the NodeSet server to check registration status
-	t.getNodeSetRegistrationStatus()
+	//t.getNodeSetRegistrationStatus()
 
 	// Run task loop
 	t.wg.Add(1)
@@ -163,42 +159,48 @@ func (t *TaskLoop) getNodeSetRegistrationStatus() {
 // Returns true if the owning loop needs to exit, false if it can continue
 func (t *TaskLoop) waitUntilReady() waitUntilReadyResult {
 	// Check the EC status
-	err := t.sp.WaitEthClientSynced(t.ctx, false) // Force refresh the primary / fallback EC status
-	if err != nil {
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "context canceled") {
-			return waitUntilReadyExit
+	// NOTE: Not needed with StakeWise v2 now
+	/*
+		err := t.sp.WaitEthClientSynced(t.ctx, false) // Force refresh the primary / fallback EC status
+		if err != nil {
+			errMsg := err.Error()
+			if strings.Contains(errMsg, "context canceled") {
+				return waitUntilReadyExit
+			}
+			t.wasExecutionClientSynced = false
+			t.logger.Error("Execution Client not synced. Waiting for sync...", slog.String(log.ErrorKey, errMsg))
+			return t.sleepAndReturnReadyResult()
 		}
-		t.wasExecutionClientSynced = false
-		t.logger.Error("Execution Client not synced. Waiting for sync...", slog.String(log.ErrorKey, errMsg))
-		return t.sleepAndReturnReadyResult()
-	}
 
-	if !t.wasExecutionClientSynced {
-		t.logger.Info("Execution Client is now synced.")
-		t.wasExecutionClientSynced = true
-	}
+		if !t.wasExecutionClientSynced {
+			t.logger.Info("Execution Client is now synced.")
+			t.wasExecutionClientSynced = true
+		}
+	*/
 
 	// Check the BC status
-	err = t.sp.WaitBeaconClientSynced(t.ctx, false) // Force refresh the primary / fallback BC status
-	if err != nil {
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "context canceled") {
-			return waitUntilReadyExit
+	// NOTE: Not needed with StakeWise v2 now
+	/*
+		err = t.sp.WaitBeaconClientSynced(t.ctx, false) // Force refresh the primary / fallback BC status
+		if err != nil {
+			errMsg := err.Error()
+			if strings.Contains(errMsg, "context canceled") {
+				return waitUntilReadyExit
+			}
+			// NOTE: if not synced, it returns an error - so there isn't necessarily an underlying issue
+			t.wasBeaconClientSynced = false
+			t.logger.Error("Beacon Node not synced. Waiting for sync...", slog.String(log.ErrorKey, errMsg))
+			return t.sleepAndReturnReadyResult()
 		}
-		// NOTE: if not synced, it returns an error - so there isn't necessarily an underlying issue
-		t.wasBeaconClientSynced = false
-		t.logger.Error("Beacon Node not synced. Waiting for sync...", slog.String(log.ErrorKey, errMsg))
-		return t.sleepAndReturnReadyResult()
-	}
 
-	if !t.wasBeaconClientSynced {
-		t.logger.Info("Beacon Node is now synced.")
-		t.wasBeaconClientSynced = true
-	}
+		if !t.wasBeaconClientSynced {
+			t.logger.Info("Beacon Node is now synced.")
+			t.wasBeaconClientSynced = true
+		}
+	*/
 
 	// Wait until the Stakewise wallet has been initialized
-	err = t.sp.WaitForStakewiseWallet(t.ctx)
+	err := t.sp.WaitForStakewiseWallet(t.ctx)
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "context canceled") {
@@ -209,9 +211,12 @@ func (t *TaskLoop) waitUntilReady() waitUntilReadyResult {
 	}
 
 	// Wait for NodeSet registration
-	if t.sp.WaitForNodeSetRegistration(t.ctx) {
-		return waitUntilReadyExit
-	}
+	// Not needed with StakeWise v2 now
+	/*
+		if t.sp.WaitForNodeSetRegistration(t.ctx) {
+			return waitUntilReadyExit
+		}
+	*/
 
 	return waitUntilReadySuccess
 }
@@ -229,18 +234,5 @@ func (t *TaskLoop) sleepAndReturnReadyResult() waitUntilReadyResult {
 // Runs an iteration of the node tasks.
 // Returns true if the task loop should exit, false if it should continue.
 func (t *TaskLoop) runTasks() bool {
-	// Update deposit data from the NodeSet server
-	if err := t.updateDepositData.Run(); err != nil {
-		t.logger.Error(err.Error())
-	}
-	if utils.SleepWithCancel(t.ctx, taskCooldown) {
-		return true
-	}
-
-	// Submit missing exit messages to the NodeSet server
-	if err := t.sendExitData.Run(); err != nil {
-		t.logger.Error(err.Error())
-	}
-
 	return utils.SleepWithCancel(t.ctx, tasksInterval)
 }

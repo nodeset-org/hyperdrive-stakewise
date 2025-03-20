@@ -26,3 +26,12 @@ type WalletClaimRewardsData struct {
 	WithdrawableNativeToken *big.Int             `json:"withdrawableNativeToken"`
 	TxInfo                  *eth.TransactionInfo `json:"txInfo"`
 }
+
+type WalletGetAvailableKeysData struct {
+	UnregisteredNode     bool                     `json:"unregisteredNode"`
+	SufficientBalance    bool                     `json:"sufficientBalance"`
+	Balance              float64                  `json:"balance"`
+	AvailablePubkeys     []beacon.ValidatorPubkey `json:"availablePubkeys"`
+	EthPerKey            float64                  `json:"ethPerKey"`
+	RemainingEthRequired float64                  `json:"remainingEthRequired"`
+}

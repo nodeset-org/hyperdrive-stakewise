@@ -39,6 +39,24 @@ var (
 	}
 )
 
+// Details for a StakeWise vault
+type StakeWiseVault struct {
+	// Whether or not the vault is enabled on the node
+	Enabled bool `yaml:"enabled" json:"enabled"`
+
+	// The address of the vault contract
+	Address common.Address `yaml:"address" json:"address"`
+
+	// The fee recipient to use for the vault
+	FeeRecipient common.Address `yaml:"feeRecipient" json:"feeRecipient"`
+
+	// The address of the SplitWarehouse contract used for node operator fund distribution
+	SplitWarehouse common.Address `yaml:"splitWarehouse" json:"splitWarehouse"`
+
+	// The address of the PullSplit contract used for node operator fund distribution
+	PullSplit common.Address `yaml:"pullSplit" json:"pullSplit"`
+}
+
 // Network settings with a field for StakeWise-specific settings
 type StakeWiseSettings struct {
 	// The unique key used to identify the network in the configuration

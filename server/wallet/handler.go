@@ -26,6 +26,7 @@ func NewWalletHandler(logger *log.Logger, ctx context.Context, serviceProvider s
 		&walletClaimRewardsContextFactory{h},
 		&walletGenerateKeysContextFactory{h},
 		&walletInitializeContextFactory{h},
+		&walletGetAvailableKeysContextFactory{h},
 	}
 	return h
 }

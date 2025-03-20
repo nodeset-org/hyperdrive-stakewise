@@ -10,7 +10,10 @@ const (
 	PasswordFilename     string = "password.txt"
 	KeystorePasswordFile string = "secret.txt"
 	DepositDataFile      string = "deposit-data.json"
+	AvailableKeysFile    string = "available-keys.json"
 	DefaultApiPort       uint16 = 8180
+	RelayLogName         string = "relay.log"
+	DefaultRelayPort     uint16 = 18180
 
 	// Volumes
 	DataVolume string = "swdata"

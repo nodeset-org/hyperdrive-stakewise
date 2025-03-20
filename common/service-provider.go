@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
+	swcontracts "github.com/nodeset-org/hyperdrive-stakewise/common/contracts"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/wallet"
 )
@@ -37,11 +38,24 @@ type IStakeWiseRequirementsProvider interface {
 	WaitForStakewiseWallet(ctx context.Context) error
 }
 
+// Provides the Beacon deposit contract
+type IBeaconDepositContractProvider interface {
+	// Gets the Constellation manager
+	GetBeaconDepositContract() *swcontracts.BeaconDepositContract
+}
+
+// Provides the manager for keys that can be used for new deposits
+type IAvailableKeyManagerProvider interface {
+	GetAvailableKeyManager() *AvailableKeyManager
+}
+
 type IStakeWiseServiceProvider interface {
 	IStakeWiseConfigProvider
 	IStakeWiseWalletProvider
 	IDepositDataManagerProvider
 	IStakeWiseRequirementsProvider
+	IBeaconDepositContractProvider
+	IAvailableKeyManagerProvider
 
 	services.IModuleServiceProvider
 }
@@ -52,6 +66,8 @@ type stakeWiseServiceProvider struct {
 	wallet             *Wallet
 	resources          *swconfig.MergedResources
 	depositDataManager *DepositDataManager
+	depositContract    *swcontracts.BeaconDepositContract
+	keyMgr             *AvailableKeyManager
 }
 
 // Create a new service provider with Stakewise daemon-specific features
@@ -90,12 +106,19 @@ func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServicePro
 		return nil, fmt.Errorf("error initializing wallet: %w", err)
 	}
 
+	// Create the Beacon deposit contract provider
+	depositContract, err := swcontracts.NewBeaconDepositContract(resources.DepositContractAddress, sp.GetEthClient())
+	if err != nil {
+		return nil, fmt.Errorf("error creating Beacon deposit contract binding: %w", err)
+	}
+
 	// Make the provider
 	stakewiseSp := &stakeWiseServiceProvider{
 		IModuleServiceProvider: sp,
 		swCfg:                  cfg,
 		wallet:                 wallet,
 		resources:              resources,
+		depositContract:        depositContract,
 	}
 
 	// Create the deposit data manager
@@ -104,6 +127,13 @@ func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServicePro
 		return nil, fmt.Errorf("error initializing deposit data manager: %w", err)
 	}
 	stakewiseSp.depositDataManager = ddMgr
+
+	// Create the available key manager
+	keyMgr, err := NewAvailableKeyManager(stakewiseSp)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing available key manager: %w", err)
+	}
+	stakewiseSp.keyMgr = keyMgr
 	return stakewiseSp, nil
 }
 
@@ -121,4 +151,12 @@ func (s *stakeWiseServiceProvider) GetWallet() *Wallet {
 
 func (s *stakeWiseServiceProvider) GetDepositDataManager() *DepositDataManager {
 	return s.depositDataManager
+}
+
+func (s *stakeWiseServiceProvider) GetBeaconDepositContract() *swcontracts.BeaconDepositContract {
+	return s.depositContract
+}
+
+func (s *stakeWiseServiceProvider) GetAvailableKeyManager() *AvailableKeyManager {
+	return s.keyMgr
 }

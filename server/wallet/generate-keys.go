@@ -65,13 +65,21 @@ func (c *walletGenerateKeysContext) PrepareData(data *api.WalletGenerateKeysData
 	}
 
 	// Generate and save the keys
+	keyMgr := sp.GetAvailableKeyManager()
 	pubkeys := make([]beacon.ValidatorPubkey, c.count)
 	for i := 0; i < int(c.count); i++ {
 		key, err := wallet.GenerateNewValidatorKey()
 		if err != nil {
 			return types.ResponseStatus_Error, fmt.Errorf("error generating validator key: %w", err)
 		}
-		pubkeys[i] = beacon.ValidatorPubkey(key.PublicKey().Marshal())
+		pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
+		pubkeys[i] = pubkey
+
+		// Add the key to the available list
+		err = keyMgr.AddNewKey(pubkey)
+		if err != nil {
+			return types.ResponseStatus_Error, fmt.Errorf("error adding new key to available list: %w", err)
+		}
 	}
 	data.Pubkeys = pubkeys
 
