@@ -281,11 +281,16 @@ func (cfg *StakeWiseConfig) GetTasksLogFileName() string {
 	return hdconfig.TasksLogName
 }
 
+func (cfg *StakeWiseConfig) GetRelayLogFileName() string {
+	return RelayLogName
+}
+
 func (cfg *StakeWiseConfig) GetLogNames() []string {
 	return []string{
 		cfg.GetHdClientLogFileName(),
 		cfg.GetApiLogFileName(),
 		cfg.GetTasksLogFileName(),
+		cfg.GetRelayLogFileName(),
 	}
 }
 

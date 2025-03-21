@@ -28,9 +28,13 @@ func NewDepositDataManager(sp IStakeWiseServiceProvider) (*DepositDataManager, e
 		sp: sp,
 	}
 
-	// Remove the legacy deposit data file if it exists
-	legacyDepositDataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile)
-	_ = os.Remove(legacyDepositDataPath)
+	// Empty out the deposit data file
+	depositDataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile)
+	bytes := []byte("{}")
+	err := os.WriteFile(depositDataPath, bytes, fileMode)
+	if err != nil {
+		return nil, fmt.Errorf("error emptying deposit data file: %w", err)
+	}
 	return ddMgr, nil
 }
 
