@@ -12,6 +12,7 @@ import (
 // Handles an error
 func HandleError(w http.ResponseWriter, logger *slog.Logger, code int, err error) {
 	msg := err.Error()
+	logger.Error("Error during request", "error", msg)
 	bytes, err := formatError(msg)
 	if err != nil {
 		logger.Error("Error serializing error response", "error", err)

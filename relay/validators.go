@@ -80,7 +80,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	if pathArgs == nil && queryArgs == nil {
 		return
 	}
-	logger.Debug("Parsed request", "time", time.Since(start))
+	logger.Debug("Parsed request", "elapsed", time.Since(start))
 
 	// Requirements
 	walletResponse, err := hd.Wallet.Status()
@@ -112,7 +112,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error checking beacon client status: %w", err))
 		return
 	}
-	logger.Debug("Verified requirements", "time", time.Since(start))
+	logger.Debug("Verified requirements", "elapsed", time.Since(start))
 
 	// Get the current Beacon deposit root
 	var depositRoot common.Hash
@@ -124,7 +124,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting latest Beacon deposit root: %w", err))
 		return
 	}
-	logger.Debug("Got deposit root", "time", time.Since(start), "root", depositRoot.Hex())
+	logger.Debug("Got deposit root", "elapsed", time.Since(start), "root", depositRoot.Hex())
 
 	// Get the current epoch
 	beaconHead, err := bn.GetBeaconHead(ctx)
@@ -133,7 +133,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	currentEpoch := beaconHead.Epoch
-	logger.Debug("Got current epoch", "time", time.Since(start), "epoch", currentEpoch)
+	logger.Debug("Got current epoch", "elapsed", time.Since(start), "epoch", currentEpoch)
 
 	// Get the available keys, clamping to the number of validators requested
 	availableKeys, err := keyMgr.GetAvailableKeys(ctx, depositRoot, true)
@@ -154,7 +154,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	for _, key := range availableKeys {
 		debugEntries = append(debugEntries, "key", key.HexWithPrefix())
 	}
-	logger.Debug("Got available keys", "time", time.Since(start), debugEntries)
+	logger.Debug("Got available keys", "elapsed", time.Since(start), debugEntries)
 
 	// Get the available count from NodeSet and clamp further
 	validatorsInfo, err := hd.NodeSet_StakeWise.GetValidatorsInfo(res.DeploymentName, res.Vault)
@@ -167,7 +167,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	available := validatorsInfo.Data.Available
-	logger.Debug("Got meta info from NodeSet", "time", time.Since(start), "available", available)
+	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", available)
 	if available == 0 {
 		// Return an empty response
 		HandleSuccess(w, h.logger, ValidatorsResponse{})
@@ -186,7 +186,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	logger.Debug("Retrieved private keys", "time", time.Since(start))
+	logger.Debug("Retrieved private keys", "elapsed", time.Since(start))
 
 	// Create the deposit data
 	depositDatas, err := ddMgr.GenerateDepositData(logger, privateKeys)
@@ -194,7 +194,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error generating deposit data: %w", err))
 		return
 	}
-	logger.Debug("Generated deposit data", "time", time.Since(start))
+	logger.Debug("Generated deposit data", "elapsed", time.Since(start))
 
 	// Create signed exits
 	signatureDomain, err := bn.GetDomainData(ctx, eth2types.DomainVoluntaryExit[:], currentEpoch, false)
@@ -212,7 +212,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		exitMessages[i] = exitMessage
 		currentIndex++
 	}
-	logger.Debug("Generated exit messages", "time", time.Since(start))
+	logger.Debug("Generated exit messages", "elapsed", time.Since(start))
 
 	// Encrypt the exits
 	encryptedExits := make([]string, len(availableKeys))
@@ -224,7 +224,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		}
 		encryptedExits[i] = encryptedMessage
 	}
-	logger.Debug("Encrypted exit messages", "time", time.Since(start))
+	logger.Debug("Encrypted exit messages", "elapsed", time.Since(start))
 
 	// Get a signature from NodeSet
 	signatureResponse, err := hd.NodeSet_StakeWise.GetValidatorManagerSignature(res.DeploymentName, res.Vault, depositRoot, depositDatas, encryptedExits)
@@ -245,7 +245,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	signature := signatureResponse.Data.Signature
-	logger.Debug("Got validators signature from NodeSet", "time", time.Since(start), "signature", signature)
+	logger.Debug("Got validators signature from NodeSet", "elapsed", time.Since(start), "signature", signature)
 
 	// Set the last deposit root for those keys
 	err = keyMgr.SetLastDepositRoot(availableKeys, depositRoot)
@@ -253,7 +253,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error setting last deposit root: %w", err))
 		return
 	}
-	logger.Debug("Updated available keys with last deposit root", "time", time.Since(start))
+	logger.Debug("Updated available keys with last deposit root", "elapsed", time.Since(start))
 
 	// Return the validators to SW
 	response := ValidatorsResponse{
@@ -269,7 +269,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	HandleSuccess(w, h.logger, response)
-	logger.Debug("Relay processing complete", "time", time.Since(start))
+	logger.Debug("Relay processing complete", "elapsed", time.Since(start))
 }
 
 // Create a signed exit message for a validator

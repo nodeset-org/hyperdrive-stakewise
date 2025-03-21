@@ -109,6 +109,10 @@ func (m *AvailableKeyManager) GetAvailableKeys(ctx context.Context, beaconDeposi
 	// Read the file
 	bytes, err := os.ReadFile(m.dataPath)
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			// File hasn't been generated yet, so there are no keys available
+			return []beacon.ValidatorPubkey{}, nil
+		}
 		return nil, fmt.Errorf("error reading available keys file [%s]: %w", m.dataPath, err)
 	}
 
