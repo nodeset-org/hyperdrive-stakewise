@@ -57,7 +57,7 @@ type ValidatorsResponse struct {
 	Validators []ValidatorInfo `json:"validators"`
 
 	// The signature from NodeSet for the validators
-	ValidatorsManagerSignature common.Hash `json:"validators_manager_signature"`
+	ValidatorsManagerSignature string `json:"validators_manager_signature"`
 }
 
 // Handle a request to get validators from the StakeWise Operator
@@ -157,19 +157,24 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Got available keys", "time", time.Since(start), debugEntries)
 
 	// Get the available count from NodeSet and clamp further
-	meta, err := hd.NodeSet_StakeWise.GetValidatorsMeta() // PLACEHOLDER until NCG is ready
+	validatorsInfo, err := hd.NodeSet_StakeWise.GetValidatorsInfo(res.DeploymentName, res.Vault)
 	if err != nil {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting meta info from nodeset: %w", err))
 		return
 	}
-	logger.Debug("Got meta info from NodeSet", "time", time.Since(start), "available", meta.AvailableCount)
-	if meta.AvailableCount == 0 {
+	if validatorsInfo.Data.NotRegistered {
+		HandleError(w, h.logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
+		return
+	}
+	available := validatorsInfo.Data.Available
+	logger.Debug("Got meta info from NodeSet", "time", time.Since(start), "available", available)
+	if available == 0 {
 		// Return an empty response
 		HandleSuccess(w, h.logger, ValidatorsResponse{})
 		return
 	}
-	if meta.AvailableCount < request.ValidatorsCount {
-		availableKeys = availableKeys[:meta.AvailableCount]
+	if available < request.ValidatorsCount {
+		availableKeys = availableKeys[:available]
 	}
 
 	// Get the private keys for the available pubkeys
@@ -178,8 +183,8 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		privateKeys[i], err = wallet.GetPrivateKeyForPubkey(key)
 		if err != nil {
 			HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting private key for pubkey [%s]: %w", key.HexWithPrefix(), err))
+			return
 		}
-		return
 	}
 	logger.Debug("Retrieved private keys", "time", time.Since(start))
 
@@ -222,12 +227,25 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Encrypted exit messages", "time", time.Since(start))
 
 	// Get a signature from NodeSet
-	signature, err := hd.NodeSet_StakeWise.GetValidatorsSignature(depositDatas, encryptedExits) // PLACEHOLDER until NCG is ready
+	signatureResponse, err := hd.NodeSet_StakeWise.GetValidatorManagerSignature(res.DeploymentName, res.Vault, depositRoot, depositDatas, encryptedExits)
 	if err != nil {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting validators signature from nodeset: %w", err))
 		return
 	}
-	logger.Debug("Got validators signature from NodeSet", "time", time.Since(start), "signature", signature.Hex())
+	if signatureResponse.Data.NotRegistered {
+		HandleError(w, h.logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
+		return
+	}
+	if signatureResponse.Data.InvalidPermissions {
+		HandleError(w, h.logger, http.StatusUnauthorized, fmt.Errorf("node does not have permission to register validators with this deployment"))
+		return
+	}
+	if signatureResponse.Data.VaultNotFound {
+		HandleError(w, h.logger, http.StatusUnprocessableEntity, fmt.Errorf("nodeset cannot find vault [%s] on deployment [%s]", res.Vault.Hex(), res.DeploymentName))
+		return
+	}
+	signature := signatureResponse.Data.Signature
+	logger.Debug("Got validators signature from NodeSet", "time", time.Since(start), "signature", signature)
 
 	// Set the last deposit root for those keys
 	err = keyMgr.SetLastDepositRoot(availableKeys, depositRoot)
