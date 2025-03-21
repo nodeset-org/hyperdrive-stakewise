@@ -100,31 +100,22 @@ func (m *AvailableKeyManager) AddNewKey(key beacon.ValidatorPubkey) error {
 	return nil
 }
 
+// Check if there are any candidate keys ready for validation and potential usage
+func (m *AvailableKeyManager) HasKeyCandidates() bool {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	return len(m.keys) > 0
+}
+
 // Get the keys that can be used for new deposits from the list of available keys.
 // As a side-effect this refreshes the backing list by filtering out any that have already been used in a deposit and saves it to disk.
 func (m *AvailableKeyManager) GetAvailableKeys(ctx context.Context, beaconDepositRoot common.Hash, skipSyncCheck bool) ([]beacon.ValidatorPubkey, error) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	// Read the file
-	bytes, err := os.ReadFile(m.dataPath)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			// File hasn't been generated yet, so there are no keys available
-			return []beacon.ValidatorPubkey{}, nil
-		}
-		return nil, fmt.Errorf("error reading available keys file [%s]: %w", m.dataPath, err)
-	}
-
-	// Deserialize it
-	var keys []AvailableKey
-	err = json.Unmarshal(bytes, &keys)
-	if err != nil {
-		return nil, fmt.Errorf("error deserializing available keys file [%s]: %w", m.dataPath, err)
-	}
-
 	// Filter the keys
-	keys, err = m.filterKeysOnBeacon(ctx, keys, skipSyncCheck)
+	keys, err := m.filterKeysOnBeacon(ctx, m.keys, skipSyncCheck)
 	if err != nil {
 		return nil, fmt.Errorf("error filtering keys via Beacon indices: %w", err)
 	}

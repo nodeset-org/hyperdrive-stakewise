@@ -82,7 +82,14 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Debug("Parsed request", "elapsed", time.Since(start))
 
-	// Requirements
+	// Short-circuit if there aren't any validators to get
+	if !keyMgr.HasKeyCandidates() {
+		logger.Debug("No candidate keys present")
+		HandleSuccess(w, h.logger, ValidatorsResponse{})
+		return
+	}
+
+	// Check the wallet
 	walletResponse, err := hd.Wallet.Status()
 	if err != nil {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting wallet status: %w", err))
@@ -94,6 +101,28 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		HandleError(w, h.logger, http.StatusUnprocessableEntity, fmt.Errorf("error checking wallet status: %w", err))
 		return
 	}
+	logger.Debug("Verified wallet status", "elapsed", time.Since(start))
+
+	// Check if NodeSet can support more validators
+	validatorsInfo, err := hd.NodeSet_StakeWise.GetValidatorsInfo(res.DeploymentName, res.Vault)
+	if err != nil {
+		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting meta info from nodeset: %w", err))
+		return
+	}
+	if validatorsInfo.Data.NotRegistered {
+		HandleError(w, h.logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
+		return
+	}
+	availableForNodeSet := validatorsInfo.Data.Available
+	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", availableForNodeSet)
+	if availableForNodeSet == 0 {
+		// Return an empty response
+		HandleSuccess(w, h.logger, ValidatorsResponse{})
+		return
+	}
+	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", availableForNodeSet)
+
+	// Get the current Beacon deposit root
 	err = sp.RequireEthClientSynced(ctx)
 	if err != nil {
 		if errors.Is(err, services.ErrExecutionClientNotSynced) {
@@ -103,18 +132,6 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error checking eth client status: %w", err))
 		return
 	}
-	err = sp.RequireBeaconClientSynced(ctx)
-	if err != nil {
-		if errors.Is(err, services.ErrBeaconNodeNotSynced) {
-			HandleError(w, h.logger, http.StatusUnprocessableEntity, err)
-			return
-		}
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error checking beacon client status: %w", err))
-		return
-	}
-	logger.Debug("Verified requirements", "elapsed", time.Since(start))
-
-	// Get the current Beacon deposit root
 	var depositRoot common.Hash
 	err = qMgr.Query(func(mc *batch.MultiCaller) error {
 		sp.GetBeaconDepositContract().GetDepositRoot(mc, &depositRoot)
@@ -127,6 +144,15 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Got deposit root", "elapsed", time.Since(start), "root", depositRoot.Hex())
 
 	// Get the current epoch
+	err = sp.RequireBeaconClientSynced(ctx)
+	if err != nil {
+		if errors.Is(err, services.ErrBeaconNodeNotSynced) {
+			HandleError(w, h.logger, http.StatusUnprocessableEntity, err)
+			return
+		}
+		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error checking beacon client status: %w", err))
+		return
+	}
 	beaconHead, err := bn.GetBeaconHead(ctx)
 	if err != nil {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting beacon head: %w", err))
@@ -150,32 +176,14 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	if len(availableKeys) > request.ValidatorsCount {
 		availableKeys = availableKeys[:request.ValidatorsCount]
 	}
+	if availableForNodeSet < request.ValidatorsCount {
+		availableKeys = availableKeys[:availableForNodeSet]
+	}
 	debugEntries := []any{}
 	for _, key := range availableKeys {
 		debugEntries = append(debugEntries, "key", key.HexWithPrefix())
 	}
 	logger.Debug("Got available keys", "elapsed", time.Since(start), debugEntries)
-
-	// Get the available count from NodeSet and clamp further
-	validatorsInfo, err := hd.NodeSet_StakeWise.GetValidatorsInfo(res.DeploymentName, res.Vault)
-	if err != nil {
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting meta info from nodeset: %w", err))
-		return
-	}
-	if validatorsInfo.Data.NotRegistered {
-		HandleError(w, h.logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
-		return
-	}
-	available := validatorsInfo.Data.Available
-	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", available)
-	if available == 0 {
-		// Return an empty response
-		HandleSuccess(w, h.logger, ValidatorsResponse{})
-		return
-	}
-	if available < request.ValidatorsCount {
-		availableKeys = availableKeys[:available]
-	}
 
 	// Get the private keys for the available pubkeys
 	privateKeys := make([]*eth2types.BLSPrivateKey, len(availableKeys))
