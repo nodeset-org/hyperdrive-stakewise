@@ -65,7 +65,6 @@ func NewAvailableKeyManager(sp IStakeWiseServiceProvider) (*AvailableKeyManager,
 		}
 
 		// Deserialize it
-		var keys []AvailableKey
 		err = json.Unmarshal(bytes, &keys)
 		if err != nil {
 			return nil, fmt.Errorf("error deserializing available keys file [%s]: %w", dataPath, err)

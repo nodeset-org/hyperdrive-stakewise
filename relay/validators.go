@@ -85,7 +85,9 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	// Short-circuit if there aren't any validators to get
 	if !keyMgr.HasKeyCandidates() {
 		logger.Debug("No candidate keys present")
-		HandleSuccess(w, h.logger, ValidatorsResponse{})
+		HandleSuccess(w, h.logger, ValidatorsResponse{
+			Validators: []ValidatorInfo{},
+		})
 		return
 	}
 
@@ -117,7 +119,9 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", availableForNodeSet)
 	if availableForNodeSet == 0 {
 		// Return an empty response
-		HandleSuccess(w, h.logger, ValidatorsResponse{})
+		HandleSuccess(w, h.logger, ValidatorsResponse{
+			Validators: []ValidatorInfo{},
+		})
 		return
 	}
 	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", availableForNodeSet)
@@ -170,13 +174,15 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	if len(availableKeys) == 0 {
 		// Return an empty response
 		logger.Debug("No available keys")
-		HandleSuccess(w, h.logger, ValidatorsResponse{})
+		HandleSuccess(w, h.logger, ValidatorsResponse{
+			Validators: []ValidatorInfo{},
+		})
 		return
 	}
 	if len(availableKeys) > request.ValidatorsCount {
 		availableKeys = availableKeys[:request.ValidatorsCount]
 	}
-	if availableForNodeSet < request.ValidatorsCount {
+	if availableForNodeSet < len(availableKeys) {
 		availableKeys = availableKeys[:availableForNodeSet]
 	}
 	debugEntries := []any{}

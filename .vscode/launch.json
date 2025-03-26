@@ -13,7 +13,13 @@
             "args": [
                 "-d",
                 "${env:HOME}/.hyperdrive/data/modules/stakewise",
-                "--hd",
+                "-s",
+                "/usr/share/hyperdrive/networks/modules/stakewise",
+                "-hk",
+                "${env:HOME}/.hyperdrive/secrets/daemon.key",
+                "-k",
+                "${env:HOME}/.hyperdrive/secrets/modules/stakewise/daemon.key",
+                "-hd",
                 "http://localhost:8080"
             ]
         }
