@@ -10,11 +10,11 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.1.4-0.20250321154333-4efd3b9518ec
-	github.com/nodeset-org/nodeset-client-go v1.2.3-0.20250320214020-5d13f36c825f
+	github.com/nodeset-org/hyperdrive-daemon v1.1.5-0.20250326194734-a29a4c1b5c1c
+	github.com/nodeset-org/nodeset-client-go v1.2.3-0.20250326184000-24e6e3271193
 	github.com/nodeset-org/osha v0.3.1
 	github.com/rocket-pool/batch-query v1.0.0
-	github.com/rocket-pool/node-manager-core v0.5.2-0.20250319163434-905cea4f4351
+	github.com/rocket-pool/node-manager-core v0.5.2-0.20250325164150-b359a52a7fb3
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.2
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
@@ -138,7 +138,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/supranational/blst v0.3.13 // indirect
+	github.com/supranational/blst v0.3.14 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect

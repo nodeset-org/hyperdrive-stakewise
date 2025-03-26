@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"net/url"
 
-	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
-	"github.com/nodeset-org/nodeset-client-go/common/stakewise"
 
 	"github.com/rocket-pool/node-manager-core/api/types"
-	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/wallet"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -88,12 +85,6 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting validator statuses: %w", err)
 	}
-
-	registeredPubkeysStatusMapping := make(map[beacon.ValidatorPubkey]stakewise.StakeWiseStatus)
-	for _, pubkeyStatus := range nodesetStatusResponse.Data.Validators {
-		registeredPubkeysStatusMapping[pubkeyStatus.Pubkey] = pubkeyStatus.Status
-	}
-
 	// Get status info for each pubkey
 	data.States = make([]swapi.ValidatorStateInfo, len(publicKeys))
 	for i, pubkey := range publicKeys {
@@ -110,7 +101,15 @@ func (c *statusGetValidatorsStatusesContext) PrepareData(data *swapi.ValidatorSt
 		}
 
 		// NodeSet status
-		state.NodesetStatus = swcommon.GetNodesetStatus(pubkey, registeredPubkeysStatusMapping)
+		if !nodesetStatusResponse.Data.NotRegistered {
+			for _, node := range nodesetStatusResponse.Data.Validators {
+				if node.Pubkey == pubkey {
+					state.NodeSet.Registered = true
+					state.NodeSet.ExitMessageUploaded = node.ExitMessageUploaded
+					break
+				}
+			}
+		}
 	}
 
 	return types.ResponseStatus_Success, nil

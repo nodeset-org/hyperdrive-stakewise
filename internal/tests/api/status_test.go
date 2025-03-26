@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
-	swtypes "github.com/nodeset-org/hyperdrive-stakewise/shared/types"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/node/validator"
 	"github.com/stretchr/testify/require"
 	eth2types "github.com/wealdtech/go-eth2-types/v2"
 )
 
+// NOTE: this uses a lot of SW v1 assumptions which may no longer hold for v2, investigate after the contracts are explored
 func TestValidatorStatus_Active(t *testing.T) {
 	// Take a snapshot, revert at the end
 	snapshotName, err := testMgr.CreateCustomSnapshot(hdtesting.Service_EthClients | hdtesting.Service_Filesystem)
@@ -85,7 +85,9 @@ func TestValidatorStatus_Active(t *testing.T) {
 	// Check the response
 	require.Len(t, response.Data.States, 1)
 	responseValidator := response.Data.States[0]
-	require.Equal(t, swtypes.NodesetStatus_RegisteredToStakewise, responseValidator.NodesetStatus)
+	require.Equal(t, pubkey, responseValidator.Pubkey)
+	require.True(t, responseValidator.NodeSet.Registered)
+	require.False(t, responseValidator.NodeSet.ExitMessageUploaded)
 	require.Equal(t, beacon.ValidatorState_ActiveOngoing, responseValidator.BeaconStatus)
 	require.Equal(t, strconv.FormatUint(validator.Index, 10), responseValidator.Index)
 	t.Logf("Validator was active, index = %s", responseValidator.Index)
