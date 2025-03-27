@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math/big"
 	"os"
 	"path/filepath"
 
@@ -20,6 +21,10 @@ var (
 		FeeRecipient:   common.HexToAddress("0x48319f97E5Da1233c21c48b80097c0FB7a20Ff86"),
 		SplitWarehouse: common.HexToAddress("0x8fb66F38cF86A3d5e8768f8F1754A24A6c661Fb8"),
 		PullSplit:      common.HexToAddress("0x6Cc15f76F76326aCe299Ad7b8fdf4693a96E05C1"),
+
+		// https://github.com/stakewise/sw-utils/blob/2d79588a64858d657f7b8a9a520b149727df0359/sw_utils/networks.py
+		Keeper:             common.HexToAddress("0x6B5815467da09DaA7DC83Db21c9239d98Bb487b5"),
+		KeeperGenesisBlock: big.NewInt(18470089),
 	}
 
 	// Holesky resources for reference in testing
@@ -28,6 +33,10 @@ var (
 		FeeRecipient:   common.HexToAddress("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
 		SplitWarehouse: common.HexToAddress("0x8fb66F38cF86A3d5e8768f8F1754A24A6c661Fb8"),
 		PullSplit:      common.HexToAddress("0xAefad0Baa37e1BAF14404bcc2c5E91e4B41c929B"),
+
+		// https://github.com/stakewise/sw-utils/blob/e07c24879082a44cf1d2c3a5de4a6f8db951e717/sw_utils/networks.py
+		Keeper:             common.HexToAddress("0x0xB580799Bf7d62721D1a523f0FDF2f5Ed7BA4e259"),
+		KeeperGenesisBlock: big.NewInt(215379),
 	}
 
 	// Devnet resources for reference in testing
@@ -36,6 +45,22 @@ var (
 		FeeRecipient:   common.HexToAddress("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
 		SplitWarehouse: common.HexToAddress("0x8fb66F38cF86A3d5e8768f8F1754A24A6c661Fb8"),
 		PullSplit:      common.HexToAddress("0xAefad0Baa37e1BAF14404bcc2c5E91e4B41c929B"),
+
+		// https://github.com/stakewise/sw-utils/blob/e07c24879082a44cf1d2c3a5de4a6f8db951e717/sw_utils/networks.py
+		Keeper:             common.HexToAddress("0x0xB580799Bf7d62721D1a523f0FDF2f5Ed7BA4e259"),
+		KeeperGenesisBlock: big.NewInt(215379),
+	}
+
+	// Hoodi resources for reference in testing
+	HoodiResourcesReference *StakeWiseResources = &StakeWiseResources{
+		Vault:          common.HexToAddress("0x0000000000000000000000000000000000000000"),
+		FeeRecipient:   common.HexToAddress("0x0000000000000000000000000000000000000000"),
+		SplitWarehouse: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+		PullSplit:      common.HexToAddress("0x0000000000000000000000000000000000000000"),
+
+		// https://github.com/stakewise/sw-utils/blob/2d79588a64858d657f7b8a9a520b149727df0359/sw_utils/networks.py
+		Keeper:             common.HexToAddress("0x0000000000000000000000000000000000000000"),
+		KeeperGenesisBlock: big.NewInt(0),
 	}
 )
 
@@ -92,6 +117,12 @@ type StakeWiseResources struct {
 	// The address of the PullSplit contract used to manage recipients/allocations and distributions
 	// See https://docs.splits.org/core/split-v2
 	PullSplit common.Address `yaml:"pullSplit" json:"pullSplit"`
+
+	// The address of the Stakewise keeper contract
+	Keeper common.Address `yaml:"keeper" json:"keeper"`
+
+	// The block on the network that StakeWise's keeper contract was deployed
+	KeeperGenesisBlock *big.Int `yaml:"keeperGenesisBlock" json:"keeperGenesisBlock"`
 }
 
 // A merged set of general resources and StakeWise-specific resources for the selected network

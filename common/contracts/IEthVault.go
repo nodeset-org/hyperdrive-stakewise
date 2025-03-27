@@ -2,6 +2,7 @@ package swcontracts
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 	"sync"
 
@@ -59,6 +60,6 @@ func NewIEthVault(address common.Address, ec eth.IExecutionClient, txMgr *eth.Tr
 // =============
 
 // Total assets available in the Vault. They can be staked or withdrawn.
-func (c *StakewiseVault) WithdrawableAssets(mc *batch.MultiCaller, out *common.Hash) {
+func (c *IEthVault) WithdrawableAssets(mc *batch.MultiCaller, out **big.Int) {
 	eth.AddCallToMulticaller(mc, c.contract, out, "withdrawableAssets")
 }
