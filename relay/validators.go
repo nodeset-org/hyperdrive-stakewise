@@ -26,7 +26,7 @@ type ValidatorsRequest struct {
 	ValidatorsStartIndex int `json:"validators_start_index"`
 
 	// Number of validators in current batch. Maximum batch size is determined by prococol config, currently 10.
-	ValidatorsCount int `json:"validators_count"`
+	ValidatorsBatchSize int `json:"validators_batch_size"`
 
 	// Total number of validators supplied by vault assets.
 	// validators_total should be more than or equal to validators_count.
@@ -116,7 +116,6 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	availableForNodeSet := validatorsInfo.Data.Available
-	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", availableForNodeSet)
 	if availableForNodeSet == 0 {
 		// Return an empty response
 		HandleSuccess(w, h.logger, ValidatorsResponse{
@@ -162,8 +161,8 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting beacon head: %w", err))
 		return
 	}
-	currentEpoch := beaconHead.Epoch
-	logger.Debug("Got current epoch", "elapsed", time.Since(start), "epoch", currentEpoch)
+	finalizedEpoch := beaconHead.FinalizedEpoch
+	logger.Debug("Got finalized epoch", "elapsed", time.Since(start), "epoch", finalizedEpoch)
 
 	// Get the available keys, clamping to the number of validators requested
 	availableKeys, err := keyMgr.GetAvailableKeys(ctx, depositRoot, true)
@@ -179,17 +178,22 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if len(availableKeys) > request.ValidatorsCount {
-		availableKeys = availableKeys[:request.ValidatorsCount]
+	if len(availableKeys) > request.ValidatorsBatchSize {
+		logger.Debug("Clamping available keys to requested count", "available", len(availableKeys), "requested", request.ValidatorsBatchSize)
+		availableKeys = availableKeys[:request.ValidatorsBatchSize]
 	}
 	if availableForNodeSet < len(availableKeys) {
+		logger.Debug("Clamping available keys to NodeSet limit", "available", len(availableKeys), "nodeSetLimit", availableForNodeSet)
 		availableKeys = availableKeys[:availableForNodeSet]
 	}
-	debugEntries := []any{}
+	debugEntries := []any{
+		"elapsed",
+		time.Since(start),
+	}
 	for _, key := range availableKeys {
 		debugEntries = append(debugEntries, "key", key.HexWithPrefix())
 	}
-	logger.Debug("Got available keys", "elapsed", time.Since(start), debugEntries)
+	logger.Debug("Got available keys", debugEntries...)
 
 	// Get the private keys for the available pubkeys
 	privateKeys := make([]*eth2types.BLSPrivateKey, len(availableKeys))
@@ -211,14 +215,14 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Generated deposit data", "elapsed", time.Since(start))
 
 	// Create signed exits
-	signatureDomain, err := bn.GetDomainData(ctx, eth2types.DomainVoluntaryExit[:], currentEpoch, false)
+	signatureDomain, err := bn.GetDomainData(ctx, eth2types.DomainVoluntaryExit[:], finalizedEpoch, false)
 	if err != nil {
 		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting voluntary exit domain data: %w", err))
 	}
 	exitMessages := make([]nscommon.ExitMessage, len(availableKeys))
 	currentIndex := uint64(request.ValidatorsStartIndex)
 	for i, key := range privateKeys {
-		exitMessage, err := createSignedExitMessage(key, currentIndex, currentEpoch, signatureDomain)
+		exitMessage, err := createSignedExitMessage(key, currentIndex, finalizedEpoch, signatureDomain)
 		if err != nil {
 			HandleError(w, h.logger, http.StatusInternalServerError, err)
 			return
