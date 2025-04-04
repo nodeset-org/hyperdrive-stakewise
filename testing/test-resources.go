@@ -20,8 +20,6 @@ func getTestResources(hdResources *hdconfig.MergedResources, deploymentName stri
 			DeploymentName: deploymentName,
 			Vault:          common.HexToAddress(StakeWiseVaultString),
 			FeeRecipient:   common.HexToAddress(""),
-			SplitWarehouse: common.HexToAddress(""),
-			PullSplit:      common.HexToAddress(""),
 		},
 	}
 }

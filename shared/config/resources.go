@@ -17,10 +17,8 @@ import (
 var (
 	// Mainnet resources for reference in testing
 	MainnetResourcesReference *StakeWiseResources = &StakeWiseResources{
-		Vault:          common.HexToAddress("0xE2AEECC76839692AEa35a8D119181b14ebf411c9"),
-		FeeRecipient:   common.HexToAddress("0x48319f97E5Da1233c21c48b80097c0FB7a20Ff86"),
-		SplitWarehouse: common.HexToAddress("0x8fb66F38cF86A3d5e8768f8F1754A24A6c661Fb8"),
-		PullSplit:      common.HexToAddress("0x6Cc15f76F76326aCe299Ad7b8fdf4693a96E05C1"),
+		Vault:        common.HexToAddress("0xE2AEECC76839692AEa35a8D119181b14ebf411c9"),
+		FeeRecipient: common.HexToAddress("0x48319f97E5Da1233c21c48b80097c0FB7a20Ff86"),
 
 		// https://github.com/stakewise/sw-utils/blob/2d79588a64858d657f7b8a9a520b149727df0359/sw_utils/networks.py
 		Keeper:             common.HexToAddress("0x6B5815467da09DaA7DC83Db21c9239d98Bb487b5"),
@@ -29,38 +27,32 @@ var (
 
 	// Holesky resources for reference in testing
 	HoleskyResourcesReference *StakeWiseResources = &StakeWiseResources{
-		Vault:          common.HexToAddress("0x646F5285D195e08E309cF9A5aDFDF68D6Fcc51C4"),
-		FeeRecipient:   common.HexToAddress("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
-		SplitWarehouse: common.HexToAddress("0x8fb66F38cF86A3d5e8768f8F1754A24A6c661Fb8"),
-		PullSplit:      common.HexToAddress("0xAefad0Baa37e1BAF14404bcc2c5E91e4B41c929B"),
+		Vault:        common.HexToAddress("0x646F5285D195e08E309cF9A5aDFDF68D6Fcc51C4"),
+		FeeRecipient: common.HexToAddress("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
 
 		// https://github.com/stakewise/sw-utils/blob/e07c24879082a44cf1d2c3a5de4a6f8db951e717/sw_utils/networks.py
-		Keeper:             common.HexToAddress("0x0xB580799Bf7d62721D1a523f0FDF2f5Ed7BA4e259"),
+		Keeper:             common.HexToAddress("0xB580799Bf7d62721D1a523f0FDF2f5Ed7BA4e259"),
 		KeeperGenesisBlock: big.NewInt(215379),
 	}
 
 	// Devnet resources for reference in testing
 	DevnetResourcesReference *StakeWiseResources = &StakeWiseResources{
-		Vault:          common.HexToAddress("0xf8763855473ce978232bBa37ef90fcFc8aAE10d1"),
-		FeeRecipient:   common.HexToAddress("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
-		SplitWarehouse: common.HexToAddress("0x8fb66F38cF86A3d5e8768f8F1754A24A6c661Fb8"),
-		PullSplit:      common.HexToAddress("0xAefad0Baa37e1BAF14404bcc2c5E91e4B41c929B"),
+		Vault:        common.HexToAddress("0xf8763855473ce978232bBa37ef90fcFc8aAE10d1"),
+		FeeRecipient: common.HexToAddress("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
 
 		// https://github.com/stakewise/sw-utils/blob/e07c24879082a44cf1d2c3a5de4a6f8db951e717/sw_utils/networks.py
-		Keeper:             common.HexToAddress("0x0xB580799Bf7d62721D1a523f0FDF2f5Ed7BA4e259"),
+		Keeper:             common.HexToAddress("0xB580799Bf7d62721D1a523f0FDF2f5Ed7BA4e259"),
 		KeeperGenesisBlock: big.NewInt(215379),
 	}
 
 	// Hoodi resources for reference in testing
 	HoodiResourcesReference *StakeWiseResources = &StakeWiseResources{
-		Vault:          common.HexToAddress("0x0000000000000000000000000000000000000000"),
-		FeeRecipient:   common.HexToAddress("0x0000000000000000000000000000000000000000"),
-		SplitWarehouse: common.HexToAddress("0x0000000000000000000000000000000000000000"),
-		PullSplit:      common.HexToAddress("0x0000000000000000000000000000000000000000"),
+		Vault:        common.HexToAddress("0xb163b6d4e1b317f3b4bace8770d74c1c21c4a131"),
+		FeeRecipient: common.HexToAddress("0x51FD45BAEfB12f54766B5C4d639b360Ea50063bd"),
 
-		// https://github.com/stakewise/sw-utils/blob/2d79588a64858d657f7b8a9a520b149727df0359/sw_utils/networks.py
-		Keeper:             common.HexToAddress("0x0000000000000000000000000000000000000000"),
-		KeeperGenesisBlock: big.NewInt(0),
+		// https://github.com/stakewise/sw-utils/blob/4a20b479bc84f1340fb34c02a89401e489537f53/sw_utils/networks.py
+		Keeper:             common.HexToAddress("0xA7D1Ac9D6F32B404C75626874BA56f7654c1dC0f"),
+		KeeperGenesisBlock: big.NewInt(94074),
 	}
 )
 
@@ -74,12 +66,6 @@ type StakeWiseVault struct {
 
 	// The fee recipient to use for the vault
 	FeeRecipient common.Address `yaml:"feeRecipient" json:"feeRecipient"`
-
-	// The address of the SplitWarehouse contract used for node operator fund distribution
-	SplitWarehouse common.Address `yaml:"splitWarehouse" json:"splitWarehouse"`
-
-	// The address of the PullSplit contract used for node operator fund distribution
-	PullSplit common.Address `yaml:"pullSplit" json:"pullSplit"`
 }
 
 // Network settings with a field for StakeWise-specific settings
@@ -108,15 +94,6 @@ type StakeWiseResources struct {
 	// The address of the NodeSet fee recipient, the Stakewise "smoothing pool".
 	// See https://github.com/stakewise/v3-core/blob/main/contracts/vaults/ethereum/mev/SharedMevEscrow.sol
 	FeeRecipient common.Address `yaml:"feeRecipient" json:"feeRecipient"`
-
-	// The address of the SplitWarehouse contract used to hold user funds.
-	// All node op rewards will live here; to claim them, call `Withdraw`.
-	// See https://docs.splits.org/core/warehouse
-	SplitWarehouse common.Address `yaml:"splitWarehouse" json:"splitWarehouse"`
-
-	// The address of the PullSplit contract used to manage recipients/allocations and distributions
-	// See https://docs.splits.org/core/split-v2
-	PullSplit common.Address `yaml:"pullSplit" json:"pullSplit"`
 
 	// The address of the Stakewise keeper contract
 	Keeper common.Address `yaml:"keeper" json:"keeper"`

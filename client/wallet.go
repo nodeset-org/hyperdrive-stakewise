@@ -37,11 +37,6 @@ func (r *WalletRequester) GenerateKeys(count uint64, restartVc bool) (*types.Api
 	return client.SendGetRequest[swapi.WalletGenerateKeysData](r, "generate-keys", "GenerateKeys", args)
 }
 
-// Claim StakeWise rewards
-func (r *WalletRequester) ClaimRewards() (*types.ApiResponse[swapi.WalletClaimRewardsData], error) {
-	return client.SendGetRequest[swapi.WalletClaimRewardsData](r, "claim-rewards", "ClaimRewards", nil)
-}
-
 // Export the wallet in encrypted ETH key format
 func (r *WalletRequester) Initialize() (*types.ApiResponse[swapi.WalletInitializeData], error) {
 	return client.SendGetRequest[swapi.WalletInitializeData](r, "initialize", "Initialize", nil)
