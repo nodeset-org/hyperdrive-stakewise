@@ -21,7 +21,7 @@ const (
 var iEthVaultAbi abi.ABI
 var iEthVaultOnce sync.Once
 
-// Binding for Stakewise vaults
+// Binding for StakeWise vaults
 type IEthVault struct {
 	contract *eth.Contract
 	txMgr    *eth.TransactionManager

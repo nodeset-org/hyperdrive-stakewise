@@ -15,6 +15,7 @@ const (
 	DefaultApiPort       uint16 = 8180
 	RelayLogName         string = "relay.log"
 	DefaultRelayPort     uint16 = 18180
+	DatabaseFilename     string = "sw-daemon.db"
 
 	// Volumes
 	DataVolume string = "swdata"

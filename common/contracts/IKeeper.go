@@ -60,8 +60,16 @@ func NewIKeeper(address common.Address, ec eth.IExecutionClient, txMgr *eth.Tran
 // === Events ===
 // ==============
 
-type ConfigUpdatedEvent struct {
+// Internal implementation of the ConfigUpdated event from the contract logs
+type configUpdatedEventImpl struct {
 	ConfigIPFSHash string `abi:"configIpfsHash" json:"configIpfsHash"`
+}
+
+// ConfigUpdatedEvent is emitted when the config is updated
+type ConfigUpdatedEvent struct {
+	ConfigIPFSHash string `json:"configIpfsHash"`
+	BlockNumber    uint64 `json:"blockNumber"`
+	TxIndex        uint   `json:"txIndex"`
 }
 
 // Get the ConfigUpdated events for the provided block range
@@ -78,10 +86,15 @@ func (c *IKeeper) ConfigUpdated(startBlock *big.Int, endBlock *big.Int, interval
 	// Process each event
 	events := make([]ConfigUpdatedEvent, 0, len(logs))
 	for _, log := range logs {
-		var event ConfigUpdatedEvent
-		err = c.contract.ContractImpl.UnpackLog(&event, eventName, log)
+		var internalEvent configUpdatedEventImpl
+		err = c.contract.ContractImpl.UnpackLog(&internalEvent, eventName, log)
 		if err != nil {
 			return nil, err
+		}
+		event := ConfigUpdatedEvent{
+			ConfigIPFSHash: internalEvent.ConfigIPFSHash,
+			BlockNumber:    log.BlockNumber,
+			TxIndex:        log.TxIndex,
 		}
 		events = append(events, event)
 	}
