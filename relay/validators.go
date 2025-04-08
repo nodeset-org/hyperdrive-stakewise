@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
+	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	nscommon "github.com/nodeset-org/nodeset-client-go/common"
 	batch "github.com/rocket-pool/batch-query"
 	"github.com/rocket-pool/node-manager-core/beacon"
@@ -62,6 +63,24 @@ type ValidatorsResponse struct {
 
 // Handle a request to get validators from the StakeWise Operator
 func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
+	// Check if the request is already in progress
+	h.validatorsLock.Lock()
+	if h.validatorsBusy {
+		h.validatorsLock.Unlock()
+		HandleError(w, h.logger, http.StatusTooManyRequests, fmt.Errorf("validators request already in progress"))
+		return
+	}
+
+	// Mark the handler as busy to prevent requests until it's done
+	h.validatorsBusy = true
+	h.validatorsLock.Unlock()
+	defer func() {
+		h.validatorsLock.Lock()
+		h.validatorsBusy = false
+		h.validatorsLock.Unlock()
+	}()
+
+	// Get the services
 	logger := h.logger
 	ctx := h.ctx
 	sp := h.sp
@@ -69,23 +88,29 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	hd := sp.GetHyperdriveClient()
 	qMgr := sp.GetQueryManager()
 	keyMgr := sp.GetAvailableKeyManager()
-	wallet := sp.GetWallet()
-	ddMgr := sp.GetDepositDataManager()
 	bn := sp.GetBeaconClient()
 	start := time.Now()
 
 	// Parse the body
 	var request ValidatorsRequest
-	pathArgs, queryArgs := ProcessApiRequest(h.logger, w, r, &request)
+	pathArgs, queryArgs := ProcessApiRequest(logger, w, r, &request)
 	if pathArgs == nil && queryArgs == nil {
 		return
 	}
 	logger.Debug("Parsed request", "elapsed", time.Since(start))
 
+	// Short-circuit if the private keys haven't been loaded yet
+	if !keyMgr.HasLoadedKeys() {
+		logger.Debug("Private keys need to be loaded, loading now")
+		HandleError(w, logger, http.StatusServiceUnavailable, fmt.Errorf("still loading private keys"))
+		keyMgr.LoadPrivateKeys(logger)
+		return
+	}
+
 	// Short-circuit if there aren't any validators to get
 	if !keyMgr.HasKeyCandidates() {
 		logger.Debug("No candidate keys present")
-		HandleSuccess(w, h.logger, ValidatorsResponse{
+		HandleSuccess(w, logger, ValidatorsResponse{
 			Validators: []ValidatorInfo{},
 		})
 		return
@@ -94,31 +119,32 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	// Check the wallet
 	walletResponse, err := hd.Wallet.Status()
 	if err != nil {
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting wallet status: %w", err))
-		return
-	}
-	walletStatus := walletResponse.Data.WalletStatus
-	err = sp.RequireStakewiseWalletReady(ctx, walletStatus)
-	if err != nil {
-		HandleError(w, h.logger, http.StatusUnprocessableEntity, fmt.Errorf("error checking wallet status: %w", err))
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting wallet status: %w", err))
 		return
 	}
 	logger.Debug("Verified wallet status", "elapsed", time.Since(start))
+	walletStatus := walletResponse.Data.WalletStatus
+	err = sp.RequireStakewiseWalletReady(ctx, walletStatus)
+	if err != nil {
+		HandleError(w, logger, http.StatusUnprocessableEntity, fmt.Errorf("error checking wallet status: %w", err))
+		return
+	}
+	logger.Debug("StakeWise wallet ready", "elapsed", time.Since(start))
 
 	// Check if NodeSet can support more validators
 	validatorsInfo, err := hd.NodeSet_StakeWise.GetValidatorsInfo(res.DeploymentName, res.Vault)
 	if err != nil {
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting meta info from nodeset: %w", err))
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting meta info from nodeset: %w", err))
 		return
 	}
 	if validatorsInfo.Data.NotRegistered {
-		HandleError(w, h.logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
+		HandleError(w, logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
 		return
 	}
 	availableForNodeSet := validatorsInfo.Data.Available
 	if availableForNodeSet == 0 {
 		// Return an empty response
-		HandleSuccess(w, h.logger, ValidatorsResponse{
+		HandleSuccess(w, logger, ValidatorsResponse{
 			Validators: []ValidatorInfo{},
 		})
 		return
@@ -129,10 +155,10 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	err = sp.RequireEthClientSynced(ctx)
 	if err != nil {
 		if errors.Is(err, services.ErrExecutionClientNotSynced) {
-			HandleError(w, h.logger, http.StatusUnprocessableEntity, err)
+			HandleError(w, logger, http.StatusUnprocessableEntity, err)
 			return
 		}
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error checking eth client status: %w", err))
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error checking eth client status: %w", err))
 		return
 	}
 	var depositRoot common.Hash
@@ -141,7 +167,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		return nil
 	}, nil)
 	if err != nil {
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting latest Beacon deposit root: %w", err))
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting latest Beacon deposit root: %w", err))
 		return
 	}
 	logger.Debug("Got deposit root", "elapsed", time.Since(start), "root", depositRoot.Hex())
@@ -150,30 +176,71 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	err = sp.RequireBeaconClientSynced(ctx)
 	if err != nil {
 		if errors.Is(err, services.ErrBeaconNodeNotSynced) {
-			HandleError(w, h.logger, http.StatusUnprocessableEntity, err)
+			HandleError(w, logger, http.StatusUnprocessableEntity, err)
 			return
 		}
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error checking beacon client status: %w", err))
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error checking beacon client status: %w", err))
 		return
 	}
 	beaconHead, err := bn.GetBeaconHead(ctx)
 	if err != nil {
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting beacon head: %w", err))
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting beacon head: %w", err))
 		return
 	}
 	finalizedEpoch := beaconHead.FinalizedEpoch
 	logger.Debug("Got finalized epoch", "elapsed", time.Since(start), "epoch", finalizedEpoch)
 
-	// Get the available keys, clamping to the number of validators requested
-	availableKeys, err := keyMgr.GetAvailableKeys(ctx, depositRoot, true)
-	if err != nil {
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting available keys: %w", err))
+	// Short-circuit if lookback scanning is required because it will take too long
+	if keyMgr.RequiresLookbackScan() {
+		logger.Info("Lookback scan required for new keys, starting scan")
+		HandleError(w, logger, http.StatusServiceUnavailable, fmt.Errorf("lookback scan required for new keys, try again later"))
+		_, _, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, swcommon.GetAvailableKeyOptions{
+			SkipSyncCheck:  true,
+			DoLookbackScan: true,
+		})
+		if err != nil {
+			logger.Error("Error during lookback scan", "error", err)
+		}
 		return
 	}
+
+	// Get the available keys, clamping to the number of validators requested
+	scanOpts := swcommon.GetAvailableKeyOptions{
+		SkipSyncCheck:  true,
+		DoLookbackScan: false,
+	}
+	availableKeys, ineligibleKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, scanOpts)
+	if err != nil {
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting available keys: %w", err))
+		return
+	}
+
+	// Log the ineligible keys
+	if len(ineligibleKeys) > 0 {
+		logger.Info("Ineligible keys found", "count", len(ineligibleKeys))
+		for key, reason := range ineligibleKeys {
+			switch reason {
+			case swcommon.IneligibleReason_NoPrivateKey:
+				logger.Info("No private key found", "key", key.PublicKey.HexWithPrefix())
+			case swcommon.IneligibleReason_LookbackScanRequired:
+				logger.Info("Key requires lookback scan still?", "key", key.PublicKey.HexWithPrefix())
+			case swcommon.IneligibleReason_OnBeacon:
+				logger.Info("Key already seen on Beacon", "key", key.PublicKey.HexWithPrefix())
+			case swcommon.IneligibleReason_HasDepositEvent:
+				logger.Info("Key has a deposit event already", "key", key.PublicKey.HexWithPrefix())
+			case swcommon.IneligibleReason_AlreadyUsedDepositRoot:
+				logger.Info("Key has already used this deposit root", "key", key.PublicKey.HexWithPrefix())
+			default:
+				logger.Info("Key is ineligible for unknown reason", "key", key.PublicKey.HexWithPrefix(), "reason", reason)
+			}
+		}
+	}
+
+	// Check if there are any available keys
 	if len(availableKeys) == 0 {
 		// Return an empty response
-		logger.Debug("No available keys")
-		HandleSuccess(w, h.logger, ValidatorsResponse{
+		logger.Debug("No available keys", "elapsed", time.Since(start))
+		HandleSuccess(w, logger, ValidatorsResponse{
 			Validators: []ValidatorInfo{},
 		})
 		return
@@ -191,25 +258,18 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		time.Since(start),
 	}
 	for _, key := range availableKeys {
-		debugEntries = append(debugEntries, "key", key.HexWithPrefix())
+		debugEntries = append(debugEntries, "key", key.PublicKey.HexWithPrefix())
 	}
-	logger.Debug("Got available keys", debugEntries...)
-
-	// Get the private keys for the available pubkeys
-	privateKeys := make([]*eth2types.BLSPrivateKey, len(availableKeys))
-	for i, key := range availableKeys {
-		privateKeys[i], err = wallet.GetPrivateKeyForPubkey(key)
-		if err != nil {
-			HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting private key for pubkey [%s]: %w", key.HexWithPrefix(), err))
-			return
-		}
-	}
-	logger.Debug("Retrieved private keys", "elapsed", time.Since(start))
+	logger.Info("Got available keys", debugEntries...)
 
 	// Create the deposit data
-	depositDatas, err := ddMgr.GenerateDepositData(logger, privateKeys)
+	privateKeys := make([]*eth2types.BLSPrivateKey, len(availableKeys))
+	for i, key := range availableKeys {
+		privateKeys[i] = key.PrivateKey
+	}
+	depositDatas, err := swcommon.GenerateDepositData(logger, res, privateKeys)
 	if err != nil {
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error generating deposit data: %w", err))
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error generating deposit data: %w", err))
 		return
 	}
 	logger.Debug("Generated deposit data", "elapsed", time.Since(start))
@@ -217,14 +277,14 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	// Create signed exits
 	signatureDomain, err := bn.GetDomainData(ctx, eth2types.DomainVoluntaryExit[:], finalizedEpoch, false)
 	if err != nil {
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting voluntary exit domain data: %w", err))
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting voluntary exit domain data: %w", err))
 	}
 	exitMessages := make([]nscommon.ExitMessage, len(availableKeys))
 	currentIndex := uint64(request.ValidatorsStartIndex)
 	for i, key := range privateKeys {
 		exitMessage, err := createSignedExitMessage(key, currentIndex, finalizedEpoch, signatureDomain)
 		if err != nil {
-			HandleError(w, h.logger, http.StatusInternalServerError, err)
+			HandleError(w, logger, http.StatusInternalServerError, err)
 			return
 		}
 		exitMessages[i] = exitMessage
@@ -237,7 +297,9 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	for i, exitMessage := range exitMessages {
 		encryptedMessage, err := nscommon.EncryptSignedExitMessage(exitMessage, res.EncryptionPubkey)
 		if err != nil {
-			HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error encrypting signed exit message for [%s]: %w", availableKeys[i].HexWithPrefix(), err))
+			HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf(
+				"error encrypting signed exit message for [%s]: %w", availableKeys[i].PublicKey.HexWithPrefix(), err),
+			)
 			return
 		}
 		encryptedExits[i] = encryptedMessage
@@ -247,19 +309,19 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	// Get a signature from NodeSet
 	signatureResponse, err := hd.NodeSet_StakeWise.GetValidatorManagerSignature(res.DeploymentName, res.Vault, depositRoot, depositDatas, encryptedExits)
 	if err != nil {
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error getting validators signature from nodeset: %w", err))
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting validators signature from nodeset: %w", err))
 		return
 	}
 	if signatureResponse.Data.NotRegistered {
-		HandleError(w, h.logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
+		HandleError(w, logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
 		return
 	}
 	if signatureResponse.Data.InvalidPermissions {
-		HandleError(w, h.logger, http.StatusUnauthorized, fmt.Errorf("node does not have permission to register validators with this deployment"))
+		HandleError(w, logger, http.StatusUnauthorized, fmt.Errorf("node does not have permission to register validators with this deployment"))
 		return
 	}
 	if signatureResponse.Data.VaultNotFound {
-		HandleError(w, h.logger, http.StatusUnprocessableEntity, fmt.Errorf("nodeset cannot find vault [%s] on deployment [%s]", res.Vault.Hex(), res.DeploymentName))
+		HandleError(w, logger, http.StatusUnprocessableEntity, fmt.Errorf("nodeset cannot find vault [%s] on deployment [%s]", res.Vault.Hex(), res.DeploymentName))
 		return
 	}
 	signature := signatureResponse.Data.Signature
@@ -268,7 +330,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	// Set the last deposit root for those keys
 	err = keyMgr.SetLastDepositRoot(availableKeys, depositRoot)
 	if err != nil {
-		HandleError(w, h.logger, http.StatusInternalServerError, fmt.Errorf("error setting last deposit root: %w", err))
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error setting last deposit root: %w", err))
 		return
 	}
 	logger.Debug("Updated available keys with last deposit root", "elapsed", time.Since(start))
@@ -280,13 +342,13 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	for i, key := range availableKeys {
 		response.Validators[i] = ValidatorInfo{
-			PublicKey:        key,
+			PublicKey:        key.PublicKey,
 			DepositSignature: beacon.ValidatorSignature(depositDatas[i].Signature[:]).HexWithPrefix(), // Type conversion is annoying, should be standardized somewhere
 			AmountGwei:       depositDatas[i].Amount,
 			ExitSignature:    exitMessages[i].Signature,
 		}
 	}
-	HandleSuccess(w, h.logger, response)
+	HandleSuccess(w, logger, response)
 	logger.Debug("Relay processing complete", "elapsed", time.Since(start))
 }
 

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
+	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/node/validator"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,6 @@ func TestValidatorStatus_Active(t *testing.T) {
 	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
 	wallet := sp.GetWallet()
-	ddMgr := sp.GetDepositDataManager()
 	nsMock := testMgr.GetNodeSetMockServer().GetManager()
 	nsDB := nsMock.GetDatabase()
 	deployment := nsDB.StakeWise.GetDeployment(res.DeploymentName)
@@ -39,7 +39,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	t.Logf("Validator key generated, pubkey = %s", pubkey.HexWithPrefix())
 
 	// Generate deposit data
-	depositData, err := ddMgr.GenerateDepositData(logger, []*eth2types.BLSPrivateKey{key})
+	depositData, err := swcommon.GenerateDepositData(logger, res, []*eth2types.BLSPrivateKey{key})
 	require.NoError(t, err)
 	t.Log("Deposit data generated")
 

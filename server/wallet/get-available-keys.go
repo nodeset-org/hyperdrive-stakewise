@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	duserver "github.com/nodeset-org/hyperdrive-daemon/module-utils/server"
 	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
+	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	api "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	batch "github.com/rocket-pool/batch-query"
 	"github.com/rocket-pool/node-manager-core/api/types"
@@ -58,6 +59,7 @@ func (c *walletGetAvailableKeysContext) PrepareData(data *api.WalletGetAvailable
 	qMgr := sp.GetQueryManager()
 	ec := sp.GetEthClient()
 	ctx := c.handler.ctx
+	logger := c.handler.logger.Logger
 	nodeAddress := walletStatus.Address.NodeAddress
 
 	// Requirements
@@ -91,11 +93,40 @@ func (c *walletGetAvailableKeysContext) PrepareData(data *api.WalletGetAvailable
 	}
 
 	// Get the list of keys ready for depositing
-	keys, err := keyMgr.GetAvailableKeys(ctx, depositRoot, true)
+	scanOpts := swcommon.GetAvailableKeyOptions{
+		SkipSyncCheck:  true,
+		DoLookbackScan: false,
+	}
+	if keyMgr.RequiresLookbackScan() {
+		scanOpts.DoLookbackScan = true
+	}
+	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, scanOpts)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting available keys: %w", err)
 	}
-	data.AvailablePubkeys = keys
+	for _, key := range goodKeys {
+		data.AvailablePubkeys = append(data.AvailablePubkeys, key.PublicKey)
+	}
+	for key, reason := range badKeys {
+		switch reason {
+		case swcommon.IneligibleReason_NoPrivateKey:
+			data.KeysMissingPrivateKey = append(data.KeysMissingPrivateKey, key.PublicKey)
+		case swcommon.IneligibleReason_LookbackScanRequired:
+			data.KeysRequiringLookbackScan = append(data.KeysRequiringLookbackScan, key.PublicKey)
+		case swcommon.IneligibleReason_OnBeacon:
+			data.KeysAlreadyOnBeacon = append(data.KeysAlreadyOnBeacon, key.PublicKey)
+		case swcommon.IneligibleReason_HasDepositEvent:
+			data.KeysWithDepositEvents = append(data.KeysWithDepositEvents, key.PublicKey)
+		case swcommon.IneligibleReason_AlreadyUsedDepositRoot:
+			data.KeysUsedWithDepositRoot = append(data.KeysUsedWithDepositRoot, key.PublicKey)
+		default:
+			logger.Warn(
+				"Key is not available for an unknown reason",
+				"key", key.PublicKey.HexWithPrefix(),
+				"reason", reason,
+			)
+		}
+	}
 
 	// Get the wallet's ETH balance
 	balance, err := ec.BalanceAt(ctx, nodeAddress, nil)
@@ -107,7 +138,7 @@ func (c *walletGetAvailableKeysContext) PrepareData(data *api.WalletGetAvailable
 	// Subtract the cost of the pending keys
 	data.EthPerKey = validatorDepositCost
 	costPerKeyBig := eth.EthToWei(validatorDepositCost)
-	pendingCountBig := big.NewInt(int64(len(keys)))
+	pendingCountBig := big.NewInt(int64(len(goodKeys)))
 	pendingCost := new(big.Int).Mul(costPerKeyBig, pendingCountBig)
 	remainingBalance := new(big.Int).Sub(balance, pendingCost)
 	requiredBalance := new(big.Int).Abs(remainingBalance)

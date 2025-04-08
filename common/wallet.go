@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/goccy/go-json"
-	"github.com/nodeset-org/hyperdrive-daemon/module-utils/services"
 	"github.com/nodeset-org/hyperdrive-daemon/shared"
 	"github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
@@ -35,11 +34,11 @@ type Wallet struct {
 	stakewisePasswordFilePath string
 	stakewiseKeystoreManager  *stakewiseKeystoreManager
 	data                      stakewiseWalletData
-	sp                        services.IModuleServiceProvider
+	sp                        IStakeWiseServiceProvider
 }
 
 // Create a new wallet
-func NewWallet(sp services.IModuleServiceProvider) (*Wallet, error) {
+func NewWallet(sp IStakeWiseServiceProvider) (*Wallet, error) {
 	moduleDir := sp.GetModuleDir()
 	validatorPath := filepath.Join(moduleDir, config.ValidatorsDirectory)
 	wallet := &Wallet{

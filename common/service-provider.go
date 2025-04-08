@@ -100,12 +100,6 @@ func NewStakeWiseServiceProvider(sp services.IModuleServiceProvider, settingsLis
 
 // Create a new service provider with Stakewise daemon-specific features, using custom services instead of loading them from the module service provider.
 func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServiceProvider, cfg *swconfig.StakeWiseConfig, resources *swconfig.MergedResources) (IStakeWiseServiceProvider, error) {
-	// Create the wallet
-	wallet, err := NewWallet(sp)
-	if err != nil {
-		return nil, fmt.Errorf("error initializing wallet: %w", err)
-	}
-
 	// Create the Beacon deposit contract provider
 	depositContract, err := swcontracts.NewBeaconDepositContract(resources.DepositContractAddress, sp.GetEthClient())
 	if err != nil {
@@ -116,10 +110,16 @@ func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServicePro
 	stakewiseSp := &stakeWiseServiceProvider{
 		IModuleServiceProvider: sp,
 		swCfg:                  cfg,
-		wallet:                 wallet,
 		resources:              resources,
 		depositContract:        depositContract,
 	}
+
+	// Create the wallet
+	wallet, err := NewWallet(stakewiseSp)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing wallet: %w", err)
+	}
+	stakewiseSp.wallet = wallet
 
 	// Create the deposit data manager
 	ddMgr, err := NewDepositDataManager(stakewiseSp)

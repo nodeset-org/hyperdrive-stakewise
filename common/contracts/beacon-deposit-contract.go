@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	batch "github.com/rocket-pool/batch-query"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/eth"
@@ -80,18 +79,17 @@ func (c *BeaconDepositContract) GetDepositRoot(mc *batch.MultiCaller, out *commo
 // === Events ===
 // ==============
 
-// BeaconDepositEvent represents a DepositEvent event raised by the BeaconDeposit contract.
-type BeaconDepositEvent struct {
-	Pubkey                []byte    `abi:"pubkey"`
-	WithdrawalCredentials []byte    `abi:"withdrawal_credentials"`
-	Amount                []byte    `abi:"amount"`
-	Signature             []byte    `abi:"signature"`
-	Index                 []byte    `abi:"index"`
-	Raw                   types.Log // Raw event data
+// depositEventImpl represents a DepositEvent event raised by the BeaconDeposit contract.
+type depositEventImpl struct {
+	Pubkey                []byte `abi:"pubkey"`
+	WithdrawalCredentials []byte `abi:"withdrawal_credentials"`
+	Amount                []byte `abi:"amount"`
+	Signature             []byte `abi:"signature"`
+	Index                 []byte `abi:"index"`
 }
 
-// Deposit Data event
-type DepositData struct {
+// Deposit event
+type DepositEvent struct {
 	Pubkey                beacon.ValidatorPubkey    `json:"pubkey"`
 	WithdrawalCredentials common.Hash               `json:"withdrawalCredentials"`
 	Amount                uint64                    `json:"amount"`
@@ -102,25 +100,25 @@ type DepositData struct {
 }
 
 // Get the deposit events for the provided block range. If pubkeys is provided, only deposits for those pubkeys will be returned.
-func (c *BeaconDepositContract) DepositEvents(pubkeys []beacon.ValidatorPubkey, startBlock *big.Int, intervalSize *big.Int) (map[beacon.ValidatorPubkey][]DepositData, error) {
+func (c *BeaconDepositContract) DepositEventsForPubkeys(pubkeys []beacon.ValidatorPubkey, startBlock *big.Int, endBlock *big.Int, intervalSize *big.Int) (map[beacon.ValidatorPubkey][]DepositEvent, error) {
 	// Create the initial map and pubkey lookup
 	requestedPubkeys := make(map[beacon.ValidatorPubkey]struct{}, len(pubkeys))
 	for _, pubkey := range pubkeys {
 		requestedPubkeys[pubkey] = struct{}{}
 	}
-	depositMap := make(map[beacon.ValidatorPubkey][]DepositData, len(pubkeys))
+	depositMap := make(map[beacon.ValidatorPubkey][]DepositEvent, len(pubkeys))
 
 	// Get the deposit events
 	addressFilter := []common.Address{c.contract.Address}
 	topicFilter := [][]common.Hash{{c.contract.ABI.Events[depositEventName].ID}}
-	logs, err := eth.GetLogs(c.ec, addressFilter, topicFilter, intervalSize, startBlock, nil, nil)
+	logs, err := eth.GetLogs(c.ec, addressFilter, topicFilter, intervalSize, startBlock, endBlock, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Process each event
 	for _, log := range logs {
-		depositEvent := new(BeaconDepositEvent)
+		depositEvent := new(depositEventImpl)
 		err = c.contract.ContractImpl.UnpackLog(depositEvent, depositEventName, log)
 		if err != nil {
 			return nil, err
@@ -139,7 +137,7 @@ func (c *BeaconDepositContract) DepositEvents(pubkeys []beacon.ValidatorPubkey, 
 		amount := binary.LittleEndian.Uint64(depositEvent.Amount)
 
 		// Create the deposit data wrapper and add it to this pubkey's collection
-		depositData := DepositData{
+		depositData := DepositEvent{
 			Pubkey:                pubkey,
 			WithdrawalCredentials: common.BytesToHash(depositEvent.WithdrawalCredentials),
 			Amount:                amount,
@@ -161,9 +159,49 @@ func (c *BeaconDepositContract) DepositEvents(pubkeys []beacon.ValidatorPubkey, 
 	return depositMap, nil
 }
 
+// Get the deposit events for the provided block range.
+func (c *BeaconDepositContract) DepositEvent(startBlock *big.Int, endBlock *big.Int, intervalSize *big.Int) ([]DepositEvent, error) {
+	// Get the deposit events
+	addressFilter := []common.Address{c.contract.Address}
+	topicFilter := [][]common.Hash{{c.contract.ABI.Events[depositEventName].ID}}
+	logs, err := eth.GetLogs(c.ec, addressFilter, topicFilter, intervalSize, startBlock, endBlock, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Process each event
+	events := make([]DepositEvent, 0, len(logs))
+	for _, log := range logs {
+		depositEvent := new(depositEventImpl)
+		err = c.contract.ContractImpl.UnpackLog(depositEvent, depositEventName, log)
+		if err != nil {
+			return nil, err
+		}
+
+		// Convert the deposit amount from little-endian binary to a uint64
+		amount := binary.LittleEndian.Uint64(depositEvent.Amount)
+
+		// Create the deposit data wrapper and add it to this pubkey's collection
+		event := DepositEvent{
+			Pubkey:                beacon.ValidatorPubkey(depositEvent.Pubkey),
+			WithdrawalCredentials: common.BytesToHash(depositEvent.WithdrawalCredentials),
+			Amount:                amount,
+			Signature:             beacon.ValidatorSignature(depositEvent.Signature),
+			TxHash:                log.TxHash,
+			BlockNumber:           log.BlockNumber,
+			TxIndex:               log.TxIndex,
+		}
+		events = append(events, event)
+	}
+
+	// Sort deposits by time
+	sortDepositData(events)
+	return events, nil
+}
+
 // Sorts a slice of deposit data entries - lower blocks come first, and if multiple transactions occur
 // in the same block, lower transaction indices come first
-func sortDepositData(data []DepositData) {
+func sortDepositData(data []DepositEvent) {
 	sort.Slice(data, func(i int, j int) bool {
 		first := data[i]
 		second := data[j]

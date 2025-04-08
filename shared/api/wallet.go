@@ -28,9 +28,14 @@ type WalletClaimRewardsData struct {
 }
 
 type WalletGetAvailableKeysData struct {
-	SufficientBalance    bool                     `json:"sufficientBalance"`
-	Balance              float64                  `json:"balance"`
-	AvailablePubkeys     []beacon.ValidatorPubkey `json:"availablePubkeys"`
-	EthPerKey            float64                  `json:"ethPerKey"`
-	RemainingEthRequired float64                  `json:"remainingEthRequired"`
+	SufficientBalance         bool                     `json:"sufficientBalance"`
+	Balance                   float64                  `json:"balance"`
+	AvailablePubkeys          []beacon.ValidatorPubkey `json:"availablePubkeys"`
+	EthPerKey                 float64                  `json:"ethPerKey"`
+	RemainingEthRequired      float64                  `json:"remainingEthRequired"`
+	KeysMissingPrivateKey     []beacon.ValidatorPubkey `json:"keysMissingPrivateKey"`
+	KeysRequiringLookbackScan []beacon.ValidatorPubkey `json:"keysRequiringLookbackScan"`
+	KeysAlreadyOnBeacon       []beacon.ValidatorPubkey `json:"keysAlreadyOnBeacon"`
+	KeysWithDepositEvents     []beacon.ValidatorPubkey `json:"keysWithDepositEvents"`
+	KeysUsedWithDepositRoot   []beacon.ValidatorPubkey `json:"keysUsedWithDepositRoot"`
 }

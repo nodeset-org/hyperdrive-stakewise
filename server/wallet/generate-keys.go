@@ -76,7 +76,7 @@ func (c *walletGenerateKeysContext) PrepareData(data *api.WalletGenerateKeysData
 		pubkeys[i] = pubkey
 
 		// Add the key to the available list
-		err = keyMgr.AddNewKey(pubkey)
+		err = keyMgr.AddNewKey(key)
 		if err != nil {
 			return types.ResponseStatus_Error, fmt.Errorf("error adding new key to available list: %w", err)
 		}
