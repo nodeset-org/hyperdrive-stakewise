@@ -39,3 +39,15 @@ type WalletGetAvailableKeysData struct {
 	KeysWithDepositEvents     []beacon.ValidatorPubkey `json:"keysWithDepositEvents"`
 	KeysUsedWithDepositRoot   []beacon.ValidatorPubkey `json:"keysUsedWithDepositRoot"`
 }
+
+type VaultInfo struct {
+	Address       common.Address           `json:"address"`
+	HasPermission bool                     `json:"hasPermission"`
+	Validators    []beacon.ValidatorPubkey `json:"validators"`
+}
+
+type WalletRegisteredKeysData struct {
+	NotRegisteredWithNodeSet bool        `json:"notRegisteredWithNodeSet"`
+	InvalidPermissions       bool        `json:"invalidPermissions"`
+	Vaults                   []VaultInfo `json:"vaults"`
+}

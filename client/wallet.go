@@ -46,3 +46,8 @@ func (r *WalletRequester) Initialize() (*types.ApiResponse[swapi.WalletInitializ
 func (r *WalletRequester) GetAvailableKeys() (*types.ApiResponse[swapi.WalletGetAvailableKeysData], error) {
 	return client.SendGetRequest[swapi.WalletGetAvailableKeysData](r, "get-available-keys", "GetAvailableKeys", nil)
 }
+
+// Get the keys that have been registered with NodeSet for each vault in the currently active deployment
+func (r *WalletRequester) GetRegisteredKeys() (*types.ApiResponse[swapi.WalletRegisteredKeysData], error) {
+	return client.SendGetRequest[swapi.WalletRegisteredKeysData](r, "registered-keys", "GetRegisteredKeys", nil)
+}
