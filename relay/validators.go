@@ -172,24 +172,6 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Debug("Got deposit root", "elapsed", time.Since(start), "root", depositRoot.Hex())
 
-	// Get the current epoch
-	err = sp.RequireBeaconClientSynced(ctx)
-	if err != nil {
-		if errors.Is(err, services.ErrBeaconNodeNotSynced) {
-			HandleError(w, logger, http.StatusUnprocessableEntity, err)
-			return
-		}
-		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error checking beacon client status: %w", err))
-		return
-	}
-	beaconHead, err := bn.GetBeaconHead(ctx)
-	if err != nil {
-		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting beacon head: %w", err))
-		return
-	}
-	finalizedEpoch := beaconHead.FinalizedEpoch
-	logger.Debug("Got finalized epoch", "elapsed", time.Since(start), "epoch", finalizedEpoch)
-
 	// Short-circuit if lookback scanning is required because it will take too long
 	if keyMgr.RequiresLookbackScan() {
 		logger.Info("Lookback scan required for new keys, starting scan")
@@ -275,14 +257,14 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Generated deposit data", "elapsed", time.Since(start))
 
 	// Create signed exits
-	signatureDomain, err := bn.GetDomainData(ctx, eth2types.DomainVoluntaryExit[:], finalizedEpoch, false)
+	signatureDomain, err := bn.GetDomainData(ctx, eth2types.DomainVoluntaryExit[:], res.CapellaForkEpoch, false)
 	if err != nil {
 		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting voluntary exit domain data: %w", err))
 	}
 	exitMessages := make([]nscommon.ExitMessage, len(availableKeys))
 	currentIndex := uint64(request.ValidatorsStartIndex)
 	for i, key := range privateKeys {
-		exitMessage, err := createSignedExitMessage(key, currentIndex, finalizedEpoch, signatureDomain)
+		exitMessage, err := createSignedExitMessage(key, currentIndex, res.CapellaForkEpoch, signatureDomain)
 		if err != nil {
 			HandleError(w, logger, http.StatusInternalServerError, err)
 			return

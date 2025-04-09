@@ -10,11 +10,12 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.1.5-0.20250326194734-a29a4c1b5c1c
-	github.com/nodeset-org/nodeset-client-go v1.2.3-0.20250326184000-24e6e3271193
+	github.com/nodeset-org/hyperdrive-daemon v1.1.5-0.20250409071628-0022d8fa1298
+	github.com/nodeset-org/nodeset-client-go v1.2.3-0.20250327200844-c7eb4bfedc9a
 	github.com/nodeset-org/osha v0.3.1
+	github.com/prysmaticlabs/prysm/v5 v5.1.0
 	github.com/rocket-pool/batch-query v1.0.0
-	github.com/rocket-pool/node-manager-core v0.5.2-0.20250325164150-b359a52a7fb3
+	github.com/rocket-pool/node-manager-core v0.5.2-0.20250409071438-eae0e23363a2
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.2
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
@@ -131,7 +132,6 @@ require (
 	github.com/prysmaticlabs/fastssz v0.0.0-20240620202422-a981b8ef89d3 // indirect
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20240328144219-a1caa50c3a1e // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.4-beta.0.20240624100937-73632381301b // indirect
-	github.com/prysmaticlabs/prysm/v5 v5.1.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sethvargo/go-password v0.3.1 // indirect
