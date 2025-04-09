@@ -80,12 +80,13 @@ func (c *walletRegisteredKeysContext) PrepareData(data *api.WalletRegisteredKeys
 	// For each vault, get the validator keys
 	for _, vault := range response.Data.Vaults {
 		vaultInfo := api.VaultInfo{
-			Address:    vault,
+			Name:       vault.Name,
+			Address:    vault.Address,
 			Validators: []beacon.ValidatorPubkey{},
 		}
-		vaultResponse, err := client.NodeSet_StakeWise.GetRegisteredValidators(res.DeploymentName, vault)
+		vaultResponse, err := client.NodeSet_StakeWise.GetRegisteredValidators(res.DeploymentName, vault.Address)
 		if err != nil {
-			return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators for vault [%s]: %w", vault.Hex(), err)
+			return types.ResponseStatus_Error, fmt.Errorf("error getting registered validators for vault [%s]: %w", vault.Address.Hex(), err)
 		}
 		if vaultResponse.Data.NotRegistered {
 			data.NotRegisteredWithNodeSet = true

@@ -15,6 +15,11 @@ import (
 	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
+const (
+	// Name for the test SW vault
+	VaultName string = "test-vault"
+)
+
 // Various singleton variables used for testing
 var (
 	testMgr *swtesting.StakeWiseTestManager = nil
@@ -55,7 +60,7 @@ func TestMain(m *testing.M) {
 	nsMgr := testMgr.GetNodeSetMockServer().GetManager()
 	nsDB := nsMgr.GetDatabase()
 	deployment := nsDB.StakeWise.AddDeployment(res.DeploymentName, big.NewInt(int64(res.ChainID)))
-	_ = deployment.AddVault(res.Vault)
+	_ = deployment.AddVault(VaultName, res.Vault)
 	nsDB.SetSecretEncryptionIdentity(hdtesting.EncryptionIdentity)
 
 	// Make a NodeSet account

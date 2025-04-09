@@ -41,6 +41,7 @@ type WalletGetAvailableKeysData struct {
 }
 
 type VaultInfo struct {
+	Name          string                   `json:"name"`
 	Address       common.Address           `json:"address"`
 	HasPermission bool                     `json:"hasPermission"`
 	Validators    []beacon.ValidatorPubkey `json:"validators"`
