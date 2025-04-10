@@ -169,8 +169,15 @@ func (m *AvailableKeyManager) AddNewKey(key *eth2types.BLSPrivateKey) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	// Add the new key
+	// Check if the key is already in the list
 	pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
+	for _, k := range m.data.Keys {
+		if k.PublicKey == pubkey {
+			return nil
+		}
+	}
+
+	// Add the new key
 	m.data.Keys = append(m.data.Keys, &AvailableKey{
 		PublicKey:          pubkey,
 		PrivateKey:         key,
