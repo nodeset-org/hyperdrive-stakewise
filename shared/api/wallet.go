@@ -52,3 +52,22 @@ type WalletRegisteredKeysData struct {
 	InvalidPermissions       bool        `json:"invalidPermissions"`
 	Vaults                   []VaultInfo `json:"vaults"`
 }
+
+type WalletRecoverKeysBody struct {
+	Pubkeys     []beacon.ValidatorPubkey `json:"pubkeys"`
+	StartIndex  uint64                   `json:"startIndex"`
+	Count       uint64                   `json:"count"`
+	SearchLimit uint64                   `json:"searchLimit"`
+	RestartVc   bool                     `json:"restartVc"`
+}
+
+type RecoveredKey struct {
+	Pubkey beacon.ValidatorPubkey `json:"pubkey"`
+	Index  uint64                 `json:"index"`
+}
+
+type WalletRecoverKeysData struct {
+	NotRegisteredWithNodeSet bool           `json:"notRegisteredWithNodeSet"`
+	Keys                     []RecoveredKey `json:"keys"`
+	SearchEnd                uint64         `json:"searchEnd"`
+}

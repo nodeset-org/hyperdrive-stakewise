@@ -6,6 +6,7 @@ import (
 	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	"github.com/rocket-pool/node-manager-core/api/client"
 	"github.com/rocket-pool/node-manager-core/api/types"
+	"github.com/rocket-pool/node-manager-core/beacon"
 )
 
 type WalletRequester struct {
@@ -50,4 +51,16 @@ func (r *WalletRequester) GetAvailableKeys() (*types.ApiResponse[swapi.WalletGet
 // Get the keys that have been registered with NodeSet for each vault in the currently active deployment
 func (r *WalletRequester) GetRegisteredKeys() (*types.ApiResponse[swapi.WalletRegisteredKeysData], error) {
 	return client.SendGetRequest[swapi.WalletRegisteredKeysData](r, "registered-keys", "GetRegisteredKeys", nil)
+}
+
+// Attempt to regenerate the private BLS keys for the given pubkeys using the provided search parameters
+func (r *WalletRequester) RecoverKeys(pubkeys []beacon.ValidatorPubkey, startIndex uint64, count uint64, searchLimit uint64, restartVc bool) (*types.ApiResponse[swapi.WalletRecoverKeysData], error) {
+	body := swapi.WalletRecoverKeysBody{
+		Pubkeys:     pubkeys,
+		StartIndex:  startIndex,
+		Count:       count,
+		SearchLimit: searchLimit,
+		RestartVc:   restartVc,
+	}
+	return client.SendPostRequest[swapi.WalletRecoverKeysData](r, "recover-keys", "RecoverKeys", body)
 }

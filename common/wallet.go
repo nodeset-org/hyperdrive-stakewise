@@ -11,6 +11,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/nodeset-org/hyperdrive-daemon/shared"
 	"github.com/nodeset-org/hyperdrive-daemon/shared/config"
+	swapi "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/node/validator"
@@ -99,6 +100,8 @@ func (w *Wallet) Reload() error {
 
 // Generate a new validator key and save it
 func (w *Wallet) GenerateNewValidatorKey() (*eth2types.BLSPrivateKey, error) {
+	keyMgr := w.sp.GetAvailableKeyManager()
+
 	// Get the path for the next validator key
 	path := fmt.Sprintf(shared.StakeWiseValidatorPath, w.data.NextAccount)
 
@@ -126,10 +129,16 @@ func (w *Wallet) GenerateNewValidatorKey() (*eth2types.BLSPrivateKey, error) {
 		return nil, fmt.Errorf("error saving validator key: %w", err)
 	}
 
-	// Save the key to the Stakewise folder
+	// Save the key to the StakeWise folder
 	err = w.stakewiseKeystoreManager.StoreValidatorKey(key, path)
 	if err != nil {
-		return nil, fmt.Errorf("error saving validator key to the Stakewise store: %w", err)
+		return nil, fmt.Errorf("error saving validator key to the StakeWise store: %w", err)
+	}
+
+	// Add it to the keymanager
+	err = keyMgr.AddNewKey(key)
+	if err != nil {
+		return nil, fmt.Errorf("error adding new key to available list: %w", err)
 	}
 	return key, nil
 }
@@ -225,6 +234,106 @@ func (w *Wallet) CheckIfStakewiseWalletExists() (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (w *Wallet) RecoverValidatorKeys(
+	keysToSearchFor []beacon.ValidatorPubkey,
+	startIndex uint64,
+	count uint64,
+	searchLimit uint64,
+) (
+	recoveredKeys []swapi.RecoveredKey,
+	searchEnd uint64,
+	err error,
+) {
+	keyMgr := w.sp.GetAvailableKeyManager()
+
+	// Sanity checking
+	if count == 0 {
+		return nil, 0, fmt.Errorf("count must be greater than 0")
+	}
+	if len(keysToSearchFor) == 0 {
+		return nil, 0, fmt.Errorf("no keys to search for")
+	}
+
+	// Make a map of the keys to search for
+	iteration := uint64(0)
+	searchMap := make(map[beacon.ValidatorPubkey]struct{}, len(keysToSearchFor))
+	for _, key := range keysToSearchFor {
+		searchMap[key] = struct{}{}
+	}
+
+	// Run the search for each index
+	recoveredKeys = make([]swapi.RecoveredKey, 0, count)
+	for {
+		index := startIndex + iteration
+
+		// Get the path for the validator key
+		path := fmt.Sprintf(shared.StakeWiseValidatorPath, index)
+
+		// Ask the HD daemon to generate the key
+		client := w.sp.GetHyperdriveClient()
+		response, err := client.Wallet.GenerateValidatorKey(path)
+		if err != nil {
+			return nil, 0, fmt.Errorf("error generating validator key for path [%s]: %w", path, err)
+		}
+
+		// Check if this is one of the keys we're looking for
+		privateKey, err := eth2types.BLSPrivateKeyFromBytes(response.Data.PrivateKey)
+		if err != nil {
+			return nil, 0, fmt.Errorf("error converting BLS private key for path %s: %w", path, err)
+		}
+		pubkey := beacon.ValidatorPubkey(privateKey.PublicKey().Marshal())
+		_, exists := searchMap[pubkey]
+		if exists {
+			// Add it to the list of recovered keys
+			recoveredKeys = append(recoveredKeys, swapi.RecoveredKey{
+				Pubkey: pubkey,
+				Index:  index,
+			})
+			delete(searchMap, pubkey)
+
+			// Update the next account index if needed
+			if index >= w.data.NextAccount {
+				w.data.NextAccount = index + 1
+				err = w.saveData()
+				if err != nil {
+					return nil, 0, fmt.Errorf("error saving wallet data: %w", err)
+				}
+			}
+
+			// Save the key
+			err = w.validatorManager.StoreKey(privateKey, path)
+			if err != nil {
+				return nil, 0, fmt.Errorf("error saving validator key: %w", err)
+			}
+			err = w.stakewiseKeystoreManager.StoreValidatorKey(privateKey, path)
+			if err != nil {
+				return nil, 0, fmt.Errorf("error saving validator key to the StakeWise store: %w", err)
+			}
+			err = keyMgr.AddNewKey(privateKey)
+			if err != nil {
+				return nil, 0, fmt.Errorf("error adding new key to available list: %w", err)
+			}
+		}
+
+		// Stop if we found all the keys
+		if len(searchMap) == 0 {
+			return recoveredKeys, index, nil
+		}
+
+		// Stop if we've hit the recovery limit
+		if uint64(len(recoveredKeys)) >= count {
+			return recoveredKeys, index, nil
+		}
+
+		// Stop if we've hit the search limit
+		if iteration >= searchLimit {
+			return recoveredKeys, index, nil
+		}
+
+		iteration++
+	}
 }
 
 // Write the wallet data to disk
