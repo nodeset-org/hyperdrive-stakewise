@@ -10,6 +10,10 @@ import (
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 )
 
+const (
+	ValidatorsPath = "validators"
+)
+
 // Base routes for the relay
 type baseHandler struct {
 	sp     swcommon.IStakeWiseServiceProvider
@@ -32,5 +36,5 @@ func NewBaseHandler(sp swcommon.IStakeWiseServiceProvider, logger *slog.Logger, 
 }
 
 func (h *baseHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/validators", h.getValidators).Methods(http.MethodPost)
+	router.HandleFunc("/"+ValidatorsPath, h.getValidators).Methods(http.MethodPost)
 }

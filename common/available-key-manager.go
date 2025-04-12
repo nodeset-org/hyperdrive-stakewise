@@ -91,36 +91,44 @@ type availableKeyManagerData struct {
 // Creates a new manager
 func NewAvailableKeyManager(sp IStakeWiseServiceProvider) (*AvailableKeyManager, error) {
 	dataPath := filepath.Join(sp.GetModuleDir(), swconfig.AvailableKeysFile)
+	mgr := &AvailableKeyManager{
+		dataPath: dataPath,
+		sp:       sp,
+		lock:     &sync.Mutex{},
+	}
+	err := mgr.Reload()
+	if err != nil {
+		return nil, fmt.Errorf("error loading available keys: %w", err)
+	}
+	return mgr, nil
+}
 
+// Reload the available keys from disk
+func (m *AvailableKeyManager) Reload() error {
 	// Initialize the available key list
 	data := new(availableKeyManagerData)
-	_, err := os.Stat(dataPath)
+	_, err := os.Stat(m.dataPath)
 	if err != nil {
 		// If the file doesn't exist, that's fine - use the empty list
 		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, fmt.Errorf("error checking status of available keys file [%s]: %w", dataPath, err)
+			return fmt.Errorf("error checking status of available keys file [%s]: %w", m.dataPath, err)
 		}
 	} else {
 		// Read the file
-		bytes, err := os.ReadFile(dataPath)
+		bytes, err := os.ReadFile(m.dataPath)
 		if err != nil {
-			return nil, fmt.Errorf("error reading available keys file [%s]: %w", dataPath, err)
+			return fmt.Errorf("error reading available keys file [%s]: %w", m.dataPath, err)
 		}
 
 		// Deserialize it
 		err = json.Unmarshal(bytes, data)
 		if err != nil {
-			return nil, fmt.Errorf("error deserializing available keys file [%s]: %w", dataPath, err)
+			return fmt.Errorf("error deserializing available keys file [%s]: %w", m.dataPath, err)
 		}
 	}
-
-	mgr := &AvailableKeyManager{
-		dataPath: dataPath,
-		sp:       sp,
-		lock:     &sync.Mutex{},
-		data:     data,
-	}
-	return mgr, nil
+	m.data = data
+	m.hasLoadedKeys = false
+	return nil
 }
 
 // Check if the private keys have been loaded yet

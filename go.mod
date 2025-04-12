@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
 	github.com/nodeset-org/hyperdrive-daemon v1.1.5-0.20250409190214-206db3bd8e62
-	github.com/nodeset-org/nodeset-client-go v1.2.3-0.20250409185923-ca68c05cfa19
+	github.com/nodeset-org/nodeset-client-go v1.2.3-0.20250410202958-18839696e648
 	github.com/nodeset-org/osha v0.3.1
 	github.com/prysmaticlabs/prysm/v5 v5.1.0
 	github.com/rocket-pool/batch-query v1.0.0

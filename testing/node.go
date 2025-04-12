@@ -14,6 +14,7 @@ import (
 	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
 	swclient "github.com/nodeset-org/hyperdrive-stakewise/client"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
+	"github.com/nodeset-org/hyperdrive-stakewise/relay"
 	swserver "github.com/nodeset-org/hyperdrive-stakewise/server"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 )
@@ -30,6 +31,9 @@ type StakeWiseNode struct {
 	// The daemon's HTTP API server
 	serverMgr *swserver.ServerManager
 
+	// The daemon's HTTP Relay server
+	relayServer *relay.RelayServer
+
 	// An HTTP API client for the daemon
 	client *swclient.ApiClient
 
@@ -39,20 +43,32 @@ type StakeWiseNode struct {
 	// The Hyperdrive node parent
 	hdNode *hdtesting.HyperdriveNode
 
-	// Wait group for graceful shutdown
-	wg *sync.WaitGroup
+	// Wait groups for graceful shutdown
+	apiWg   *sync.WaitGroup
+	relayWg *sync.WaitGroup
 }
 
 // Create a new StakeWise node, including its folder structure, service provider, server manager, and API client.
 func newStakeWiseNode(sp swcommon.IStakeWiseServiceProvider, address string, clientLogger *slog.Logger, hyperdriveNode *hdtesting.HyperdriveNode) (*StakeWiseNode, error) {
 	// Create the server
-	wg := &sync.WaitGroup{}
+	apiWg := &sync.WaitGroup{}
 	cfg := sp.GetConfig()
 	serverAuthMgr := auth.NewAuthorizationManager("", "sw-server", auth.DefaultRequestLifespan)
 	serverAuthMgr.SetKey([]byte(apiAuthKey))
-	serverMgr, err := swserver.NewServerManager(sp, address, cfg.ApiPort.Value, wg, serverAuthMgr)
+	serverMgr, err := swserver.NewServerManager(sp, address, cfg.ApiPort.Value, apiWg, serverAuthMgr)
 	if err != nil {
 		return nil, fmt.Errorf("error creating constellation server: %v", err)
+	}
+
+	// Create the relay
+	relayWg := &sync.WaitGroup{}
+	relayServer, err := relay.NewRelayServer(sp, address, cfg.RelayPort.Value)
+	if err != nil {
+		return nil, fmt.Errorf("error creating relay server: %v", err)
+	}
+	err = relayServer.Start(relayWg)
+	if err != nil {
+		return nil, fmt.Errorf("error starting relay server: %v", err)
 	}
 
 	// Create the client
@@ -66,12 +82,14 @@ func newStakeWiseNode(sp swcommon.IStakeWiseServiceProvider, address string, cli
 	apiClient := swclient.NewApiClient(url, clientLogger, nil, clientAuthMgr)
 
 	return &StakeWiseNode{
-		sp:        sp,
-		serverMgr: serverMgr,
-		client:    apiClient,
-		logger:    clientLogger,
-		hdNode:    hyperdriveNode,
-		wg:        wg,
+		sp:          sp,
+		serverMgr:   serverMgr,
+		relayServer: relayServer,
+		client:      apiClient,
+		logger:      clientLogger,
+		hdNode:      hyperdriveNode,
+		apiWg:       apiWg,
+		relayWg:     relayWg,
 	}, nil
 }
 
@@ -79,9 +97,15 @@ func newStakeWiseNode(sp swcommon.IStakeWiseServiceProvider, address string, cli
 func (n *StakeWiseNode) Close() error {
 	if n.serverMgr != nil {
 		n.serverMgr.Stop()
-		n.wg.Wait()
+		n.apiWg.Wait()
 		n.serverMgr = nil
 		n.logger.Info("Stopped StakeWise daemon API server")
+	}
+	if n.relayServer != nil {
+		n.relayServer.Stop()
+		n.relayWg.Wait()
+		n.relayServer = nil
+		n.logger.Info("Stopped StakeWise relay server")
 	}
 	return n.hdNode.Close()
 }
@@ -94,6 +118,11 @@ func (n *StakeWiseNode) GetServiceProvider() swcommon.IStakeWiseServiceProvider 
 // Get the HTTP API server for the node's daemon
 func (n *StakeWiseNode) GetServerManager() *swserver.ServerManager {
 	return n.serverMgr
+}
+
+// Get the HTTP Relay server for the node's daemon
+func (n *StakeWiseNode) GetRelayServer() *relay.RelayServer {
+	return n.relayServer
 }
 
 // Get the HTTP API client for interacting with the node's daemon server

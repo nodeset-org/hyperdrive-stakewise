@@ -23,6 +23,9 @@ type StakeWiseTestManager struct {
 
 	// The complete StakeWise node
 	node *StakeWiseNode
+
+	// The StakeWise operator mock
+	operatorMock *OperatorMock
 }
 
 // Creates a new TestManager instance
@@ -69,11 +72,20 @@ func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 		return nil, fmt.Errorf("error creating StakeWise service provider: %v", err)
 	}
 
-	// Create the Constellation node
-	node, err := newStakeWiseNode(stakeWiseSP, "localhost", tm.GetLogger(), hdNode)
+	// Create the StakeWise node
+	nodeIP := "localhost"
+	node, err := newStakeWiseNode(stakeWiseSP, nodeIP, tm.GetLogger(), hdNode)
 	if err != nil {
 		closeTestManager(tm)
-		return nil, fmt.Errorf("error creating Constellation node: %v", err)
+		return nil, fmt.Errorf("error creating StakeWise node: %v", err)
+	}
+
+	// Create the Operator mock
+	relayUrl := fmt.Sprintf("http://%s:%d", nodeIP, node.relayServer.GetPort())
+	operatorMock, err := NewOperatorMock(relayUrl, resources, 0)
+	if err != nil {
+		closeTestManager(tm)
+		return nil, fmt.Errorf("error creating operator mock: %v", err)
 	}
 
 	// Disable automining
@@ -87,6 +99,7 @@ func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 	m := &StakeWiseTestManager{
 		HyperdriveTestManager: tm,
 		node:                  node,
+		operatorMock:          operatorMock,
 	}
 	return m, nil
 }
@@ -94,6 +107,11 @@ func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 // Get the node handle
 func (m *StakeWiseTestManager) GetNode() *StakeWiseNode {
 	return m.node
+}
+
+// Get the operator mock handle
+func (m *StakeWiseTestManager) GetOperatorMock() *OperatorMock {
+	return m.operatorMock
 }
 
 // Closes the test manager, shutting down the nodeset mock server and all other resources
