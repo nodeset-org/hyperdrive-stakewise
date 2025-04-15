@@ -101,7 +101,7 @@ func NewStakeWiseServiceProvider(sp services.IModuleServiceProvider, settingsLis
 // Create a new service provider with Stakewise daemon-specific features, using custom services instead of loading them from the module service provider.
 func NewStakeWiseServiceProviderFromCustomServices(sp services.IModuleServiceProvider, cfg *swconfig.StakeWiseConfig, resources *swconfig.MergedResources) (IStakeWiseServiceProvider, error) {
 	// Create the Beacon deposit contract provider
-	depositContract, err := swcontracts.NewBeaconDepositContract(resources.DepositContractAddress, sp.GetEthClient())
+	depositContract, err := swcontracts.NewBeaconDepositContract(resources.DepositContractAddress, sp.GetEthClient(), sp.GetTransactionManager())
 	if err != nil {
 		return nil, fmt.Errorf("error creating Beacon deposit contract binding: %w", err)
 	}

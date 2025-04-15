@@ -1,13 +1,16 @@
 package api_test
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"log/slog"
 	"math/big"
 	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	hdshared "github.com/nodeset-org/hyperdrive-daemon/shared"
 	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
 	swtesting "github.com/nodeset-org/hyperdrive-stakewise/testing"
 	"github.com/nodeset-org/osha/keys"
@@ -26,9 +29,14 @@ var (
 	logger  *slog.Logger                    = nil
 	nsEmail string                          = "test@nodeset.io"
 
-	// CS nodes
+	// SW nodes
 	mainNode        *swtesting.StakeWiseNode
 	mainNodeAddress common.Address
+
+	// Transactor artifacts
+	keygen       *keys.KeyGenerator
+	mainNodeKey  *ecdsa.PrivateKey
+	mainNodeOpts *bind.TransactOpts
 )
 
 // Initialize a common server used by all tests
@@ -54,12 +62,27 @@ func TestMain(m *testing.M) {
 	}
 	mainNodeAddress = recoverResponse.Data.AccountAddress
 
-	// Set up NodeSet with the StakeWise vault
+	// Get the transactor for the main node
 	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
+	chainID := big.NewInt(int64(res.ChainID))
+	keygen, err = keys.NewKeyGenerator(keys.DefaultMnemonic, keys.DefaultEthDerivationPath, hdshared.StakeWiseValidatorPath)
+	if err != nil {
+		fail("error creating key generator: %v", err)
+	}
+	mainNodeKey, err = keygen.GetEthPrivateKey(0)
+	if err != nil {
+		fail("error getting main node key: %v", err)
+	}
+	mainNodeOpts, err = bind.NewKeyedTransactorWithChainID(mainNodeKey, chainID)
+	if err != nil {
+		fail("error creating main node transactor: %v", err)
+	}
+
+	// Set up NodeSet with the StakeWise vault
 	nsMgr := testMgr.GetNodeSetMockServer().GetManager()
 	nsDB := nsMgr.GetDatabase()
-	deployment := nsDB.StakeWise.AddDeployment(res.DeploymentName, big.NewInt(int64(res.ChainID)))
+	deployment := nsDB.StakeWise.AddDeployment(res.DeploymentName, chainID)
 	_ = deployment.AddVault(VaultName, res.Vault)
 	nsDB.SetSecretEncryptionIdentity(hdtesting.EncryptionIdentity)
 

@@ -141,7 +141,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		HandleError(w, logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
 		return
 	}
-	availableForNodeSet := validatorsInfo.Data.Available
+	availableForNodeSet := validatorsInfo.Data.AvailableValidators
 	if availableForNodeSet == 0 {
 		// Return an empty response
 		HandleSuccess(w, logger, ValidatorsResponse{

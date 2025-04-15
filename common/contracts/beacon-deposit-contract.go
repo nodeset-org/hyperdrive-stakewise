@@ -29,10 +29,11 @@ var depositContractOnce sync.Once
 type BeaconDepositContract struct {
 	contract *eth.Contract
 	ec       eth.IExecutionClient
+	txMgr    *eth.TransactionManager
 }
 
 // Create a new contract instance
-func NewBeaconDepositContract(address common.Address, ec eth.IExecutionClient) (*BeaconDepositContract, error) {
+func NewBeaconDepositContract(address common.Address, ec eth.IExecutionClient, txMgr *eth.TransactionManager) (*BeaconDepositContract, error) {
 	// Parse the ABI
 	var err error
 	depositContractOnce.Do(func() {
@@ -56,6 +57,7 @@ func NewBeaconDepositContract(address common.Address, ec eth.IExecutionClient) (
 	return &BeaconDepositContract{
 		contract: contract,
 		ec:       ec,
+		txMgr:    txMgr,
 	}, nil
 }
 
@@ -73,6 +75,16 @@ func (c *BeaconDepositContract) GetDepositCount(mc *batch.MultiCaller) func() ui
 
 func (c *BeaconDepositContract) GetDepositRoot(mc *batch.MultiCaller, out *common.Hash) {
 	eth.AddCallToMulticaller(mc, c.contract, out, "get_deposit_root")
+}
+
+// ====================
+// === Transactions ===
+// ====================
+
+// Creates a deposit to the Beacon deposit contract.
+// Note that the amount deposited must be set in opts.Value, and must match the deposit amount provided in the deposit data.
+func (c *BeaconDepositContract) Deposit(pubkey beacon.ValidatorPubkey, withdrawalCredentials common.Hash, signature beacon.ValidatorSignature, depositDataRoot common.Hash, opts *bind.TransactOpts) (*eth.TransactionInfo, error) {
+	return c.txMgr.CreateTransactionInfo(c.contract, "deposit", opts, pubkey[:], withdrawalCredentials[:], signature[:], depositDataRoot)
 }
 
 // ==============

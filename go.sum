@@ -372,10 +372,10 @@ github.com/multiformats/go-varint v0.0.7/go.mod h1:r8PUYw/fD/SjBCiKOoDlGF6QawOEL
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
-github.com/nodeset-org/hyperdrive-daemon v1.1.5-0.20250409190214-206db3bd8e62 h1:hy6//4pVQUdv5DW4qT2wfh4cVTZmIj3fSE4s217RBrc=
-github.com/nodeset-org/hyperdrive-daemon v1.1.5-0.20250409190214-206db3bd8e62/go.mod h1:R9JqoAi+KY5+g1dMYcqGrHJK4V66qDNGhPZb2ryFJG4=
-github.com/nodeset-org/nodeset-client-go v1.2.3-0.20250410202958-18839696e648 h1:TukY+ssCk/iwN96Kud8lqnVmZxHWFGzkUS2v/r/TReE=
-github.com/nodeset-org/nodeset-client-go v1.2.3-0.20250410202958-18839696e648/go.mod h1:X7vNVv8nzjV5FaiRS9epHmj5woxGSRvY6+qn2l0JY4Q=
+github.com/nodeset-org/hyperdrive-daemon v1.1.5-0.20250414212552-bfd1207576c6 h1:1k/AR2VLJkUlx0h0xWN2nw+begdXvCJjsK7pZbiv9JQ=
+github.com/nodeset-org/hyperdrive-daemon v1.1.5-0.20250414212552-bfd1207576c6/go.mod h1:Y8c6lIUiq+TbklGIuuv+23ZrWav+MCbBSLXEee9aV/0=
+github.com/nodeset-org/nodeset-client-go v1.2.3-0.20250414212133-c46c955a2b6f h1:9xlckVK+tMXfy/xY38sGmBPYs8tQphARHZ/tvVeY014=
+github.com/nodeset-org/nodeset-client-go v1.2.3-0.20250414212133-c46c955a2b6f/go.mod h1:X7vNVv8nzjV5FaiRS9epHmj5woxGSRvY6+qn2l0JY4Q=
 github.com/nodeset-org/osha v0.3.1 h1:xHDjCswxGDazY/UsZ0QOpcu7gTVnEuUwXcKGVAz72lI=
 github.com/nodeset-org/osha v0.3.1/go.mod h1:47D6kYMuxYDTbul3w/YtE1LKA0hfzbXzCEC3M9oQlOU=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
