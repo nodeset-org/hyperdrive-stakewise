@@ -41,10 +41,8 @@ type Wallet struct {
 // Create a new wallet
 func NewWallet(sp IStakeWiseServiceProvider) (*Wallet, error) {
 	moduleDir := sp.GetModuleDir()
-	validatorPath := filepath.Join(moduleDir, config.ValidatorsDirectory)
 	wallet := &Wallet{
 		sp:                        sp,
-		validatorManager:          validator.NewValidatorManager(validatorPath),
 		stakewiseWalletFilePath:   filepath.Join(moduleDir, swconfig.WalletFilename),
 		stakewisePasswordFilePath: filepath.Join(moduleDir, swconfig.PasswordFilename),
 	}
@@ -95,6 +93,11 @@ func (w *Wallet) Reload() error {
 		return fmt.Errorf("error creating Stakewise keystore manager: %w", err)
 	}
 	w.stakewiseKeystoreManager = stakewiseKeystoreMgr
+
+	// Make the validator manager
+	validatorPath := filepath.Join(moduleDir, config.ValidatorsDirectory)
+	validatorMgr := validator.NewValidatorManager(validatorPath)
+	w.validatorManager = validatorMgr
 	return nil
 }
 

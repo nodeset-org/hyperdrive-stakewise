@@ -16,6 +16,7 @@ import (
 	"github.com/goccy/go-json"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
 	"github.com/rocket-pool/node-manager-core/beacon"
+	bclient "github.com/rocket-pool/node-manager-core/beacon/client"
 	eth2types "github.com/wealdtech/go-eth2-types/v2"
 )
 
@@ -284,7 +285,7 @@ func (m *AvailableKeyManager) GetAvailableKeys(
 
 	// Remove keys that have already been used in a deposit contract event
 	start = time.Now()
-	goodKeys, badKeys, err = m.filterKeysOnDepositContract(ctx, logger, goodKeys, options.SkipSyncCheck, options.DoLookbackScan)
+	goodKeys, badKeys, err = m.filterKeysOnDepositEvents(ctx, logger, goodKeys, options.SkipSyncCheck, options.DoLookbackScan)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error filtering keys via deposit contract events: %w", err)
 	}
@@ -417,7 +418,7 @@ func (m *AvailableKeyManager) filterKeysOnBeacon(
 }
 
 // Filter the list of available keys to remove any that have deposit events in the deposit contract logs
-func (m *AvailableKeyManager) filterKeysOnDepositContract(
+func (m *AvailableKeyManager) filterKeysOnDepositEvents(
 	ctx context.Context,
 	logger *slog.Logger,
 	keys []*AvailableKey,
@@ -428,11 +429,78 @@ func (m *AvailableKeyManager) filterKeysOnDepositContract(
 	ineligibleKeys []*AvailableKey,
 	err error,
 ) {
+	eligibleKeys = []*AvailableKey{}
+	ineligibleKeys = []*AvailableKey{}
+
 	// Get the Execution client and make sure it's synced
 	ec := m.sp.GetEthClient()
 	if !skipSyncCheck {
 		if err := m.sp.RequireEthClientSynced(ctx); err != nil {
 			return nil, nil, err
+		}
+	}
+
+	// Check the pending deposits if we are doing a lookback scan
+	if doLookbackScan {
+		bn := m.sp.GetBeaconClient()
+		if !skipSyncCheck {
+			if err := m.sp.RequireBeaconClientSynced(ctx); err != nil {
+				return nil, nil, err
+			}
+		}
+		pendingDeposits, err := bn.GetPendingDeposits(ctx, "head")
+		if err != nil {
+			if errors.Is(err, bclient.ErrorStateNotPectra) {
+				// Pending deposits aren't available yet so ignore them
+				logger.Debug("Pending deposits aren't available until Pectra, ignoring")
+			} else if errors.Is(err, bclient.ErrorNotSupportedYet) {
+				// The client doesn't have the pending deposits route yet
+				logger.Debug("Pending deposits not supported by the Beacon Node yet, ignoring")
+			} else {
+				return nil, nil, fmt.Errorf("error getting pending deposits: %w", err)
+			}
+		}
+		logger.Debug("Got pending deposits", "count", len(pendingDeposits))
+
+		// Filter out any keys that are already in the pending deposits
+		keyMap := map[beacon.ValidatorPubkey]*AvailableKey{}
+		for _, key := range keys {
+			keyMap[key.PublicKey] = key
+		}
+		removedKeys := map[beacon.ValidatorPubkey]struct{}{}
+		for _, deposit := range pendingDeposits {
+			key, exists := keyMap[deposit.Pubkey]
+			if exists {
+				logger.Debug(
+					"Key was found in a pending deposit",
+					"pubkey", deposit.Pubkey.Hex(),
+					"slot", deposit.Slot,
+				)
+				_, removed := removedKeys[deposit.Pubkey]
+				if !removed {
+					removedKeys[deposit.Pubkey] = struct{}{}
+					key.PrivateKey = nil // Empty out the private key so it's not resident in memory
+					ineligibleKeys = append(ineligibleKeys, key)
+				}
+			}
+		}
+
+		// Remove the ineligible keys from the list
+		newKeys := make([]*AvailableKey, 0, len(keys))
+		for _, key := range keys {
+			_, exists := removedKeys[key.PublicKey]
+			if !exists {
+				newKeys = append(newKeys, key)
+			}
+		}
+		keys = newKeys
+		logger.Debug(
+			"Removed ineligible keys from pending deposits",
+			"removed", len(removedKeys),
+			"available", len(keys),
+		)
+		if len(keys) == 0 {
+			return eligibleKeys, ineligibleKeys, nil
 		}
 	}
 
@@ -487,11 +555,14 @@ func (m *AvailableKeyManager) filterKeysOnDepositContract(
 	}
 
 	// Ignore keys that are already in the deposit logs
-	eligibleKeys = []*AvailableKey{}
-	ineligibleKeys = []*AvailableKey{}
 	for _, key := range keys {
-		_, exists := depositEvents[key.PublicKey]
+		event, exists := depositEvents[key.PublicKey]
 		if exists {
+			logger.Debug(
+				"Key was found in a deposit event",
+				"pubkey", key.PublicKey.Hex(),
+				"tx", event[0].TxHash.Hex(),
+			)
 			key.PrivateKey = nil // Empty out the private key so it's not resident in memory
 			ineligibleKeys = append(ineligibleKeys, key)
 		} else {

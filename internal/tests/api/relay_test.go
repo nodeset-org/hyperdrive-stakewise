@@ -3,12 +3,10 @@ package api_test
 import (
 	"context"
 	"fmt"
-	"runtime/debug"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	hdtesting "github.com/nodeset-org/hyperdrive-daemon/testing"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	batchquery "github.com/rocket-pool/batch-query"
 	"github.com/rocket-pool/node-manager-core/beacon"
@@ -18,12 +16,12 @@ import (
 )
 
 func TestRelay_One(t *testing.T) {
-	// Take a snapshot, revert at the end
-	snapshotName, err := testMgr.CreateCustomSnapshot(hdtesting.Service_EthClients | hdtesting.Service_Filesystem)
+	// Revert to the initial setup
+	err := testMgr.RevertSnapshot(initSnapshot)
 	if err != nil {
-		fail("Error creating custom snapshot: %v", err)
+		fail("Error reverting to initial snapshot: %v", err)
 	}
-	defer relay_cleanup(snapshotName)
+	defer handle_panics()
 
 	// Get some resources
 	sp := mainNode.GetServiceProvider()
@@ -70,12 +68,12 @@ func TestRelay_One(t *testing.T) {
 }
 
 func TestRelay_Three(t *testing.T) {
-	// Take a snapshot, revert at the end
-	snapshotName, err := testMgr.CreateCustomSnapshot(hdtesting.Service_EthClients | hdtesting.Service_Filesystem)
+	// Revert to the initial setup
+	err := testMgr.RevertSnapshot(initSnapshot)
 	if err != nil {
-		fail("Error creating custom snapshot: %v", err)
+		fail("Error reverting to initial snapshot: %v", err)
 	}
-	defer relay_cleanup(snapshotName)
+	defer handle_panics()
 
 	// Get some resources
 	sp := mainNode.GetServiceProvider()
@@ -128,12 +126,12 @@ func TestRelay_Three(t *testing.T) {
 }
 
 func TestRelay_Staggered(t *testing.T) {
-	// Take a snapshot, revert at the end
-	snapshotName, err := testMgr.CreateCustomSnapshot(hdtesting.Service_EthClients | hdtesting.Service_Filesystem)
+	// Revert to the initial setup
+	err := testMgr.RevertSnapshot(initSnapshot)
 	if err != nil {
-		fail("Error creating custom snapshot: %v", err)
+		fail("Error reverting to initial snapshot: %v", err)
 	}
-	defer relay_cleanup(snapshotName)
+	defer handle_panics()
 
 	// Get some resources
 	sp := mainNode.GetServiceProvider()
@@ -303,38 +301,4 @@ func deposit(key *eth2types.BLSPrivateKey, opts *bind.TransactOpts) error {
 		return fmt.Errorf("error waiting for deploy transactions: %w", err)
 	}
 	return nil
-}
-
-// Clean up after each test
-func relay_cleanup(snapshotName string) {
-	// Handle panics
-	r := recover()
-	if r != nil {
-		debug.PrintStack()
-		fail("Recovered from panic: %v", r)
-	}
-
-	// Revert to the snapshot taken at the start of the test
-	err := testMgr.RevertToCustomSnapshot(snapshotName)
-	if err != nil {
-		fail("Error reverting to custom snapshot: %v", err)
-	}
-
-	// Reload the HD wallet to undo any changes made during the test
-	err = mainNode.GetHyperdriveNode().GetServiceProvider().GetWallet().Reload(testMgr.GetLogger())
-	if err != nil {
-		fail("Error reloading hyperdrive wallet: %v", err)
-	}
-
-	// Reload the SW wallet to undo any changes made during the test
-	err = mainNode.GetServiceProvider().GetWallet().Reload()
-	if err != nil {
-		fail("Error reloading stakewise wallet: %v", err)
-	}
-
-	// Reload the key manager to undo any changes made during the test
-	err = mainNode.GetServiceProvider().GetAvailableKeyManager().Reload()
-	if err != nil {
-		fail("Error reloading available key manager: %v", err)
-	}
 }

@@ -26,12 +26,12 @@ type StakeWiseTestManager struct {
 
 	// The StakeWise operator mock
 	operatorMock *OperatorMock
+
+	// The snapshot ID of the baseline snapshot
+	baselineSnapshotID string
 }
 
 // Creates a new TestManager instance
-// `hdAddress` is the address to bind the Hyperdrive daemon to.
-// `swAddress` is the address to bind the StakeWise daemon to.
-// `nsAddress` is the address to bind the nodeset.io mock server to.
 func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 	tm, err := hdtesting.NewHyperdriveTestManagerWithDefaults(provisionNetworkSettings)
 	if err != nil {
@@ -96,12 +96,27 @@ func NewStakeWiseTestManager() (*StakeWiseTestManager, error) {
 	}
 
 	// Return
-	m := &StakeWiseTestManager{
+	module := &StakeWiseTestManager{
 		HyperdriveTestManager: tm,
 		node:                  node,
 		operatorMock:          operatorMock,
 	}
-	return m, nil
+	tm.RegisterModule(module)
+
+	baselineSnapshot, err := tm.CreateSnapshot()
+	if err != nil {
+		return nil, fmt.Errorf("error creating baseline snapshot: %w", err)
+	}
+	module.baselineSnapshotID = baselineSnapshot
+	return module, nil
+}
+
+// ===============
+// === Getters ===
+// ===============
+
+func (m *StakeWiseTestManager) GetModuleName() string {
+	return "hyperdrive-stakewise"
 }
 
 // Get the node handle
@@ -114,17 +129,56 @@ func (m *StakeWiseTestManager) GetOperatorMock() *OperatorMock {
 	return m.operatorMock
 }
 
+// ====================
+// === Snapshotting ===
+// ====================
+
+// Reverts the service states to the baseline snapshot
+func (m *StakeWiseTestManager) DependsOnStakeWiseBaseline() error {
+	err := m.RevertSnapshot(m.baselineSnapshotID)
+	if err != nil {
+		return fmt.Errorf("error reverting to baseline snapshot: %w", err)
+	}
+	return nil
+}
+
+func (m *StakeWiseTestManager) TakeModuleSnapshot() (any, error) {
+	snapshotName, err := m.HyperdriveTestManager.TakeModuleSnapshot()
+	if err != nil {
+		return nil, fmt.Errorf("error taking snapshot: %w", err)
+	}
+	// The OperatorMock doesn't have any state so it doesn't need snapshotting
+	return snapshotName, nil
+}
+
+func (m *StakeWiseTestManager) RevertModuleToSnapshot(moduleState any) error {
+	err := m.HyperdriveTestManager.RevertModuleToSnapshot(moduleState)
+	if err != nil {
+		return fmt.Errorf("error reverting to snapshot: %w", err)
+	}
+
+	// Reload the SW wallet to undo any changes made during the test
+	wallet := m.node.sp.GetWallet()
+	err = wallet.Reload()
+	if err != nil {
+		return fmt.Errorf("error reloading stakewise wallet: %v", err)
+	}
+
+	// Reload the available key manager
+	err = m.node.sp.GetAvailableKeyManager().Reload()
+	if err != nil {
+		return fmt.Errorf("error reloading available key manager: %v", err)
+	}
+	return nil
+}
+
 // Closes the test manager, shutting down the nodeset mock server and all other resources
-func (m *StakeWiseTestManager) Close() error {
+func (m *StakeWiseTestManager) CloseModule() error {
 	err := m.node.Close()
 	if err != nil {
 		return fmt.Errorf("error closing StakeWise node: %w", err)
 	}
 	if m.HyperdriveTestManager != nil {
-		err := m.HyperdriveTestManager.Close()
-		if err != nil {
-			return fmt.Errorf("error closing test manager: %w", err)
-		}
 		m.HyperdriveTestManager = nil
 	}
 	return nil

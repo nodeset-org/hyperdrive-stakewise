@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math/big"
 	"os"
+	"runtime/debug"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -25,9 +26,10 @@ const (
 
 // Various singleton variables used for testing
 var (
-	testMgr *swtesting.StakeWiseTestManager = nil
-	logger  *slog.Logger                    = nil
-	nsEmail string                          = "test@nodeset.io"
+	testMgr      *swtesting.StakeWiseTestManager = nil
+	logger       *slog.Logger                    = nil
+	nsEmail      string                          = "test@nodeset.io"
+	initSnapshot string
 
 	// SW nodes
 	mainNode        *swtesting.StakeWiseNode
@@ -98,6 +100,12 @@ func TestMain(m *testing.M) {
 		fail("error registering with nodeset: %v", err)
 	}
 
+	// Create a new baseline snapshot
+	initSnapshot, err = testMgr.CreateSnapshot()
+	if err != nil {
+		fail("error creating test snapshot: %v", err)
+	}
+
 	// Run tests
 	code := m.Run()
 
@@ -116,7 +124,11 @@ func cleanup() {
 	if testMgr == nil {
 		return
 	}
-	err := testMgr.Close()
+	err := testMgr.RevertToBaseline()
+	if err != nil {
+		fail("error reverting to baseline: %v", err)
+	}
+	err = testMgr.Close()
 	if err != nil {
 		logger.Error("Error closing test manager", log.Err(err))
 	}
@@ -144,4 +156,14 @@ func registerWithNodeset(node *swtesting.StakeWiseNode, address common.Address) 
 		fail("node is not whitelisted with a nodeset user account")
 	}
 	return nil
+}
+
+// Clean up after each test
+func handle_panics() {
+	// Handle panics
+	r := recover()
+	if r != nil {
+		debug.PrintStack()
+		fail("Recovered from panic: %v", r)
+	}
 }
