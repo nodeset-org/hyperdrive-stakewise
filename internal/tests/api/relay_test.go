@@ -15,7 +15,12 @@ import (
 	eth2types "github.com/wealdtech/go-eth2-types/v2"
 )
 
-func TestRelay_One(t *testing.T) {
+var (
+	generatedKeysSnapshot string
+	pubkeys               []beacon.ValidatorPubkey
+)
+
+func GenerateTestKeys(t *testing.T) {
 	// Revert to the initial setup
 	err := testMgr.RevertSnapshot(initSnapshot)
 	if err != nil {
@@ -25,8 +30,35 @@ func TestRelay_One(t *testing.T) {
 
 	// Get some resources
 	sp := mainNode.GetServiceProvider()
-	res := sp.GetResources()
 	wallet := sp.GetWallet()
+
+	// Generate three validator keys
+	pubkeys = make([]beacon.ValidatorPubkey, 3)
+	for i := 0; i < 3; i++ {
+		key, err := wallet.GenerateNewValidatorKey()
+		require.NoError(t, err)
+		pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
+		pubkeys[i] = pubkey
+		t.Logf("Validator key generated, pubkey = %s", pubkey.HexWithPrefix())
+	}
+
+	// Take a snapshot
+	generatedKeysSnapshot, err = testMgr.TestManager.CreateSnapshot()
+	if err != nil {
+		fail("Error taking snapshot after key generation: %v", err)
+	}
+}
+
+func TestRelay_One(t *testing.T) {
+	err := testMgr.DependsOn(GenerateTestKeys, &generatedKeysSnapshot, t)
+	if err != nil {
+		fail("Error loading dependent state: %v", err)
+	}
+	defer handle_panics()
+
+	// Get some resources
+	sp := mainNode.GetServiceProvider()
+	res := sp.GetResources()
 	nsMock := testMgr.GetNodeSetMockServer().GetManager()
 	nsDB := nsMock.GetDatabase()
 	deployment := nsDB.StakeWise.GetDeployment(res.DeploymentName)
@@ -34,12 +66,6 @@ func TestRelay_One(t *testing.T) {
 	op := testMgr.GetOperatorMock()
 	keyMgr := sp.GetAvailableKeyManager()
 	logger := testMgr.GetLogger()
-
-	// Generate a validator key
-	key, err := wallet.GenerateNewValidatorKey()
-	require.NoError(t, err)
-	pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
-	t.Logf("Validator key generated, pubkey = %s", pubkey.HexWithPrefix())
 
 	// Set the max validators per node to 1
 	vault.MaxValidatorsPerUser = 1
@@ -64,21 +90,19 @@ func TestRelay_One(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, resp.Validators, 1)
-	require.Equal(t, resp.Validators[0].PublicKey, pubkey)
+	require.Equal(t, resp.Validators[0].PublicKey, pubkeys[0])
 }
 
 func TestRelay_Three(t *testing.T) {
-	// Revert to the initial setup
-	err := testMgr.RevertSnapshot(initSnapshot)
+	err := testMgr.DependsOn(GenerateTestKeys, &generatedKeysSnapshot, t)
 	if err != nil {
-		fail("Error reverting to initial snapshot: %v", err)
+		fail("Error loading dependent state: %v", err)
 	}
 	defer handle_panics()
 
 	// Get some resources
 	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
-	wallet := sp.GetWallet()
 	nsMock := testMgr.GetNodeSetMockServer().GetManager()
 	nsDB := nsMock.GetDatabase()
 	deployment := nsDB.StakeWise.GetDeployment(res.DeploymentName)
@@ -86,16 +110,6 @@ func TestRelay_Three(t *testing.T) {
 	op := testMgr.GetOperatorMock()
 	keyMgr := sp.GetAvailableKeyManager()
 	logger := testMgr.GetLogger()
-
-	// Generate three validator keys
-	pubkeys := make([]beacon.ValidatorPubkey, 3)
-	for i := 0; i < 3; i++ {
-		key, err := wallet.GenerateNewValidatorKey()
-		require.NoError(t, err)
-		pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
-		pubkeys[i] = pubkey
-		t.Logf("Validator key generated, pubkey = %s", pubkey.HexWithPrefix())
-	}
 
 	// Set the max validators per node to 1
 	vault.MaxValidatorsPerUser = 3
@@ -126,17 +140,15 @@ func TestRelay_Three(t *testing.T) {
 }
 
 func TestRelay_Staggered(t *testing.T) {
-	// Revert to the initial setup
-	err := testMgr.RevertSnapshot(initSnapshot)
+	err := testMgr.DependsOn(GenerateTestKeys, &generatedKeysSnapshot, t)
 	if err != nil {
-		fail("Error reverting to initial snapshot: %v", err)
+		fail("Error loading dependent state: %v", err)
 	}
 	defer handle_panics()
 
 	// Get some resources
 	sp := mainNode.GetServiceProvider()
 	res := sp.GetResources()
-	wallet := sp.GetWallet()
 	nsMock := testMgr.GetNodeSetMockServer().GetManager()
 	nsDB := nsMock.GetDatabase()
 	deployment := nsDB.StakeWise.GetDeployment(res.DeploymentName)
@@ -146,16 +158,6 @@ func TestRelay_Staggered(t *testing.T) {
 	logger := testMgr.GetLogger()
 	qMgr := sp.GetQueryManager()
 	bdc := sp.GetBeaconDepositContract()
-
-	// Generate three validator keys
-	pubkeys := make([]beacon.ValidatorPubkey, 3)
-	for i := 0; i < 3; i++ {
-		key, err := wallet.GenerateNewValidatorKey()
-		require.NoError(t, err)
-		pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
-		pubkeys[i] = pubkey
-		t.Logf("Validator key generated, pubkey = %s", pubkey.HexWithPrefix())
-	}
 
 	// Set the max validators per node to 1
 	vault.MaxValidatorsPerUser = 1
