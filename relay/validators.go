@@ -142,6 +142,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	availableForNodeSet := validatorsInfo.Data.AvailableValidators
+	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", availableForNodeSet)
 	if availableForNodeSet == 0 {
 		// Return an empty response
 		HandleSuccess(w, logger, ValidatorsResponse{
@@ -149,7 +150,6 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", availableForNodeSet)
 
 	// Get the current Beacon deposit root
 	err = sp.RequireEthClientSynced(ctx)

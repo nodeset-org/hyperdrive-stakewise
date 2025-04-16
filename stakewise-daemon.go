@@ -202,7 +202,10 @@ func main() {
 			fmt.Println("Shutting down daemon...")
 			stakewiseSp.CancelContextOnShutdown()
 			serverMgr.Stop()
-			relayServer.Stop()
+			err := relayServer.Stop()
+			if err != nil {
+				fmt.Printf("WARNING: relay server didn't shutdown cleanly: %s\n", err.Error())
+			}
 		}()
 
 		// Run the daemon until closed

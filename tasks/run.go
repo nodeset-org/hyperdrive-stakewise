@@ -8,9 +8,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/nodeset-org/hyperdrive-daemon/shared/types/api"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
-	"github.com/nodeset-org/hyperdrive-stakewise/shared/keys"
 	"github.com/rocket-pool/node-manager-core/log"
 	"github.com/rocket-pool/node-manager-core/utils"
 )
@@ -21,7 +19,7 @@ const (
 	tasksInterval time.Duration = time.Minute * 5
 
 	// Time between individual tasks
-	taskCooldown time.Duration = time.Second
+	//taskCooldown time.Duration = time.Second
 
 	// Time to wait if the tasks loop isn't ready before checking again
 	notReadySleepTime time.Duration = time.Second * 15
@@ -109,7 +107,8 @@ func (t *TaskLoop) Run() error {
 	return nil
 }
 
-// Get thee NodeSet server registration status
+// Get the NodeSet server registration status
+/*
 func (t *TaskLoop) getNodeSetRegistrationStatus() {
 	hd := t.sp.GetHyperdriveClient()
 	attempts := 3
@@ -154,6 +153,7 @@ func (t *TaskLoop) getNodeSetRegistrationStatus() {
 	}
 	t.logger.Error("Max login attempts reached")
 }
+*/
 
 // Wait until the chains and other resources are ready to be queried
 // Returns true if the owning loop needs to exit, false if it can continue

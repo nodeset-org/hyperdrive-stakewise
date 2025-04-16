@@ -102,7 +102,10 @@ func (n *StakeWiseNode) Close() error {
 		n.logger.Info("Stopped StakeWise daemon API server")
 	}
 	if n.relayServer != nil {
-		n.relayServer.Stop()
+		err := n.relayServer.Stop()
+		if err != nil {
+			n.logger.Warn("relay server didn't shutdown cleanly", "error", err.Error())
+		}
 		n.relayWg.Wait()
 		n.relayServer = nil
 		n.logger.Info("Stopped StakeWise relay server")
