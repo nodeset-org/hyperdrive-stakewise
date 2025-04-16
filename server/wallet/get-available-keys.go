@@ -14,8 +14,10 @@ import (
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
 	api "github.com/nodeset-org/hyperdrive-stakewise/shared/api"
 	batch "github.com/rocket-pool/batch-query"
+	"github.com/rocket-pool/node-manager-core/api/server"
 	"github.com/rocket-pool/node-manager-core/api/types"
 	"github.com/rocket-pool/node-manager-core/eth"
+	"github.com/rocket-pool/node-manager-core/utils/input"
 	"github.com/rocket-pool/node-manager-core/wallet"
 )
 
@@ -35,7 +37,9 @@ func (f *walletGetAvailableKeysContextFactory) Create(args url.Values) (*walletG
 	c := &walletGetAvailableKeysContext{
 		handler: f.handler,
 	}
-	inputErrs := []error{}
+	inputErrs := []error{
+		server.ValidateOptionalArg("lookback", args, input.ValidateBool, &c.doLookback, nil),
+	}
 	return c, errors.Join(inputErrs...)
 }
 
@@ -50,7 +54,8 @@ func (f *walletGetAvailableKeysContextFactory) RegisterRoute(router *mux.Router)
 // ===============
 
 type walletGetAvailableKeysContext struct {
-	handler *WalletHandler
+	handler    *WalletHandler
+	doLookback bool
 }
 
 func (c *walletGetAvailableKeysContext) PrepareData(data *api.WalletGetAvailableKeysData, walletStatus wallet.WalletStatus, opts *bind.TransactOpts) (types.ResponseStatus, error) {
@@ -97,7 +102,7 @@ func (c *walletGetAvailableKeysContext) PrepareData(data *api.WalletGetAvailable
 		SkipSyncCheck:  true,
 		DoLookbackScan: false,
 	}
-	if keyMgr.RequiresLookbackScan() {
+	if keyMgr.RequiresLookbackScan() || c.doLookback {
 		scanOpts.DoLookbackScan = true
 	}
 	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, scanOpts)

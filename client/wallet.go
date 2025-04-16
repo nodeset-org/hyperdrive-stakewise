@@ -44,8 +44,11 @@ func (r *WalletRequester) Initialize() (*types.ApiResponse[swapi.WalletInitializ
 }
 
 // Get the keys that are available for new deposits
-func (r *WalletRequester) GetAvailableKeys() (*types.ApiResponse[swapi.WalletGetAvailableKeysData], error) {
-	return client.SendGetRequest[swapi.WalletGetAvailableKeysData](r, "get-available-keys", "GetAvailableKeys", nil)
+func (r *WalletRequester) GetAvailableKeys(lookback bool) (*types.ApiResponse[swapi.WalletGetAvailableKeysData], error) {
+	args := map[string]string{
+		"lookback": strconv.FormatBool(lookback),
+	}
+	return client.SendGetRequest[swapi.WalletGetAvailableKeysData](r, "get-available-keys", "GetAvailableKeys", args)
 }
 
 // Get the keys that have been registered with NodeSet for each vault in the currently active deployment

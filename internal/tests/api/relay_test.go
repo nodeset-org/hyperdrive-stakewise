@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
+	"github.com/nodeset-org/osha/beacon/db"
 	batchquery "github.com/rocket-pool/batch-query"
 	"github.com/rocket-pool/node-manager-core/beacon"
 	"github.com/rocket-pool/node-manager-core/eth"
@@ -169,9 +170,24 @@ func TestRelay_Staggered(t *testing.T) {
 		t.Fatalf("Error committing block: %v", err)
 	}
 
+	// Do a deposit just to change the deposit root
+	key, err := keygen.GetBlsPrivateKey(1000)
+	require.NoError(t, err)
+	_, err = deposit(key, mainNodeOpts)
+	require.NoError(t, err)
+
+	// Get the deposit root
+	var depositRoot common.Hash
+	err = qMgr.Query(func(mc *batchquery.MultiCaller) error {
+		bdc.GetDepositRoot(mc, &depositRoot)
+		return nil
+	}, nil)
+	require.NoError(t, err)
+	nsDB.Eth.SetDepositRoot(depositRoot)
+
 	// Initialize the key manager
 	keyMgr.LoadPrivateKeys(logger)
-	_, _, err = keyMgr.GetAvailableKeys(context.Background(), logger, common.HexToHash("0x01"), swcommon.GetAvailableKeyOptions{
+	_, _, err = keyMgr.GetAvailableKeys(context.Background(), logger, depositRoot, swcommon.GetAvailableKeyOptions{
 		SkipSyncCheck:  true,
 		DoLookbackScan: true,
 	})
@@ -180,6 +196,7 @@ func TestRelay_Staggered(t *testing.T) {
 	// Run the relay
 	resp, err := op.SubmitValidatorsRequest()
 	require.NoError(t, err)
+	require.Len(t, resp.Validators, 1)
 	require.Equal(t, resp.Validators[0].PublicKey, pubkeys[0])
 	t.Log("First key was submitted for deposits as expected")
 
@@ -190,11 +207,10 @@ func TestRelay_Staggered(t *testing.T) {
 	t.Log("No keys were submitted for deposits as expected")
 
 	// Change the deposit root
-	key, err := keygen.GetBlsPrivateKey(1000)
+	key, err = keygen.GetBlsPrivateKey(1001)
 	require.NoError(t, err)
-	err = deposit(key, mainNodeOpts)
+	_, err = deposit(key, mainNodeOpts)
 	require.NoError(t, err)
-	var depositRoot common.Hash
 	err = qMgr.Query(func(mc *batchquery.MultiCaller) error {
 		bdc.GetDepositRoot(mc, &depositRoot)
 		return nil
@@ -214,7 +230,7 @@ func TestRelay_Staggered(t *testing.T) {
 	key, err = keygen.GetBlsPrivateKey(0)
 	require.NoError(t, err)
 	require.Equal(t, key.PublicKey().Marshal(), pubkeys[0][:])
-	err = deposit(key, mainNodeOpts)
+	_, err = deposit(key, mainNodeOpts)
 	require.NoError(t, err)
 	err = qMgr.Query(func(mc *batchquery.MultiCaller) error {
 		bdc.GetDepositRoot(mc, &depositRoot)
@@ -237,8 +253,256 @@ func TestRelay_Staggered(t *testing.T) {
 	t.Log("Next 2 keys were submitted for deposits as expected")
 }
 
+func TestRelay_DepositEvent(t *testing.T) {
+	err := testMgr.DependsOn(GenerateTestKeys, &generatedKeysSnapshot, t)
+	if err != nil {
+		fail("Error loading dependent state: %v", err)
+	}
+	defer handle_panics()
+
+	// Get some resources
+	sp := mainNode.GetServiceProvider()
+	res := sp.GetResources()
+	nsMock := testMgr.GetNodeSetMockServer().GetManager()
+	nsDB := nsMock.GetDatabase()
+	deployment := nsDB.StakeWise.GetDeployment(res.DeploymentName)
+	vault := deployment.GetVault(res.Vault)
+	op := testMgr.GetOperatorMock()
+	keyMgr := sp.GetAvailableKeyManager()
+	logger := testMgr.GetLogger()
+	qMgr := sp.GetQueryManager()
+	bdc := sp.GetBeaconDepositContract()
+
+	// Set the max validators per node to 1
+	vault.MaxValidatorsPerUser = 1
+
+	// Commit a block just so the latest block is fresh - otherwise the sync progress check will
+	// error out because the block is too old and it thinks the client just can't find any peers
+	err = testMgr.CommitBlock()
+	if err != nil {
+		t.Fatalf("Error committing block: %v", err)
+	}
+
+	// Do a deposit for key 0 to make an event
+	key, err := keygen.GetBlsPrivateKey(0)
+	require.NoError(t, err)
+	_, err = deposit(key, mainNodeOpts)
+	require.NoError(t, err)
+
+	// Get the deposit root
+	var depositRoot common.Hash
+	err = qMgr.Query(func(mc *batchquery.MultiCaller) error {
+		bdc.GetDepositRoot(mc, &depositRoot)
+		return nil
+	}, nil)
+	require.NoError(t, err)
+	nsDB.Eth.SetDepositRoot(depositRoot)
+
+	// Initialize the key manager
+	keyMgr.LoadPrivateKeys(logger)
+	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(context.Background(), logger, depositRoot, swcommon.GetAvailableKeyOptions{
+		SkipSyncCheck:  true,
+		DoLookbackScan: true,
+	})
+	require.NoError(t, err)
+	require.Len(t, goodKeys, 2)
+	require.Equal(t, goodKeys[0].PublicKey, pubkeys[1])
+	require.Equal(t, goodKeys[1].PublicKey, pubkeys[2])
+	require.Len(t, badKeys, 1)
+	for key, reason := range badKeys {
+		require.Equal(t, key.PublicKey, pubkeys[0])
+		require.Equal(t, reason, swcommon.IneligibleReason_HasDepositEvent)
+	}
+	t.Log("Validator 0 was marked as having a deposit event as expected")
+
+	// Run the relay - key 2 should be the only one that comes up
+	resp, err := op.SubmitValidatorsRequest()
+	require.NoError(t, err)
+	require.Len(t, resp.Validators, 1)
+	require.Equal(t, resp.Validators[0].PublicKey, pubkeys[1])
+	t.Log("Validator 1 was submitted for deposits as expected, validator 0 was skipped")
+}
+
+func TestRelay_PendingDepositEvent(t *testing.T) {
+	err := testMgr.DependsOn(GenerateTestKeys, &generatedKeysSnapshot, t)
+	if err != nil {
+		fail("Error loading dependent state: %v", err)
+	}
+	defer handle_panics()
+
+	// Get some resources
+	sp := mainNode.GetServiceProvider()
+	res := sp.GetResources()
+	nsMock := testMgr.GetNodeSetMockServer().GetManager()
+	nsDB := nsMock.GetDatabase()
+	deployment := nsDB.StakeWise.GetDeployment(res.DeploymentName)
+	vault := deployment.GetVault(res.Vault)
+	op := testMgr.GetOperatorMock()
+	keyMgr := sp.GetAvailableKeyManager()
+	logger := testMgr.GetLogger()
+	qMgr := sp.GetQueryManager()
+	bdc := sp.GetBeaconDepositContract()
+	bnMock := testMgr.GetBeaconMockManager()
+
+	// Set the max validators per node to 1
+	vault.MaxValidatorsPerUser = 1
+
+	// Commit a block just so the latest block is fresh - otherwise the sync progress check will
+	// error out because the block is too old and it thinks the client just can't find any peers
+	err = testMgr.CommitBlock()
+	if err != nil {
+		t.Fatalf("Error committing block: %v", err)
+	}
+
+	// Do a deposit just to change the deposit root
+	key, err := keygen.GetBlsPrivateKey(1000)
+	require.NoError(t, err)
+	_, err = deposit(key, mainNodeOpts)
+	require.NoError(t, err)
+
+	// Get the deposit root
+	var depositRoot common.Hash
+	err = qMgr.Query(func(mc *batchquery.MultiCaller) error {
+		bdc.GetDepositRoot(mc, &depositRoot)
+		return nil
+	}, nil)
+	require.NoError(t, err)
+	nsDB.Eth.SetDepositRoot(depositRoot)
+
+	// Add a fake deposit for 0 to the pending deposits on Beacon
+	bnMock.AddPendingDeposit(&db.Deposit{
+		Pubkey:                pubkeys[0],
+		WithdrawalCredentials: common.Hash{},
+		Amount:                32e9,
+		Signature:             beacon.ValidatorSignature{},
+		Slot:                  bnMock.GetCurrentSlot(),
+	})
+
+	// Initialize the key manager
+	keyMgr.LoadPrivateKeys(logger)
+	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(context.Background(), logger, depositRoot, swcommon.GetAvailableKeyOptions{
+		SkipSyncCheck:  true,
+		DoLookbackScan: true,
+	})
+	require.NoError(t, err)
+	require.Len(t, goodKeys, 2)
+	require.Equal(t, goodKeys[0].PublicKey, pubkeys[1])
+	require.Equal(t, goodKeys[1].PublicKey, pubkeys[2])
+	require.Len(t, badKeys, 1)
+	for key, reason := range badKeys {
+		require.Equal(t, key.PublicKey, pubkeys[0])
+		require.Equal(t, reason, swcommon.IneligibleReason_HasDepositEvent)
+	}
+	t.Log("Validator 0 was marked as having a deposit event as expected")
+
+	// Run the relay - key 2 should be the only one that comes up
+	resp, err := op.SubmitValidatorsRequest()
+	require.NoError(t, err)
+	require.Len(t, resp.Validators, 1)
+	require.Equal(t, resp.Validators[0].PublicKey, pubkeys[1])
+	t.Log("Validator 1 was submitted for deposits as expected, validator 0 was skipped")
+
+	/*
+		// Reload the key manager
+		err = keyMgr.Reload()
+		require.NoError(t, err)
+		require.False(t, keyMgr.RequiresLookbackScan())
+		require.False(t, keyMgr.HasLoadedKeys())
+		keyMgr.LoadPrivateKeys(logger)
+		require.False(t, keyMgr.RequiresLookbackScan())
+		require.True(t, keyMgr.HasLoadedKeys())
+		t.Log("Reloaded the key manager")
+
+		resp, err = op.SubmitValidatorsRequest()
+		require.NoError(t, err)
+		require.Len(t, resp.Validators, 0)
+		t.Log("No more validators were provided for deposits as expected")
+	*/
+}
+
+func TestRelay_ActiveOnBeacon(t *testing.T) {
+	err := testMgr.DependsOn(GenerateTestKeys, &generatedKeysSnapshot, t)
+	if err != nil {
+		fail("Error loading dependent state: %v", err)
+	}
+	defer handle_panics()
+
+	// Get some resources
+	sp := mainNode.GetServiceProvider()
+	res := sp.GetResources()
+	nsMock := testMgr.GetNodeSetMockServer().GetManager()
+	nsDB := nsMock.GetDatabase()
+	deployment := nsDB.StakeWise.GetDeployment(res.DeploymentName)
+	vault := deployment.GetVault(res.Vault)
+	op := testMgr.GetOperatorMock()
+	keyMgr := sp.GetAvailableKeyManager()
+	logger := testMgr.GetLogger()
+	qMgr := sp.GetQueryManager()
+	bdc := sp.GetBeaconDepositContract()
+	bnMock := testMgr.GetBeaconMockManager()
+
+	// Set the max validators per node to 1
+	vault.MaxValidatorsPerUser = 1
+
+	// Commit a block just so the latest block is fresh - otherwise the sync progress check will
+	// error out because the block is too old and it thinks the client just can't find any peers
+	err = testMgr.CommitBlock()
+	if err != nil {
+		t.Fatalf("Error committing block: %v", err)
+	}
+
+	// Do a deposit just to change the deposit root
+	key, err := keygen.GetBlsPrivateKey(1000)
+	require.NoError(t, err)
+	_, err = deposit(key, mainNodeOpts)
+	require.NoError(t, err)
+
+	// Get the deposit root
+	var depositRoot common.Hash
+	err = qMgr.Query(func(mc *batchquery.MultiCaller) error {
+		bdc.GetDepositRoot(mc, &depositRoot)
+		return nil
+	}, nil)
+	require.NoError(t, err)
+	nsDB.Eth.SetDepositRoot(depositRoot)
+
+	// Make the validator active on Beacon
+	bnValidator, err := bnMock.AddValidator(pubkeys[0], common.Hash{})
+	require.NoError(t, err)
+	bnValidator.Status = beacon.ValidatorState_ActiveOngoing
+	/*
+		validator0, exists := vault.Validators[mainNodeAddress][pubkeys[0]]
+		require.True(t, exists)
+		validator0.IsActiveOnBeacon = true
+	*/
+
+	// Initialize the key manager
+	keyMgr.LoadPrivateKeys(logger)
+	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(context.Background(), logger, depositRoot, swcommon.GetAvailableKeyOptions{
+		SkipSyncCheck:  true,
+		DoLookbackScan: true,
+	})
+	require.NoError(t, err)
+	require.Len(t, goodKeys, 2)
+	require.Equal(t, goodKeys[0].PublicKey, pubkeys[1])
+	require.Equal(t, goodKeys[1].PublicKey, pubkeys[2])
+	require.Len(t, badKeys, 1)
+	for key, reason := range badKeys {
+		require.Equal(t, key.PublicKey, pubkeys[0])
+		require.Equal(t, reason, swcommon.IneligibleReason_OnBeacon)
+	}
+	t.Log("Validator 0 was marked as having a deposit event as expected")
+
+	// Run the relay - key 2 should be the only one that comes up
+	resp, err := op.SubmitValidatorsRequest()
+	require.NoError(t, err)
+	require.Len(t, resp.Validators, 1)
+	require.Equal(t, resp.Validators[0].PublicKey, pubkeys[1])
+	t.Log("Validator 1 was submitted for deposits as expected, validator 0 was skipped")
+}
+
 // Perform a deposit to the Beacon deposit contract
-func deposit(key *eth2types.BLSPrivateKey, opts *bind.TransactOpts) error {
+func deposit(key *eth2types.BLSPrivateKey, opts *bind.TransactOpts) (beacon.ExtendedDepositData, error) {
 	sp := mainNode.GetServiceProvider()
 	bdc := sp.GetBeaconDepositContract()
 	txMgr := sp.GetTransactionManager()
@@ -251,7 +515,7 @@ func deposit(key *eth2types.BLSPrivateKey, opts *bind.TransactOpts) error {
 		[]*eth2types.BLSPrivateKey{key},
 	)
 	if err != nil {
-		return fmt.Errorf("error generating deposit data: %w", err)
+		return beacon.ExtendedDepositData{}, fmt.Errorf("error generating deposit data: %w", err)
 	}
 	depositData := depositDatas[0]
 
@@ -264,7 +528,8 @@ func deposit(key *eth2types.BLSPrivateKey, opts *bind.TransactOpts) error {
 				beacon.ValidatorSignature(depositData.Signature),
 				common.Hash(depositData.DepositDataRoot),
 				&bind.TransactOpts{
-					From:      opts.From,
+					From: opts.From,
+
 					Signer:    opts.Signer,
 					Nonce:     nil,
 					Context:   opts.Context,
@@ -277,7 +542,7 @@ func deposit(key *eth2types.BLSPrivateKey, opts *bind.TransactOpts) error {
 		},
 	}, true)
 	if err != nil {
-		return fmt.Errorf("error creating transaction submission: %w", err)
+		return beacon.ExtendedDepositData{}, fmt.Errorf("error creating transaction submission: %w", err)
 	}
 
 	// Execute the transaction
@@ -290,17 +555,17 @@ func deposit(key *eth2types.BLSPrivateKey, opts *bind.TransactOpts) error {
 		GasTipCap: opts.GasTipCap,
 	})
 	if err != nil {
-		return fmt.Errorf("error submitting mint transactions: %w", err)
+		return beacon.ExtendedDepositData{}, fmt.Errorf("error submitting mint transactions: %w", err)
 	}
 
 	// Mine the block
 	err = testMgr.CommitBlock()
 	if err != nil {
-		return fmt.Errorf("error committing block: %w", err)
+		return beacon.ExtendedDepositData{}, fmt.Errorf("error committing block: %w", err)
 	}
 	err = txMgr.WaitForTransactions(txs)
 	if err != nil {
-		return fmt.Errorf("error waiting for deploy transactions: %w", err)
+		return beacon.ExtendedDepositData{}, fmt.Errorf("error waiting for deploy transactions: %w", err)
 	}
-	return nil
+	return depositData, nil
 }
