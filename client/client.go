@@ -12,10 +12,10 @@ import (
 // Binder for the StakeWise API server
 type ApiClient struct {
 	context   client.IRequesterContext
+	Network   *NetworkRequester
 	Validator *ValidatorRequester
 	Wallet    *WalletRequester
 	Service   *ServiceRequester
-	Status    *StatusRequester
 }
 
 // Creates a new API client instance
@@ -24,10 +24,10 @@ func NewApiClient(apiUrl *url.URL, logger *slog.Logger, tracer *httptrace.Client
 
 	client := &ApiClient{
 		context:   context,
+		Network:   NewNetworkRequester(context),
 		Validator: NewValidatorRequester(context),
 		Wallet:    NewWalletRequester(context),
 		Service:   NewServiceRequester(context),
-		Status:    NewStatusRequester(context),
 	}
 	return client
 }

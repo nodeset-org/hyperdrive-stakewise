@@ -51,11 +51,6 @@ func (r *WalletRequester) GetAvailableKeys(lookback bool) (*types.ApiResponse[sw
 	return client.SendGetRequest[swapi.WalletGetAvailableKeysData](r, "get-available-keys", "GetAvailableKeys", args)
 }
 
-// Get the keys that have been registered with NodeSet for each vault in the currently active deployment
-func (r *WalletRequester) GetRegisteredKeys() (*types.ApiResponse[swapi.WalletRegisteredKeysData], error) {
-	return client.SendGetRequest[swapi.WalletRegisteredKeysData](r, "registered-keys", "GetRegisteredKeys", nil)
-}
-
 // Attempt to regenerate the private BLS keys for the given pubkeys using the provided search parameters
 func (r *WalletRequester) RecoverKeys(pubkeys []beacon.ValidatorPubkey, startIndex uint64, count uint64, searchLimit uint64, restartVc bool) (*types.ApiResponse[swapi.WalletRecoverKeysData], error) {
 	body := swapi.WalletRecoverKeysBody{
