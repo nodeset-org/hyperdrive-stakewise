@@ -38,3 +38,6 @@ build/
 # Binaries
 hyperdrive-stakewise
 logs/
+
+# Misc
+.DS_Store

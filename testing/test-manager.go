@@ -142,6 +142,7 @@ func (m *StakeWiseTestManager) DependsOnStakeWiseBaseline() error {
 	return nil
 }
 
+// Takes a snapshot of the service states
 func (m *StakeWiseTestManager) TakeModuleSnapshot() (any, error) {
 	snapshotName, err := m.HyperdriveTestManager.TakeModuleSnapshot()
 	if err != nil {
