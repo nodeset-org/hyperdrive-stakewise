@@ -13,7 +13,7 @@ import (
 const (
 	// Tags
 	daemonTag   string = "nodeset/hyperdrive-stakewise:v" + shared.StakewiseVersion
-	operatorTag string = "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:v2.1.3"
+	operatorTag string = "europe-west4-docker.pkg.dev/stakewiselabs/public/v3-operator:v3.1.1"
 )
 
 // Configuration for Stakewise
@@ -21,8 +21,11 @@ type StakeWiseConfig struct {
 	// Toggle for enabling the module
 	Enabled config.Parameter[bool]
 
-	// Port to run the Stakewise API server on
+	// Port to run the StakeWise API server on
 	ApiPort config.Parameter[uint16]
+
+	// Port to run the StakeWise Relay server on
+	RelayPort config.Parameter[uint16]
 
 	// Toggle for verifying deposit data Merkle roots before saving
 	VerifyDepositsRoot config.Parameter[bool]
@@ -60,8 +63,8 @@ func NewStakeWiseConfig(hdCfg *hdconfig.HyperdriveConfig, networks []*StakeWiseS
 			ParameterCommon: &config.ParameterCommon{
 				ID:                 ids.StakewiseEnableID,
 				Name:               "Enable",
-				Description:        "Enable support for Stakewise (see more at https://docs.nodeset.io).",
-				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon, ContainerID_StakewiseOperator, ContainerID_StakewiseValidator},
+				Description:        "Enable support for StakeWise (see more at https://docs.nodeset.io).",
+				AffectsContainers:  []config.ContainerID{ContainerID_StakeWiseDaemon, ContainerID_StakewiseOperator, ContainerID_StakewiseValidator},
 				CanBeBlank:         false,
 				OverwriteOnUpgrade: false,
 			},
@@ -74,8 +77,8 @@ func NewStakeWiseConfig(hdCfg *hdconfig.HyperdriveConfig, networks []*StakeWiseS
 			ParameterCommon: &config.ParameterCommon{
 				ID:                 ids.ApiPortID,
 				Name:               "Daemon API Port",
-				Description:        "The port that the Stakewise daemon's API server should run on. Note this is bound to the local machine only; it cannot be accessed by other machines.",
-				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon},
+				Description:        "The port that the StakeWise daemon's API server should run on. Note this is bound to the local machine only; it cannot be accessed by other machines.",
+				AffectsContainers:  []config.ContainerID{ContainerID_StakeWiseDaemon},
 				CanBeBlank:         false,
 				OverwriteOnUpgrade: false,
 			},
@@ -84,12 +87,26 @@ func NewStakeWiseConfig(hdCfg *hdconfig.HyperdriveConfig, networks []*StakeWiseS
 			},
 		},
 
+		RelayPort: config.Parameter[uint16]{
+			ParameterCommon: &config.ParameterCommon{
+				ID:                 ids.RelayPortID,
+				Name:               "Daemon Relay Port",
+				Description:        "The port that the StakeWise daemon's relay server should run on. The relay is an HTTP server the StakeWise Operator service will interact with when it requests validator keys for new deposits. It is not related to the daemon's Hyperdrive API.\n\nNote this is bound to the local machine only; it cannot be accessed by other machines.",
+				AffectsContainers:  []config.ContainerID{ContainerID_StakeWiseDaemon},
+				CanBeBlank:         false,
+				OverwriteOnUpgrade: false,
+			},
+			Default: map[config.Network]uint16{
+				config.Network_All: DefaultRelayPort,
+			},
+		},
+
 		VerifyDepositsRoot: config.Parameter[bool]{
 			ParameterCommon: &config.ParameterCommon{
 				ID:                 ids.VerifyDepositRootsID,
 				Name:               "Verify Deposits Root",
 				Description:        "Enable this to verify that the Merkle root of aggregated deposit data returned by the NodeSet server matches the Merkle root stored in the NodeSet vault contract. This is a safety mechanism to ensure the Stakewise Operator container won't try to submit deposits for validators that the NodeSet vault hasn't verified yet.\n\n[orange]Don't disable this unless you know what you're doing.",
-				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon},
+				AffectsContainers:  []config.ContainerID{ContainerID_StakeWiseDaemon},
 				CanBeBlank:         false,
 				OverwriteOnUpgrade: false,
 			},
@@ -102,8 +119,8 @@ func NewStakeWiseConfig(hdCfg *hdconfig.HyperdriveConfig, networks []*StakeWiseS
 			ParameterCommon: &config.ParameterCommon{
 				ID:                 ids.DaemonContainerTagID,
 				Name:               "Daemon Container Tag",
-				Description:        "The tag name of Hyperdrive's Stakewise Daemon image to use.",
-				AffectsContainers:  []config.ContainerID{ContainerID_StakewiseDaemon},
+				Description:        "The tag name of Hyperdrive's StakeWise Daemon image to use.",
+				AffectsContainers:  []config.ContainerID{ContainerID_StakeWiseDaemon},
 				CanBeBlank:         false,
 				OverwriteOnUpgrade: true,
 			},
@@ -171,6 +188,7 @@ func (cfg *StakeWiseConfig) GetParameters() []config.IParameter {
 	return []config.IParameter{
 		&cfg.Enabled,
 		&cfg.ApiPort,
+		&cfg.RelayPort,
 		&cfg.VerifyDepositsRoot,
 		&cfg.DaemonContainerTag,
 		&cfg.OperatorContainerTag,
@@ -263,11 +281,16 @@ func (cfg *StakeWiseConfig) GetTasksLogFileName() string {
 	return hdconfig.TasksLogName
 }
 
+func (cfg *StakeWiseConfig) GetRelayLogFileName() string {
+	return RelayLogName
+}
+
 func (cfg *StakeWiseConfig) GetLogNames() []string {
 	return []string{
 		cfg.GetHdClientLogFileName(),
 		cfg.GetApiLogFileName(),
 		cfg.GetTasksLogFileName(),
+		cfg.GetRelayLogFileName(),
 	}
 }
 
@@ -289,7 +312,7 @@ func (cfg *StakeWiseConfig) GetValidatorContainerTagInfo() map[config.ContainerI
 
 func (cfg *StakeWiseConfig) GetContainersToDeploy() []config.ContainerID {
 	return []config.ContainerID{
-		ContainerID_StakewiseDaemon,
+		ContainerID_StakeWiseDaemon,
 		ContainerID_StakewiseOperator,
 		ContainerID_StakewiseValidator,
 	}

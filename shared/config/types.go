@@ -6,7 +6,7 @@ import (
 
 const (
 	// The stakewise Hyperdrive daemon
-	ContainerID_StakewiseDaemon config.ContainerID = "sw_daemon"
+	ContainerID_StakeWiseDaemon config.ContainerID = "sw_daemon"
 
 	// The stakewise operator container
 	ContainerID_StakewiseOperator config.ContainerID = "sw_operator"

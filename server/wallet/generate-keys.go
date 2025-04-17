@@ -71,7 +71,8 @@ func (c *walletGenerateKeysContext) PrepareData(data *api.WalletGenerateKeysData
 		if err != nil {
 			return types.ResponseStatus_Error, fmt.Errorf("error generating validator key: %w", err)
 		}
-		pubkeys[i] = beacon.ValidatorPubkey(key.PublicKey().Marshal())
+		pubkey := beacon.ValidatorPubkey(key.PublicKey().Marshal())
+		pubkeys[i] = pubkey
 	}
 	data.Pubkeys = pubkeys
 

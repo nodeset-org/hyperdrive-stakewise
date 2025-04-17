@@ -24,6 +24,7 @@ func NewValidatorHandler(logger *log.Logger, ctx context.Context, serviceProvide
 	}
 	h.factories = []server.IContextFactory{
 		&validatorExitContextFactory{h},
+		&validatorStatusContextFactory{h},
 	}
 	return h
 }

@@ -1,23 +1,17 @@
 package swcommon
 
 import (
-	"bytes"
-	"errors"
+	"encoding/hex"
 	"fmt"
-	"io/fs"
 	"log/slog"
-	"math/big"
 	"os"
 	"path/filepath"
-	"sort"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/goccy/go-json"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
+	prdeposit "github.com/prysmaticlabs/prysm/v5/contracts/deposit"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/rocket-pool/node-manager-core/beacon"
-	"github.com/rocket-pool/node-manager-core/beacon/ssz_types"
 	"github.com/rocket-pool/node-manager-core/node/validator"
 	eth2types "github.com/wealdtech/go-eth2-types/v2"
 )
@@ -27,39 +21,30 @@ const (
 	StakewiseDepositAmount uint64 = 32e9
 )
 
-// DepositDataManager manages the aggregated deposit data file that Stakewise uses
+// DEPRECATED: This was only necessary for StakeWise v1 support and now just creates a blank file.
+// Once StakeWise no longer needs the file at all, this can be removed.
 type DepositDataManager struct {
-	dataPath string
-	sp       IStakeWiseServiceProvider
+	sp IStakeWiseServiceProvider
 }
 
 // Creates a new manager
 func NewDepositDataManager(sp IStakeWiseServiceProvider) (*DepositDataManager, error) {
-	dataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile)
-
 	ddMgr := &DepositDataManager{
-		dataPath: filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile),
-		sp:       sp,
+		sp: sp,
 	}
 
-	// Initialize the file if it's not there
-	_, err := os.Stat(dataPath)
-	if errors.Is(err, fs.ErrNotExist) {
-		// Make a blank one
-		err = ddMgr.UpdateDepositData([]beacon.ExtendedDepositData{})
-		return ddMgr, err
-	}
+	// Empty out the deposit data file
+	depositDataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile)
+	bytes := []byte("{}")
+	err := os.WriteFile(depositDataPath, bytes, fileMode)
 	if err != nil {
-		return nil, fmt.Errorf("error checking status of wallet file [%s]: %w", dataPath, err)
+		return nil, fmt.Errorf("error emptying deposit data file: %w", err)
 	}
-
 	return ddMgr, nil
 }
 
 // Generates deposit data for the provided keys
-func (m *DepositDataManager) GenerateDepositData(logger *slog.Logger, keys []*eth2types.BLSPrivateKey) ([]beacon.ExtendedDepositData, error) {
-	resources := m.sp.GetResources()
-
+func GenerateDepositData(logger *slog.Logger, resources *swconfig.MergedResources, keys []*eth2types.BLSPrivateKey) ([]beacon.ExtendedDepositData, error) {
 	// Stakewise uses the same withdrawal creds for each validator
 	withdrawalCreds := validator.GetWithdrawalCredsFromAddress(resources.Vault)
 
@@ -76,138 +61,23 @@ func (m *DepositDataManager) GenerateDepositData(logger *slog.Logger, keys []*et
 	return dataList, nil
 }
 
-// Read the deposit data file
-func (m *DepositDataManager) GetDepositData() ([]byte, error) {
-	// Read the file
-	bytes, err := os.ReadFile(m.dataPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading deposit data file [%s]: %w", m.dataPath, err)
-	}
-
-	// Make sure it can deserialize properly
-	var depositData []beacon.ExtendedDepositData
-	err = json.Unmarshal(bytes, &depositData)
-	if err != nil {
-		return nil, fmt.Errorf("error deserializing deposit data file [%s]: %w", m.dataPath, err)
-	}
-
-	return bytes, nil
+// Calculates the deposit domain for Beacon deposits
+func GetGenesisDepositDomain(genesisForkVersion []byte) ([]byte, error) {
+	return signing.ComputeDomain(eth2types.DomainDeposit, genesisForkVersion, eth2types.ZeroGenesisValidatorsRoot)
 }
 
-// Save the deposit data file
-func (m *DepositDataManager) UpdateDepositData(data []beacon.ExtendedDepositData) error {
-	// Serialize it
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("error serializing deposit data: %w", err)
+// Validates the signature for deposit data
+func ValidateDepositInfo(logger *slog.Logger, depositDomain []byte, depositAmount uint64, pubkey []byte, withdrawalCredentials []byte, signature []byte) error {
+	if logger != nil {
+		logger.Debug("Validating deposit data",
+			slog.String("domain", hex.EncodeToString(depositDomain)),
+		)
 	}
-
-	// Write it
-	err = os.WriteFile(m.dataPath, bytes, fileMode)
-	if err != nil {
-		return fmt.Errorf("error saving deposit data to disk: %w", err)
+	depositData := &ethpb.Deposit_Data{
+		Amount:                depositAmount,
+		PublicKey:             pubkey,
+		WithdrawalCredentials: withdrawalCredentials,
+		Signature:             signature,
 	}
-
-	return nil
-}
-
-// Compute the Merkle root of the aggregated deposit data using the Stakewise rules
-// NOTE: reverse engineered from https://github.com/stakewise/v3-operator/blob/fa4ac2673a64a486ced51098005376e56e2ddd19/src/validators/utils.py#L207
-func (m *DepositDataManager) ComputeMerkleRoot(data []beacon.ExtendedDepositData) (common.Hash, error) {
-	leafCount := len(data)
-	if leafCount == 0 {
-		// Empty data gets an empty root
-		return common.Hash{}, nil
-	}
-
-	// Create leaf data for each deposit data
-	leaves := make([][]byte, leafCount)
-	for i, dd := range data {
-		// Get the deposit data root for this deposit data
-		ddRoot, err := m.regenerateDepositDataRoot(dd)
-		if err != nil {
-			pubkey := beacon.ValidatorPubkey(dd.PublicKey)
-			return common.Hash{}, fmt.Errorf("error generating deposit data root for validator %d (%s): %w", i, pubkey.Hex(), err)
-		}
-
-		// Get the index
-		index := big.NewInt(int64(i))
-
-		// The Stakewise tree ABI encodes its leaves in a custom format, so we have to replicate that for Geth to use
-		bytesType, _ := abi.NewType("bytes", "bytes", nil)
-		uint256Type, _ := abi.NewType("uint256", "uint256", nil)
-		args := abi.Arguments{
-			{
-				// This is a tweaked version of the deposit data at index i, "entry data"
-				Type: bytesType,
-			},
-			{
-				// This is index i
-				Type: uint256Type,
-			},
-		}
-
-		// entryData = pubkey :: signature :: ddRoot
-		entryData := []byte{}
-		entryData = append(entryData, dd.PublicKey...)
-		entryData = append(entryData, dd.Signature...)
-		entryData = append(entryData, ddRoot[:]...)
-
-		// ABI encode entryData and index to produce the raw leaf node value
-		bytes, err := args.Pack(entryData, index)
-		if err != nil {
-			return common.Hash{}, fmt.Errorf("error packing abi_encode args for %d: %w", i, err)
-		}
-
-		// Keccak256 the ABI-encoded data twice
-		hash := crypto.Keccak256(bytes)
-		hash = crypto.Keccak256(hash)
-		leaves[i] = hash
-	}
-
-	// Sort the hashes
-	sort.SliceStable(leaves, func(i, j int) bool {
-		return bytes.Compare(leaves[i], leaves[j]) == -1
-	})
-
-	// Add the leaves to the "tree" backwards - note that this is a nonstandard tree; the leaves aren't padded so they don't all necessarily live at the same depth.
-	treeLength := 2*leafCount - 1
-	tree := make([][]byte, treeLength)
-	for i, leaf := range leaves {
-		tree[treeLength-1-i] = leaf
-	}
-
-	// Traverse up the "tree", calculating nodes from the children that are already present
-	for i := treeLength - 1 - leafCount; i > -1; i-- {
-		leftChild := tree[2*i+1]
-		rightChild := tree[2*i+2]
-
-		// Compute the hash in sorted mode
-		var hash []byte
-		if bytes.Compare(leftChild, rightChild) < 0 {
-			hash = crypto.Keccak256(leftChild, rightChild)
-		} else {
-			hash = crypto.Keccak256(rightChild, leftChild)
-		}
-		tree[i] = hash
-	}
-
-	return common.Hash(tree[0]), nil
-}
-
-// Regenerate the deposit data hash root from a deposit data object instead of explicitly relying on the deposit data root provided in the EDD
-func (m *DepositDataManager) regenerateDepositDataRoot(dd beacon.ExtendedDepositData) (common.Hash, error) {
-	var depositData = ssz_types.DepositData{
-		PublicKey:             dd.PublicKey,
-		WithdrawalCredentials: dd.WithdrawalCredentials,
-		Amount:                StakewiseDepositAmount, // Note: hardcoded here because Stakewise ignores the actual amount in the deposit data and hardcodes it in their tree generation
-		Signature:             dd.Signature,
-	}
-
-	// Get deposit data root
-	root, err := depositData.HashTreeRoot()
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return root, nil
+	return prdeposit.VerifyDepositSignature(depositData, depositDomain)
 }

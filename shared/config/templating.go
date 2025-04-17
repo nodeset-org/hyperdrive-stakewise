@@ -19,7 +19,7 @@ func (c *StakeWiseConfig) KeystorePasswordFile() string {
 }
 
 func (c *StakeWiseConfig) DaemonContainerName() string {
-	return string(ContainerID_StakewiseDaemon)
+	return string(ContainerID_StakeWiseDaemon)
 }
 
 func (c *StakeWiseConfig) DataVolume() string {

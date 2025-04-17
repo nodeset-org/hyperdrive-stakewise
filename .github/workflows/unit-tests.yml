@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install OSHA dependencies
         working-directory: ./osha/hardhat
         run: npm ci
       
@@ -35,6 +35,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: 1.22.7
+
+      - name: Install Module Dependencies
+        working-directory: ./internal/hardhat
+        run: npm ci
+
+      - name: Setup Module Contracts
+        working-directory: ./internal/hardhat
+        run: npx hardhat run scripts/deploy.js --network localhost
           
       - name: Run tests
         env: 

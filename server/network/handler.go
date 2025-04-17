@@ -1,4 +1,4 @@
-package swnodeset
+package swnetwork
 
 import (
 	"context"
@@ -9,29 +9,27 @@ import (
 	"github.com/rocket-pool/node-manager-core/log"
 )
 
-type NodesetHandler struct {
+type NetworkHandler struct {
 	logger          *log.Logger
 	ctx             context.Context
 	serviceProvider swcommon.IStakeWiseServiceProvider
 	factories       []server.IContextFactory
 }
 
-func NewNodesetHandler(logger *log.Logger, ctx context.Context, serviceProvider swcommon.IStakeWiseServiceProvider) *NodesetHandler {
-	h := &NodesetHandler{
+func NewNetworkHandler(logger *log.Logger, ctx context.Context, serviceProvider swcommon.IStakeWiseServiceProvider) *NetworkHandler {
+	h := &NetworkHandler{
 		logger:          logger,
 		ctx:             ctx,
 		serviceProvider: serviceProvider,
 	}
 	h.factories = []server.IContextFactory{
-		&nodesetSetValidatorsRootContextFactory{h},
-		&nodesetUploadDepositDataContextFactory{h},
-		&nodesetGenerateDepositDataContextFactory{h},
+		&networkStatusContextFactory{h},
 	}
 	return h
 }
 
-func (h *NodesetHandler) RegisterRoutes(router *mux.Router) {
-	subrouter := router.PathPrefix("/nodeset").Subrouter()
+func (h *NetworkHandler) RegisterRoutes(router *mux.Router) {
+	subrouter := router.PathPrefix("/network").Subrouter()
 	for _, factory := range h.factories {
 		factory.RegisterRoute(subrouter)
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/nodeset-org/hyperdrive-daemon/shared/auth"
 	hdconfig "github.com/nodeset-org/hyperdrive-daemon/shared/config"
 	swcommon "github.com/nodeset-org/hyperdrive-stakewise/common"
+	"github.com/nodeset-org/hyperdrive-stakewise/relay"
 	"github.com/nodeset-org/hyperdrive-stakewise/server"
 	swshared "github.com/nodeset-org/hyperdrive-stakewise/shared"
 	swconfig "github.com/nodeset-org/hyperdrive-stakewise/shared/config"
@@ -70,8 +71,8 @@ func main() {
 		Usage:   "The IP address to bind the API server to",
 		Value:   "127.0.0.1",
 	}
-	portFlag := &cli.UintFlag{
-		Name:    "port",
+	apiPortFlag := &cli.UintFlag{
+		Name:    "api-port",
 		Aliases: []string{"p"},
 		Usage:   "The port to bind the API server to",
 		Value:   uint(swconfig.DefaultApiPort),
@@ -88,13 +89,20 @@ func main() {
 		Usage:    "Path of the key to use when sending requests to the Hyperdrive API",
 		Required: true,
 	}
+	relayPortFlag := &cli.UintFlag{
+		Name:    "relay-port",
+		Aliases: []string{"rp"},
+		Usage:   "The port to bind the relay server to, for StakeWise Operator to connect to",
+		Value:   uint(swconfig.DefaultRelayPort),
+	}
 
 	app.Flags = []cli.Flag{
 		moduleDirFlag,
 		hyperdriveUrlFlag,
 		settingsFolderFlag,
 		ipFlag,
-		portFlag,
+		apiPortFlag,
+		relayPortFlag,
 		apiKeyFlag,
 		hyperdriveApiKeyFlag,
 	}
@@ -166,13 +174,25 @@ func main() {
 			return fmt.Errorf("error starting task loop: %w", err)
 		}
 
-		// Start the server after the task loop so it can log into NodeSet before this starts serving registration status checks
+		// Start the API server after the task loop so it can log into NodeSet before this starts serving registration status checks
 		ip := c.String(ipFlag.Name)
-		port := c.Uint64(portFlag.Name)
+		port := c.Uint64(apiPortFlag.Name)
 		serverMgr, err := server.NewServerManager(stakewiseSp, ip, uint16(port), stopWg, moduleAuthMgr)
 		if err != nil {
-			return fmt.Errorf("error creating StakeWise server: %w", err)
+			return fmt.Errorf("error creating API server: %w", err)
 		}
+
+		// Start the relay server
+		relayPort := c.Uint64(relayPortFlag.Name)
+		relayServer, err := relay.NewRelayServer(stakewiseSp, ip, uint16(relayPort))
+		if err != nil {
+			return fmt.Errorf("error creating relay server: %w", err)
+		}
+		err = relayServer.Start(stopWg)
+		if err != nil {
+			return fmt.Errorf("error starting relay server: %w", err)
+		}
+		fmt.Printf("Relay server started on %s:%d\n", ip, relayPort)
 
 		// Handle process closures
 		termListener := make(chan os.Signal, 1)
@@ -182,14 +202,19 @@ func main() {
 			fmt.Println("Shutting down daemon...")
 			stakewiseSp.CancelContextOnShutdown()
 			serverMgr.Stop()
+			err := relayServer.Stop()
+			if err != nil {
+				fmt.Printf("WARNING: relay server didn't shutdown cleanly: %s\n", err.Error())
+			}
 		}()
 
 		// Run the daemon until closed
 		fmt.Println("Daemon online.")
 		fmt.Printf("HD client calls are being logged to: %s\n", sp.GetClientLogger().GetFilePath())
-		fmt.Printf("API calls are being logged to: %s\n", sp.GetApiLogger().GetFilePath())
-		fmt.Printf("Tasks are being logged to:     %s\n", sp.GetTasksLogger().GetFilePath())
-		fmt.Println("To view them, use `hyperdrive service daemon-logs [sw-hd | sw-api | sw-tasks].") // TODO: don't hardcode
+		fmt.Printf("API calls are being logged to:       %s\n", sp.GetApiLogger().GetFilePath())
+		fmt.Printf("Tasks are being logged to:           %s\n", sp.GetTasksLogger().GetFilePath())
+		fmt.Printf("Relay calls are being logged to:     %s\n", relayServer.GetLogPath())
+		fmt.Println("To view them, use `hyperdrive service daemon-logs [sw-hd | sw-api | sw-tasks | sw-relay].") // TODO: don't hardcode
 		stopWg.Wait()
 		sp.Close()
 		fmt.Println("Daemon stopped.")

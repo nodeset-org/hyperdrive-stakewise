@@ -104,10 +104,10 @@ func (c *validatorExitContext) PrepareData(data *api.ValidatorExitData, walletSt
 		c.epoch = head.Epoch
 	}
 
-	// Get the BlsToExecutionChange signature domain
+	// Get the voluntary exit signature domain
 	signatureDomain, err := bc.GetDomainData(ctx, eth2types.DomainVoluntaryExit[:], c.epoch, false)
 	if err != nil {
-		return types.ResponseStatus_Error, fmt.Errorf("error getting Beacon domain data: %w", err)
+		return types.ResponseStatus_Error, fmt.Errorf("error getting voluntary exit domain data: %w", err)
 	}
 
 	// Get the statuses (indices) of each validator
