@@ -216,7 +216,7 @@ func main() {
 		fmt.Printf("Relay calls are being logged to:     %s\n", relayServer.GetLogPath())
 		fmt.Println("To view them, use `hyperdrive service daemon-logs [sw-hd | sw-api | sw-tasks | sw-relay].") // TODO: don't hardcode
 		stopWg.Wait()
-		sp.Close()
+		_ = sp.Close()
 		fmt.Println("Daemon stopped.")
 		return nil
 	}

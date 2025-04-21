@@ -159,48 +159,42 @@ func (t *TaskLoop) getNodeSetRegistrationStatus() {
 // Returns true if the owning loop needs to exit, false if it can continue
 func (t *TaskLoop) waitUntilReady() waitUntilReadyResult {
 	// Check the EC status
-	// NOTE: Not needed with StakeWise v2 now
-	/*
-		err := t.sp.WaitEthClientSynced(t.ctx, false) // Force refresh the primary / fallback EC status
-		if err != nil {
-			errMsg := err.Error()
-			if strings.Contains(errMsg, "context canceled") {
-				return waitUntilReadyExit
-			}
-			t.wasExecutionClientSynced = false
-			t.logger.Error("Execution Client not synced. Waiting for sync...", slog.String(log.ErrorKey, errMsg))
-			return t.sleepAndReturnReadyResult()
+	err := t.sp.WaitEthClientSynced(t.ctx, false) // Force refresh the primary / fallback EC status
+	if err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "context canceled") {
+			return waitUntilReadyExit
 		}
+		t.wasExecutionClientSynced = false
+		t.logger.Error("Execution Client not synced. Waiting for sync...", slog.String(log.ErrorKey, errMsg))
+		return t.sleepAndReturnReadyResult()
+	}
 
-		if !t.wasExecutionClientSynced {
-			t.logger.Info("Execution Client is now synced.")
-			t.wasExecutionClientSynced = true
-		}
-	*/
+	if !t.wasExecutionClientSynced {
+		t.logger.Info("Execution Client is now synced.")
+		t.wasExecutionClientSynced = true
+	}
 
 	// Check the BC status
-	// NOTE: Not needed with StakeWise v2 now
-	/*
-		err = t.sp.WaitBeaconClientSynced(t.ctx, false) // Force refresh the primary / fallback BC status
-		if err != nil {
-			errMsg := err.Error()
-			if strings.Contains(errMsg, "context canceled") {
-				return waitUntilReadyExit
-			}
-			// NOTE: if not synced, it returns an error - so there isn't necessarily an underlying issue
-			t.wasBeaconClientSynced = false
-			t.logger.Error("Beacon Node not synced. Waiting for sync...", slog.String(log.ErrorKey, errMsg))
-			return t.sleepAndReturnReadyResult()
+	err = t.sp.WaitBeaconClientSynced(t.ctx, false) // Force refresh the primary / fallback BC status
+	if err != nil {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "context canceled") {
+			return waitUntilReadyExit
 		}
+		// NOTE: if not synced, it returns an error - so there isn't necessarily an underlying issue
+		t.wasBeaconClientSynced = false
+		t.logger.Error("Beacon Node not synced. Waiting for sync...", slog.String(log.ErrorKey, errMsg))
+		return t.sleepAndReturnReadyResult()
+	}
 
-		if !t.wasBeaconClientSynced {
-			t.logger.Info("Beacon Node is now synced.")
-			t.wasBeaconClientSynced = true
-		}
-	*/
+	if !t.wasBeaconClientSynced {
+		t.logger.Info("Beacon Node is now synced.")
+		t.wasBeaconClientSynced = true
+	}
 
 	// Wait until the Stakewise wallet has been initialized
-	err := t.sp.WaitForStakewiseWallet(t.ctx)
+	err = t.sp.WaitForStakewiseWallet(t.ctx)
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "context canceled") {

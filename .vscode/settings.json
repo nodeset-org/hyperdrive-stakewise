@@ -1,6 +1,6 @@
 {
     "go.testEnvVars": {
-        "HARDHAT_URL": "http://localhost:8545"
+        "HARDHAT_URL": "http://localhost:9545"
     },
     "go.testTimeout": "5m",
     "go.testFlags": [

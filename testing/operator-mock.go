@@ -77,7 +77,9 @@ func (m *OperatorMock) SubmitValidatorsRequest() (*relay.ValidatorsResponse, err
 	if err != nil {
 		return nil, fmt.Errorf("error sending request: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 
 	// Handle the response
 	switch response.StatusCode {
