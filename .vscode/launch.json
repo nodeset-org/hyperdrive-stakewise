@@ -22,6 +22,26 @@
                 "-hd",
                 "http://localhost:8080"
             ]
+        },
+        {
+            "name": "Debug Hardhat Deploy Script",
+            "type": "node",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/internal/hardhat",
+            "env": {
+                "HARDHAT_NETWORK": "localhost"
+            },
+            "program": "${workspaceFolder}/internal/hardhat/node_modules/hardhat/internal/cli/cli.js",
+            "args": [
+                "run",
+                "scripts/deploy.js",
+                "--network",
+                "localhost"
+            ]
         }
     ]
 }

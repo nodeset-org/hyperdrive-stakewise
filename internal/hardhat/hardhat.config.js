@@ -48,8 +48,7 @@ module.exports = {
     networks: {
         hardhat: {},
         localhost: {
-            host: '127.0.0.1',
-            port: 8545,
+            url: 'http://127.0.0.1:9545',
             network_id: '*',
         },
         testnet: {
