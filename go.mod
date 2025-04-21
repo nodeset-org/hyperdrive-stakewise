@@ -10,7 +10,7 @@ require (
 	github.com/goccy/go-json v0.10.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.2.0-b1.0.20250421175054-fc10e2b02172
+	github.com/nodeset-org/hyperdrive-daemon v1.2.0-b1.0.20250421184329-a33deb30110f
 	github.com/nodeset-org/nodeset-client-go v1.3.0
 	github.com/nodeset-org/osha v0.4.0
 	github.com/prysmaticlabs/prysm/v5 v5.1.0

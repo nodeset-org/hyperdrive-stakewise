@@ -44,7 +44,7 @@ func GenerateTestKeys(t *testing.T) {
 	}
 
 	// Take a snapshot
-	generatedKeysSnapshot, err = testMgr.TestManager.CreateSnapshot()
+	generatedKeysSnapshot, err = testMgr.CreateSnapshot()
 	if err != nil {
 		fail("Error taking snapshot after key generation: %v", err)
 	}
@@ -575,19 +575,23 @@ func TestRelay_KeysAlreadyExist(t *testing.T) {
 	require.Len(t, badKeys, 3)
 	seen := make(map[beacon.ValidatorPubkey]bool)
 	for key, reason := range badKeys {
-		if key.PublicKey == pubkeys[0] {
+		switch key.PublicKey {
+		case pubkeys[0]:
 			require.Equal(t, reason, swcommon.IneligibleReason_OnBeacon)
 			seen[key.PublicKey] = true
 			t.Logf("Validator 0 was active on Beacon")
-		} else if key.PublicKey == pubkeys[1] {
+
+		case pubkeys[1]:
 			require.Equal(t, reason, swcommon.IneligibleReason_HasDepositEvent)
 			seen[key.PublicKey] = true
 			t.Logf("Validator 1 had a pending deposit")
-		} else if key.PublicKey == pubkeys[2] {
+
+		case pubkeys[2]:
 			require.Equal(t, reason, swcommon.IneligibleReason_HasDepositEvent)
 			seen[key.PublicKey] = true
 			t.Logf("Validator 2 had a deposit event")
-		} else {
+
+		default:
 			fail("Unexpected key %s", key.PublicKey.HexWithPrefix())
 		}
 	}
