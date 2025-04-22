@@ -10,12 +10,12 @@ require (
 	github.com/goccy/go-json v0.10.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.2.0-b1.0.20250421184329-a33deb30110f
+	github.com/nodeset-org/hyperdrive-daemon v1.2.0
 	github.com/nodeset-org/nodeset-client-go v1.3.0
 	github.com/nodeset-org/osha v0.4.0
 	github.com/prysmaticlabs/prysm/v5 v5.1.0
 	github.com/rocket-pool/batch-query v1.0.0
-	github.com/rocket-pool/node-manager-core v0.5.2-0.20250421174946-6e2a934bf75c
+	github.com/rocket-pool/node-manager-core v0.5.2-0.20250422025203-22095e9ac713
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.5
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
