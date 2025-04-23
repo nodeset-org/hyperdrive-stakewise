@@ -25,9 +25,19 @@ var (
 		KeeperGenesisBlock: big.NewInt(18470089),
 	}
 
+	// Hoodi devnet resources for reference in testing
+	HoodiDevResourcesReference *StakeWiseResources = &StakeWiseResources{
+		Vault:        common.HexToAddress("0xb163b6d4e1b317f3b4bace8770d74c1c21c4a131"),
+		FeeRecipient: common.HexToAddress("0x51FD45BAEfB12f54766B5C4d639b360Ea50063bd"),
+
+		// https://github.com/stakewise/sw-utils/blob/4a20b479bc84f1340fb34c02a89401e489537f53/sw_utils/networks.py
+		Keeper:             common.HexToAddress("0xA7D1Ac9D6F32B404C75626874BA56f7654c1dC0f"),
+		KeeperGenesisBlock: big.NewInt(94074),
+	}
+
 	// Hoodi resources for reference in testing
 	HoodiResourcesReference *StakeWiseResources = &StakeWiseResources{
-		Vault:        common.HexToAddress("0xb163b6d4e1b317f3b4bace8770d74c1c21c4a131"),
+		Vault:        common.HexToAddress("0x2b3eb77e5cbde5deb70c928e1e2814f8a6f143e0"),
 		FeeRecipient: common.HexToAddress("0x51FD45BAEfB12f54766B5C4d639b360Ea50063bd"),
 
 		// https://github.com/stakewise/sw-utils/blob/4a20b479bc84f1340fb34c02a89401e489537f53/sw_utils/networks.py
