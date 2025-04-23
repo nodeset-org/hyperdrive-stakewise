@@ -25,29 +25,19 @@ var (
 		KeeperGenesisBlock: big.NewInt(18470089),
 	}
 
-	// Holesky resources for reference in testing
-	HoleskyResourcesReference *StakeWiseResources = &StakeWiseResources{
-		Vault:        common.HexToAddress("0x646F5285D195e08E309cF9A5aDFDF68D6Fcc51C4"),
-		FeeRecipient: common.HexToAddress("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
+	// Hoodi devnet resources for reference in testing
+	HoodiDevResourcesReference *StakeWiseResources = &StakeWiseResources{
+		Vault:        common.HexToAddress("0xb163b6d4e1b317f3b4bace8770d74c1c21c4a131"),
+		FeeRecipient: common.HexToAddress("0x51FD45BAEfB12f54766B5C4d639b360Ea50063bd"),
 
-		// https://github.com/stakewise/sw-utils/blob/e07c24879082a44cf1d2c3a5de4a6f8db951e717/sw_utils/networks.py
-		Keeper:             common.HexToAddress("0xB580799Bf7d62721D1a523f0FDF2f5Ed7BA4e259"),
-		KeeperGenesisBlock: big.NewInt(215379),
-	}
-
-	// Devnet resources for reference in testing
-	DevnetResourcesReference *StakeWiseResources = &StakeWiseResources{
-		Vault:        common.HexToAddress("0xf8763855473ce978232bBa37ef90fcFc8aAE10d1"),
-		FeeRecipient: common.HexToAddress("0xc98F25BcAA6B812a07460f18da77AF8385be7b56"),
-
-		// https://github.com/stakewise/sw-utils/blob/e07c24879082a44cf1d2c3a5de4a6f8db951e717/sw_utils/networks.py
-		Keeper:             common.HexToAddress("0xB580799Bf7d62721D1a523f0FDF2f5Ed7BA4e259"),
-		KeeperGenesisBlock: big.NewInt(215379),
+		// https://github.com/stakewise/sw-utils/blob/4a20b479bc84f1340fb34c02a89401e489537f53/sw_utils/networks.py
+		Keeper:             common.HexToAddress("0xA7D1Ac9D6F32B404C75626874BA56f7654c1dC0f"),
+		KeeperGenesisBlock: big.NewInt(94074),
 	}
 
 	// Hoodi resources for reference in testing
 	HoodiResourcesReference *StakeWiseResources = &StakeWiseResources{
-		Vault:        common.HexToAddress("0xb163b6d4e1b317f3b4bace8770d74c1c21c4a131"),
+		Vault:        common.HexToAddress("0x2b3eb77e5cbde5deb70c928e1e2814f8a6f143e0"),
 		FeeRecipient: common.HexToAddress("0x51FD45BAEfB12f54766B5C4d639b360Ea50063bd"),
 
 		// https://github.com/stakewise/sw-utils/blob/4a20b479bc84f1340fb34c02a89401e489537f53/sw_utils/networks.py
@@ -88,7 +78,7 @@ type StakeWiseResources struct {
 
 	// The address of the Stakewise v3 vault contract, the withdrawal address for all Stakewise validators on Beacon.
 	// It's also the address of an ERC-20 token on the EL, which is an LST for the NodeSet partner administrating the vault.
-	// See https://app.stakewise.io/vault/holesky/<vault_address> for details.
+	// See https://app.stakewise.io/vault/mainnet/<vault_address> for details.
 	Vault common.Address `yaml:"vault" json:"vault"`
 
 	// The address of the NodeSet fee recipient, the Stakewise "smoothing pool".
