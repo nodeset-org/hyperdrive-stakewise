@@ -89,9 +89,9 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	qMgr := sp.GetQueryManager()
 	keyMgr := sp.GetAvailableKeyManager()
 	bn := sp.GetBeaconClient()
-	start := time.Now()
 
 	// Parse the body
+	start := time.Now()
 	var request ValidatorsRequest
 	pathArgs, queryArgs := ProcessApiRequest(logger, w, r, &request)
 	if pathArgs == nil && queryArgs == nil {
@@ -117,6 +117,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check the wallet
+	start = time.Now()
 	walletResponse, err := hd.Wallet.Status()
 	if err != nil {
 		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting wallet status: %w", err))
@@ -124,6 +125,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Debug("Verified wallet status", "elapsed", time.Since(start))
 	walletStatus := walletResponse.Data.WalletStatus
+	start = time.Now()
 	err = sp.RequireStakewiseWalletReady(ctx, walletStatus)
 	if err != nil {
 		HandleError(w, logger, http.StatusUnprocessableEntity, fmt.Errorf("error checking wallet status: %w", err))
@@ -142,6 +144,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var depositRoot common.Hash
+	start = time.Now()
 	err = qMgr.Query(func(mc *batch.MultiCaller) error {
 		sp.GetBeaconDepositContract().GetDepositRoot(mc, &depositRoot)
 		return nil
@@ -161,20 +164,22 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 
 	// Short-circuit if lookback scanning is required because it will take too long
 	if keyMgr.RequiresLookbackScan(currentBlock) {
-		logger.Info("Lookback scan required for new keys, starting scan")
+		logger.Info("Lookback scan required for new keys or old data, starting scan")
 		if err := sp.RequireBeaconClientSynced(ctx); err != nil {
 			HandleError(w, logger, http.StatusUnprocessableEntity, fmt.Errorf("lookback scan is required but the Beacon Node is not synced: %w", err))
 			return
 		}
 
 		// Beacon is synced but the lookback scan is required, so start it and return while it runs
-		HandleError(w, logger, http.StatusServiceUnavailable, fmt.Errorf("lookback scan required for new keys, try again later"))
+		HandleError(w, logger, http.StatusServiceUnavailable, fmt.Errorf("lookback scan required for new keys or old data, try again later"))
 
 		// Do the lookback scan
+		start = time.Now()
 		_, _, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, currentBlock, swcommon.GetAvailableKeyOptions{
 			SkipSyncCheck:  true,
 			DoLookbackScan: true,
 		})
+		logger.Debug("Lookback scan complete", "elapsed", time.Since(start))
 		if err != nil {
 			logger.Error("Error during lookback scan", "error", err)
 		}
@@ -186,11 +191,13 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		SkipSyncCheck:  true,
 		DoLookbackScan: false,
 	}
+	start = time.Now()
 	availableKeys, ineligibleKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, currentBlock, scanOpts)
 	if err != nil {
 		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting available keys: %w", err))
 		return
 	}
+	logger.Debug("Got available keys", "elapsed", time.Since(start))
 
 	// Log the ineligible keys
 	if len(ineligibleKeys) > 0 {
@@ -216,7 +223,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	// Check if there are any available keys
 	if len(availableKeys) == 0 {
 		// Return an empty response
-		logger.Debug("No available keys", "elapsed", time.Since(start))
+		logger.Info("No available keys")
 		HandleSuccess(w, logger, ValidatorsResponse{
 			Validators: []ValidatorInfo{},
 		})
@@ -228,6 +235,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if NodeSet can support more validators
+	start = time.Now()
 	validatorsInfo, err := hd.NodeSet_StakeWise.GetValidatorsInfo(res.DeploymentName, res.Vault)
 	if err != nil {
 		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting meta info from nodeset: %w", err))
@@ -250,16 +258,14 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		logger.Debug("Clamping available keys to NodeSet limit", "available", len(availableKeys), "nodeSetLimit", availableForNodeSet)
 		availableKeys = availableKeys[:availableForNodeSet]
 	}
-	debugEntries := []any{
-		"elapsed",
-		time.Since(start),
-	}
+	debugEntries := []any{}
 	for _, key := range availableKeys {
 		debugEntries = append(debugEntries, "key", key.PublicKey.HexWithPrefix())
 	}
 	logger.Info("Got available keys", debugEntries...)
 
 	// Create the deposit data
+	start = time.Now()
 	privateKeys := make([]*eth2types.BLSPrivateKey, len(availableKeys))
 	for i, key := range availableKeys {
 		privateKeys[i] = key.PrivateKey
@@ -272,6 +278,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Generated deposit data", "elapsed", time.Since(start))
 
 	// Create signed exits
+	start = time.Now()
 	signatureDomain, err := bn.GetDomainData(ctx, eth2types.DomainVoluntaryExit[:], res.CapellaForkEpoch, false)
 	if err != nil {
 		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting voluntary exit domain data: %w", err))
@@ -290,6 +297,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Generated exit messages", "elapsed", time.Since(start))
 
 	// Encrypt the exits
+	start = time.Now()
 	encryptedExits := make([]string, len(availableKeys))
 	for i, exitMessage := range exitMessages {
 		encryptedMessage, err := nscommon.EncryptSignedExitMessage(exitMessage, res.EncryptionPubkey)
@@ -304,6 +312,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Encrypted exit messages", "elapsed", time.Since(start))
 
 	// Get a signature from NodeSet
+	start = time.Now()
 	signatureResponse, err := hd.NodeSet_StakeWise.GetValidatorManagerSignature(res.DeploymentName, res.Vault, depositRoot, depositDatas, encryptedExits)
 	if err != nil {
 		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting validators signature from nodeset: %w", err))
@@ -325,6 +334,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Got validators signature from NodeSet", "elapsed", time.Since(start), "signature", signature)
 
 	// Set the last deposit root for those keys
+	start = time.Now()
 	err = keyMgr.SetLastDepositRoot(availableKeys, depositRoot)
 	if err != nil {
 		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error setting last deposit root: %w", err))
@@ -333,6 +343,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	logger.Debug("Updated available keys with last deposit root", "elapsed", time.Since(start))
 
 	// Return the validators to SW
+	start = time.Now()
 	response := ValidatorsResponse{
 		Validators:                 make([]ValidatorInfo, len(availableKeys)),
 		ValidatorsManagerSignature: signature,

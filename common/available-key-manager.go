@@ -325,7 +325,7 @@ func (m *AvailableKeyManager) GetAvailableKeys(
 	// Remove keys that have already been assigned an index on Beacon
 	if options.DoLookbackScan {
 		start := time.Now()
-		goodKeys, badKeys, err = m.filterKeysOnBeacon(ctx, goodKeys)
+		goodKeys, badKeys, err = m.filterKeysOnBeacon(ctx, logger, goodKeys)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error filtering keys via Beacon indices: %w", err)
 		}
@@ -353,20 +353,25 @@ func (m *AvailableKeyManager) GetAvailableKeys(
 	}
 
 	// Remove keys that have already been used in a deposit contract event
-	start = time.Now()
-	goodKeys, badKeys, err = m.filterKeysOnDepositEvents(ctx, logger, goodKeys, startBlock, currentBlock)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error filtering keys via deposit contract events: %w", err)
-	}
-	logger.Debug("Filtered keys on deposit contract", "available", len(goodKeys), "elapsed", time.Since(start))
-	for _, key := range badKeys {
-		ineligibleKeys[key] = IneligibleReason_HasDepositEvent
-	}
+	if startBlock > currentBlock {
+		logger.Debug("Already scanned current block, skipping deposit event filter")
+	} else {
+		start = time.Now()
+		goodKeys, badKeys, err = m.filterKeysOnDepositEvents(ctx, logger, goodKeys, startBlock, currentBlock)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error filtering keys via deposit contract events: %w", err)
+		}
+		logger.Debug("Filtered keys on deposit contract", "available", len(goodKeys), "elapsed", time.Since(start))
+		for _, key := range badKeys {
+			ineligibleKeys[key] = IneligibleReason_HasDepositEvent
+		}
+		m.data.NextBlockToScan = currentBlock + 1
 
-	// Set the lookback flag for all keys
-	if options.DoLookbackScan {
-		for _, key := range goodKeys {
-			key.HasLookbackScanned = true
+		// Set the lookback flag for all keys
+		if options.DoLookbackScan {
+			for _, key := range goodKeys {
+				key.HasLookbackScanned = true
+			}
 		}
 	}
 
@@ -381,7 +386,6 @@ func (m *AvailableKeyManager) GetAvailableKeys(
 	}
 
 	// Save the new list
-	m.data.NextBlockToScan = currentBlock + 1
 	err = m.updateData()
 	if err != nil {
 		return nil, nil, fmt.Errorf("error updating available keys: %w", err)
@@ -454,6 +458,7 @@ func (m *AvailableKeyManager) filterKeysOnLookbackScanned(
 // Filter the list of available keys to remove any that have already been assigned an index on the Beacon chain
 func (m *AvailableKeyManager) filterKeysOnBeacon(
 	ctx context.Context,
+	logger *slog.Logger,
 	keys []*AvailableKey,
 ) (
 	eligibleKeys []*AvailableKey,
@@ -474,14 +479,24 @@ func (m *AvailableKeyManager) filterKeysOnBeacon(
 	eligibleKeys = []*AvailableKey{}
 	ineligibleKeys = []*AvailableKey{}
 	for _, key := range keys {
-		_, exists := statuses[key.PublicKey]
+		status, exists := statuses[key.PublicKey]
 		if exists {
 			key.PrivateKey = nil // Empty out the private key so it's not resident in memory
 			ineligibleKeys = append(ineligibleKeys, key)
+			logger.Info(
+				"Key was found on Beacon",
+				"pubkey", key.PublicKey.Hex(),
+				"index", status.Index,
+			)
 		} else {
 			eligibleKeys = append(eligibleKeys, key)
 		}
 	}
+	logger.Info(
+		"Removed ineligible keys from Beacon scan",
+		"removed", len(ineligibleKeys),
+		"available", len(eligibleKeys),
+	)
 	return eligibleKeys, ineligibleKeys, nil
 }
 
@@ -520,7 +535,7 @@ func (m *AvailableKeyManager) filterKeysOnPendingDeposits(
 	for _, deposit := range pendingDeposits {
 		key, exists := keyMap[deposit.Pubkey]
 		if exists {
-			logger.Debug(
+			logger.Info(
 				"Key was found in a pending deposit",
 				"pubkey", deposit.Pubkey.Hex(),
 				"slot", deposit.Slot,
@@ -541,7 +556,7 @@ func (m *AvailableKeyManager) filterKeysOnPendingDeposits(
 			eligibleKeys = append(eligibleKeys, key)
 		}
 	}
-	logger.Debug(
+	logger.Info(
 		"Removed ineligible keys from pending deposits",
 		"removed", len(ineligibleKeys),
 		"available", len(eligibleKeys),
@@ -586,7 +601,7 @@ func (m *AvailableKeyManager) filterKeysOnDepositEvents(
 	for _, key := range keys {
 		event, exists := depositEvents[key.PublicKey]
 		if exists {
-			logger.Debug(
+			logger.Info(
 				"Key was found in a deposit event",
 				"pubkey", key.PublicKey.Hex(),
 				"tx", event[0].TxHash.Hex(),
@@ -597,8 +612,11 @@ func (m *AvailableKeyManager) filterKeysOnDepositEvents(
 			eligibleKeys = append(eligibleKeys, key)
 		}
 	}
-
-	// Update the next block to scan if there aren't any errors
+	logger.Info(
+		"Removed ineligible keys from deposit events",
+		"removed", len(ineligibleKeys),
+		"available", len(eligibleKeys),
+	)
 	return eligibleKeys, ineligibleKeys, nil
 }
 
