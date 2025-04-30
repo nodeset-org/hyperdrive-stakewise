@@ -211,15 +211,22 @@ func (m *AvailableKeyManager) HasKeyCandidates() bool {
 }
 
 // Check if any of the keys in the list require a lookback scan
-func (m *AvailableKeyManager) RequiresLookbackScan() bool {
+func (m *AvailableKeyManager) RequiresLookbackScan(currentBlock uint64) bool {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	// If there are any keys that haven't been scanned yet, lookback is required
 	for _, key := range m.data.Keys {
 		if !key.HasLookbackScanned {
 			return true
 		}
 	}
+
+	// If the next block to scan is too far in the past, lookback is required
+	if currentBlock > m.data.NextBlockToScan && currentBlock-m.data.NextBlockToScan > DepositEventLookbackLimit {
+		return true
+	}
+
 	return false
 }
 
@@ -241,6 +248,7 @@ func (m *AvailableKeyManager) GetAvailableKeys(
 	ctx context.Context,
 	logger *slog.Logger,
 	beaconDepositRoot common.Hash,
+	currentBlock uint64,
 	options GetAvailableKeyOptions,
 ) (
 	eligibleKeys []*AvailableKey,
@@ -255,6 +263,48 @@ func (m *AvailableKeyManager) GetAvailableKeys(
 	// Load the keys from disk if they haven't been loaded yet
 	if !m.hasLoadedKeys {
 		m.loadPrivateKeysImpl(logger)
+	}
+
+	// Check if a lookback scan is needed
+	startBlock := m.data.NextBlockToScan
+	if options.DoLookbackScan {
+		if DepositEventLookbackLimit > currentBlock {
+			// If the limit is greater than the current block, like for new chains, start from 0
+			startBlock = 0
+		} else {
+			startBlock = currentBlock - DepositEventLookbackLimit
+		}
+	} else {
+		if currentBlock > startBlock && currentBlock-startBlock > DepositEventLookbackLimit {
+			// If the next block to scan is too far in the past, start from the limit
+			startBlock = currentBlock - DepositEventLookbackLimit
+			options.DoLookbackScan = true
+			logger.Warn(
+				"Next block to scan is too far in the past, forcing lookback scan",
+				"oldStartBlock", m.data.NextBlockToScan,
+				"currentBlock", currentBlock,
+				"lookbackLimit", DepositEventLookbackLimit,
+				"newStartBlock", startBlock,
+			)
+		}
+	}
+
+	// Check if the clients are synced
+	if !options.SkipSyncCheck {
+		start := time.Now()
+		err := m.sp.RequireEthClientSynced(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if options.DoLookbackScan {
+			// Only need to do the Beacon client if we're doing a lookback scan
+			if err := m.sp.RequireBeaconClientSynced(ctx); err != nil {
+				return nil, nil, err
+			}
+		}
+
+		logger.Debug("Checked client sync status", "elapsed", time.Since(start))
 	}
 
 	// Remove keys that don't have a private key
@@ -273,25 +323,51 @@ func (m *AvailableKeyManager) GetAvailableKeys(
 	}
 
 	// Remove keys that have already been assigned an index on Beacon
-	start = time.Now()
-	goodKeys, badKeys, err = m.filterKeysOnBeacon(ctx, goodKeys, options.SkipSyncCheck)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error filtering keys via Beacon indices: %w", err)
+	if options.DoLookbackScan {
+		start := time.Now()
+		goodKeys, badKeys, err = m.filterKeysOnBeacon(ctx, goodKeys)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error filtering keys via Beacon indices: %w", err)
+		}
+		logger.Debug("Filtered keys on Beacon", "available", len(goodKeys), "elapsed", time.Since(start))
+		for _, key := range badKeys {
+			ineligibleKeys[key] = IneligibleReason_OnBeacon
+		}
+	} else {
+		logger.Debug("Lookback not needed, skipping Beacon filter")
 	}
-	logger.Debug("Filtered keys on Beacon", "available", len(goodKeys), "elapsed", time.Since(start))
-	for _, key := range badKeys {
-		ineligibleKeys[key] = IneligibleReason_OnBeacon
+
+	// Remove keys that have pending deposits in the Pectra Beacon queue
+	if options.DoLookbackScan {
+		start := time.Now()
+		goodKeys, badKeys, err = m.filterKeysOnPendingDeposits(ctx, logger, goodKeys)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error filtering keys via pending deposits: %w", err)
+		}
+		logger.Debug("Filtered keys on pending deposits", "available", len(goodKeys), "elapsed", time.Since(start))
+		for _, key := range badKeys {
+			ineligibleKeys[key] = IneligibleReason_HasDepositEvent
+		}
+	} else {
+		logger.Debug("Lookback not needed, skipping pending deposits filter")
 	}
 
 	// Remove keys that have already been used in a deposit contract event
 	start = time.Now()
-	goodKeys, badKeys, err = m.filterKeysOnDepositEvents(ctx, logger, goodKeys, options.SkipSyncCheck, options.DoLookbackScan)
+	goodKeys, badKeys, err = m.filterKeysOnDepositEvents(ctx, logger, goodKeys, startBlock, currentBlock)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error filtering keys via deposit contract events: %w", err)
 	}
 	logger.Debug("Filtered keys on deposit contract", "available", len(goodKeys), "elapsed", time.Since(start))
 	for _, key := range badKeys {
 		ineligibleKeys[key] = IneligibleReason_HasDepositEvent
+	}
+
+	// Set the lookback flag for all keys
+	if options.DoLookbackScan {
+		for _, key := range goodKeys {
+			key.HasLookbackScanned = true
+		}
 	}
 
 	m.data.Keys = goodKeys // Save all of the keys before filtering by deposit root
@@ -305,6 +381,7 @@ func (m *AvailableKeyManager) GetAvailableKeys(
 	}
 
 	// Save the new list
+	m.data.NextBlockToScan = currentBlock + 1
 	err = m.updateData()
 	if err != nil {
 		return nil, nil, fmt.Errorf("error updating available keys: %w", err)
@@ -378,21 +455,12 @@ func (m *AvailableKeyManager) filterKeysOnLookbackScanned(
 func (m *AvailableKeyManager) filterKeysOnBeacon(
 	ctx context.Context,
 	keys []*AvailableKey,
-	skipSyncCheck bool,
 ) (
 	eligibleKeys []*AvailableKey,
 	ineligibleKeys []*AvailableKey,
 	err error,
 ) {
-	// Get the Beacon client and make sure it's synced
 	bn := m.sp.GetBeaconClient()
-	if !skipSyncCheck {
-		if err := m.sp.RequireBeaconClientSynced(ctx); err != nil {
-			return nil, nil, err
-		}
-	}
-
-	// Remove keys that have already been assigned an index on Beacon
 	pubkeys := make([]beacon.ValidatorPubkey, len(keys))
 	for i, data := range keys {
 		pubkeys[i] = data.PublicKey
@@ -417,115 +485,82 @@ func (m *AvailableKeyManager) filterKeysOnBeacon(
 	return eligibleKeys, ineligibleKeys, nil
 }
 
-// Filter the list of available keys to remove any that have deposit events in the deposit contract logs
-func (m *AvailableKeyManager) filterKeysOnDepositEvents(
+// Filter the list of available keys to remove any that have pending deposits in the Pectra Beacon queue
+func (m *AvailableKeyManager) filterKeysOnPendingDeposits(
 	ctx context.Context,
 	logger *slog.Logger,
 	keys []*AvailableKey,
-	skipSyncCheck bool,
-	doLookbackScan bool,
 ) (
 	eligibleKeys []*AvailableKey,
 	ineligibleKeys []*AvailableKey,
 	err error,
 ) {
-	eligibleKeys = []*AvailableKey{}
-	ineligibleKeys = []*AvailableKey{}
-
-	// Get the Execution client and make sure it's synced
-	ec := m.sp.GetEthClient()
-	if !skipSyncCheck {
-		if err := m.sp.RequireEthClientSynced(ctx); err != nil {
-			return nil, nil, err
-		}
-	}
-
-	// Check the pending deposits if we are doing a lookback scan
-	if doLookbackScan {
-		bn := m.sp.GetBeaconClient()
-		if !skipSyncCheck {
-			if err := m.sp.RequireBeaconClientSynced(ctx); err != nil {
-				return nil, nil, err
-			}
-		}
-		pendingDeposits, err := bn.GetPendingDeposits(ctx, "head")
-		if err != nil {
-			if errors.Is(err, bclient.ErrorStateNotPectra) {
-				// Pending deposits aren't available yet so ignore them
-				logger.Debug("Pending deposits aren't available until Pectra, ignoring")
-			} else if errors.Is(err, bclient.ErrorNotSupportedYet) {
-				// The client doesn't have the pending deposits route yet
-				logger.Debug("Pending deposits not supported by the Beacon Node yet, ignoring")
-			} else {
-				return nil, nil, fmt.Errorf("error getting pending deposits: %w", err)
-			}
-		}
-		logger.Debug("Got pending deposits", "count", len(pendingDeposits))
-
-		// Filter out any keys that are already in the pending deposits
-		keyMap := map[beacon.ValidatorPubkey]*AvailableKey{}
-		for _, key := range keys {
-			keyMap[key.PublicKey] = key
-		}
-		removedKeys := map[beacon.ValidatorPubkey]struct{}{}
-		for _, deposit := range pendingDeposits {
-			key, exists := keyMap[deposit.Pubkey]
-			if exists {
-				logger.Debug(
-					"Key was found in a pending deposit",
-					"pubkey", deposit.Pubkey.Hex(),
-					"slot", deposit.Slot,
-				)
-				_, removed := removedKeys[deposit.Pubkey]
-				if !removed {
-					removedKeys[deposit.Pubkey] = struct{}{}
-					key.PrivateKey = nil // Empty out the private key so it's not resident in memory
-					ineligibleKeys = append(ineligibleKeys, key)
-				}
-			}
-		}
-
-		// Remove the ineligible keys from the list
-		newKeys := make([]*AvailableKey, 0, len(keys))
-		for _, key := range keys {
-			_, exists := removedKeys[key.PublicKey]
-			if !exists {
-				newKeys = append(newKeys, key)
-			}
-		}
-		keys = newKeys
-		logger.Debug(
-			"Removed ineligible keys from pending deposits",
-			"removed", len(removedKeys),
-			"available", len(keys),
-		)
-		if len(keys) == 0 {
-			return eligibleKeys, ineligibleKeys, nil
-		}
-	}
-
-	// Figure out where to start
-	currentBlock, err := ec.BlockNumber(ctx)
+	bn := m.sp.GetBeaconClient()
+	pendingDeposits, err := bn.GetPendingDeposits(ctx, "head")
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting current block number: %w", err)
-	}
-
-	var startBlock uint64
-	if doLookbackScan {
-		if DepositEventLookbackLimit > currentBlock {
-			// If the limit is greater than the current block, like for new chains, start from 0
-			startBlock = 0
+		if errors.Is(err, bclient.ErrorStateNotPectra) {
+			// Pending deposits aren't available yet so ignore them
+			logger.Debug("Pending deposits aren't available until Pectra, ignoring")
+		} else if errors.Is(err, bclient.ErrorNotSupportedYet) {
+			// The client doesn't have the pending deposits route yet
+			logger.Debug("Pending deposits not supported by the Beacon Node yet, ignoring")
 		} else {
-			startBlock = currentBlock - DepositEventLookbackLimit
+			return nil, nil, fmt.Errorf("error getting pending deposits: %w", err)
 		}
-	} else {
-		startBlock = m.data.NextBlockToScan
-		if currentBlock-startBlock > DepositEventLookbackLimit {
-			// If the next block to scan is too far in the past, start from the limit
-			startBlock = currentBlock - DepositEventLookbackLimit
+		return keys, []*AvailableKey{}, nil
+	}
+	logger.Debug("Got pending deposits", "count", len(pendingDeposits))
+
+	// Filter out any keys that are already in the pending deposits
+	keyMap := map[beacon.ValidatorPubkey]*AvailableKey{}
+	for _, key := range keys {
+		keyMap[key.PublicKey] = key
+	}
+	removedKeys := map[beacon.ValidatorPubkey]struct{}{}
+	for _, deposit := range pendingDeposits {
+		key, exists := keyMap[deposit.Pubkey]
+		if exists {
+			logger.Debug(
+				"Key was found in a pending deposit",
+				"pubkey", deposit.Pubkey.Hex(),
+				"slot", deposit.Slot,
+			)
+			_, removed := removedKeys[deposit.Pubkey]
+			if !removed {
+				removedKeys[deposit.Pubkey] = struct{}{}
+				key.PrivateKey = nil // Empty out the private key so it's not resident in memory
+				ineligibleKeys = append(ineligibleKeys, key)
+			}
 		}
 	}
 
+	// Remove the ineligible keys from the list
+	for _, key := range keys {
+		_, exists := removedKeys[key.PublicKey]
+		if !exists {
+			eligibleKeys = append(eligibleKeys, key)
+		}
+	}
+	logger.Debug(
+		"Removed ineligible keys from pending deposits",
+		"removed", len(ineligibleKeys),
+		"available", len(eligibleKeys),
+	)
+	return eligibleKeys, ineligibleKeys, nil
+}
+
+// Filter the list of available keys to remove any that have deposit events in the deposit contract logs
+func (m *AvailableKeyManager) filterKeysOnDepositEvents(
+	ctx context.Context,
+	logger *slog.Logger,
+	keys []*AvailableKey,
+	startBlock uint64,
+	currentBlock uint64,
+) (
+	eligibleKeys []*AvailableKey,
+	ineligibleKeys []*AvailableKey,
+	err error,
+) {
 	// Get the deposit events
 	logger.Debug(
 		"Getting deposit events",
@@ -547,13 +582,6 @@ func (m *AvailableKeyManager) filterKeysOnDepositEvents(
 		return nil, nil, fmt.Errorf("error getting deposit events: %w", err)
 	}
 
-	// Set the lookback flag for all keys
-	if doLookbackScan {
-		for _, key := range keys {
-			key.HasLookbackScanned = true
-		}
-	}
-
 	// Ignore keys that are already in the deposit logs
 	for _, key := range keys {
 		event, exists := depositEvents[key.PublicKey]
@@ -571,7 +599,6 @@ func (m *AvailableKeyManager) filterKeysOnDepositEvents(
 	}
 
 	// Update the next block to scan if there aren't any errors
-	m.data.NextBlockToScan = currentBlock + 1
 	return eligibleKeys, ineligibleKeys, nil
 }
 

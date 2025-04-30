@@ -97,15 +97,21 @@ func (c *walletGetAvailableKeysContext) PrepareData(data *api.WalletGetAvailable
 		return types.ResponseStatus_Error, fmt.Errorf("error getting latest Beacon deposit root: %w", err)
 	}
 
+	// Get the current block number
+	currentBlock, err := sp.GetEthClient().BlockNumber(ctx)
+	if err != nil {
+		return types.ResponseStatus_Error, fmt.Errorf("error getting current block number: %w", err)
+	}
+
 	// Get the list of keys ready for depositing
 	scanOpts := swcommon.GetAvailableKeyOptions{
 		SkipSyncCheck:  true,
 		DoLookbackScan: false,
 	}
-	if keyMgr.RequiresLookbackScan() || c.doLookback {
+	if keyMgr.RequiresLookbackScan(currentBlock) || c.doLookback {
 		scanOpts.DoLookbackScan = true
 	}
-	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, scanOpts)
+	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, currentBlock, scanOpts)
 	if err != nil {
 		return types.ResponseStatus_Error, fmt.Errorf("error getting available keys: %w", err)
 	}

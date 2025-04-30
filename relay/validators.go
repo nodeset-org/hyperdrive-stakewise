@@ -131,26 +131,6 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Debug("StakeWise wallet ready", "elapsed", time.Since(start))
 
-	// Check if NodeSet can support more validators
-	validatorsInfo, err := hd.NodeSet_StakeWise.GetValidatorsInfo(res.DeploymentName, res.Vault)
-	if err != nil {
-		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting meta info from nodeset: %w", err))
-		return
-	}
-	if validatorsInfo.Data.NotRegistered {
-		HandleError(w, logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
-		return
-	}
-	availableForNodeSet := validatorsInfo.Data.AvailableValidators
-	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", availableForNodeSet)
-	if availableForNodeSet == 0 {
-		// Return an empty response
-		HandleSuccess(w, logger, ValidatorsResponse{
-			Validators: []ValidatorInfo{},
-		})
-		return
-	}
-
 	// Get the current Beacon deposit root
 	err = sp.RequireEthClientSynced(ctx)
 	if err != nil {
@@ -172,11 +152,26 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	logger.Debug("Got deposit root", "elapsed", time.Since(start), "root", depositRoot.Hex())
 
+	// Get the current block number
+	currentBlock, err := sp.GetEthClient().BlockNumber(ctx)
+	if err != nil {
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting current block number: %w", err))
+		return
+	}
+
 	// Short-circuit if lookback scanning is required because it will take too long
-	if keyMgr.RequiresLookbackScan() {
+	if keyMgr.RequiresLookbackScan(currentBlock) {
 		logger.Info("Lookback scan required for new keys, starting scan")
+		if err := sp.RequireBeaconClientSynced(ctx); err != nil {
+			HandleError(w, logger, http.StatusUnprocessableEntity, fmt.Errorf("lookback scan is required but the Beacon Node is not synced: %w", err))
+			return
+		}
+
+		// Beacon is synced but the lookback scan is required, so start it and return while it runs
 		HandleError(w, logger, http.StatusServiceUnavailable, fmt.Errorf("lookback scan required for new keys, try again later"))
-		_, _, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, swcommon.GetAvailableKeyOptions{
+
+		// Do the lookback scan
+		_, _, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, currentBlock, swcommon.GetAvailableKeyOptions{
 			SkipSyncCheck:  true,
 			DoLookbackScan: true,
 		})
@@ -191,7 +186,7 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 		SkipSyncCheck:  true,
 		DoLookbackScan: false,
 	}
-	availableKeys, ineligibleKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, scanOpts)
+	availableKeys, ineligibleKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, currentBlock, scanOpts)
 	if err != nil {
 		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting available keys: %w", err))
 		return
@@ -230,6 +225,26 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	if len(availableKeys) > request.ValidatorsBatchSize {
 		logger.Debug("Clamping available keys to requested count", "available", len(availableKeys), "requested", request.ValidatorsBatchSize)
 		availableKeys = availableKeys[:request.ValidatorsBatchSize]
+	}
+
+	// Check if NodeSet can support more validators
+	validatorsInfo, err := hd.NodeSet_StakeWise.GetValidatorsInfo(res.DeploymentName, res.Vault)
+	if err != nil {
+		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting meta info from nodeset: %w", err))
+		return
+	}
+	if validatorsInfo.Data.NotRegistered {
+		HandleError(w, logger, http.StatusUnprocessableEntity, fmt.Errorf("node is not registered with nodeset"))
+		return
+	}
+	availableForNodeSet := validatorsInfo.Data.AvailableValidators
+	logger.Debug("Got meta info from NodeSet", "elapsed", time.Since(start), "available", availableForNodeSet)
+	if availableForNodeSet == 0 {
+		// Return an empty response
+		HandleSuccess(w, logger, ValidatorsResponse{
+			Validators: []ValidatorInfo{},
+		})
+		return
 	}
 	if availableForNodeSet < len(availableKeys) {
 		logger.Debug("Clamping available keys to NodeSet limit", "available", len(availableKeys), "nodeSetLimit", availableForNodeSet)

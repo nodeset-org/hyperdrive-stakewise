@@ -67,6 +67,7 @@ func TestRelay_One(t *testing.T) {
 	op := testMgr.GetOperatorMock()
 	keyMgr := sp.GetAvailableKeyManager()
 	logger := testMgr.GetLogger()
+	ctx := context.Background()
 
 	// Set the max validators per node to 1
 	vault.MaxValidatorsPerUser = 1
@@ -78,9 +79,14 @@ func TestRelay_One(t *testing.T) {
 		t.Fatalf("Error committing block: %v", err)
 	}
 
+	// Get the current block number
+	currentBlock, err := sp.GetEthClient().BlockNumber(ctx)
+	require.NoError(t, err)
+	t.Logf("Current block number: %d", currentBlock)
+
 	// Initialize the key manager
 	keyMgr.LoadPrivateKeys(logger)
-	_, _, err = keyMgr.GetAvailableKeys(context.Background(), logger, common.HexToHash("0x01"), swcommon.GetAvailableKeyOptions{
+	_, _, err = keyMgr.GetAvailableKeys(context.Background(), logger, common.HexToHash("0x01"), currentBlock, swcommon.GetAvailableKeyOptions{
 		SkipSyncCheck:  true,
 		DoLookbackScan: true,
 	})
@@ -111,6 +117,7 @@ func TestRelay_Three(t *testing.T) {
 	op := testMgr.GetOperatorMock()
 	keyMgr := sp.GetAvailableKeyManager()
 	logger := testMgr.GetLogger()
+	ctx := context.Background()
 
 	// Set the max validators per node to 1
 	vault.MaxValidatorsPerUser = 3
@@ -122,9 +129,14 @@ func TestRelay_Three(t *testing.T) {
 		t.Fatalf("Error committing block: %v", err)
 	}
 
+	// Get the current block number
+	currentBlock, err := sp.GetEthClient().BlockNumber(ctx)
+	require.NoError(t, err)
+	t.Logf("Current block number: %d", currentBlock)
+
 	// Initialize the key manager
 	keyMgr.LoadPrivateKeys(logger)
-	_, _, err = keyMgr.GetAvailableKeys(context.Background(), logger, common.HexToHash("0x01"), swcommon.GetAvailableKeyOptions{
+	_, _, err = keyMgr.GetAvailableKeys(ctx, logger, common.HexToHash("0x01"), currentBlock, swcommon.GetAvailableKeyOptions{
 		SkipSyncCheck:  true,
 		DoLookbackScan: true,
 	})
@@ -159,6 +171,7 @@ func TestRelay_Staggered(t *testing.T) {
 	logger := testMgr.GetLogger()
 	qMgr := sp.GetQueryManager()
 	bdc := sp.GetBeaconDepositContract()
+	ctx := context.Background()
 
 	// Set the max validators per node to 1
 	vault.MaxValidatorsPerUser = 1
@@ -185,9 +198,14 @@ func TestRelay_Staggered(t *testing.T) {
 	require.NoError(t, err)
 	nsDB.Eth.SetDepositRoot(depositRoot)
 
+	// Get the current block number
+	currentBlock, err := sp.GetEthClient().BlockNumber(ctx)
+	require.NoError(t, err)
+	t.Logf("Current block number: %d", currentBlock)
+
 	// Initialize the key manager
 	keyMgr.LoadPrivateKeys(logger)
-	_, _, err = keyMgr.GetAvailableKeys(context.Background(), logger, depositRoot, swcommon.GetAvailableKeyOptions{
+	_, _, err = keyMgr.GetAvailableKeys(ctx, logger, depositRoot, currentBlock, swcommon.GetAvailableKeyOptions{
 		SkipSyncCheck:  true,
 		DoLookbackScan: true,
 	})
@@ -272,6 +290,7 @@ func TestRelay_DepositEvent(t *testing.T) {
 	logger := testMgr.GetLogger()
 	qMgr := sp.GetQueryManager()
 	bdc := sp.GetBeaconDepositContract()
+	ctx := context.Background()
 
 	// Set the max validators per node to 1
 	vault.MaxValidatorsPerUser = 1
@@ -298,9 +317,14 @@ func TestRelay_DepositEvent(t *testing.T) {
 	require.NoError(t, err)
 	nsDB.Eth.SetDepositRoot(depositRoot)
 
+	// Get the current block number
+	currentBlock, err := sp.GetEthClient().BlockNumber(ctx)
+	require.NoError(t, err)
+	t.Logf("Current block number: %d", currentBlock)
+
 	// Initialize the key manager
 	keyMgr.LoadPrivateKeys(logger)
-	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(context.Background(), logger, depositRoot, swcommon.GetAvailableKeyOptions{
+	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, currentBlock, swcommon.GetAvailableKeyOptions{
 		SkipSyncCheck:  true,
 		DoLookbackScan: true,
 	})
@@ -343,6 +367,7 @@ func TestRelay_PendingDepositEvent(t *testing.T) {
 	qMgr := sp.GetQueryManager()
 	bdc := sp.GetBeaconDepositContract()
 	bnMock := testMgr.GetBeaconMockManager()
+	ctx := context.Background()
 
 	// Set the max validators per node to 1
 	vault.MaxValidatorsPerUser = 1
@@ -369,6 +394,11 @@ func TestRelay_PendingDepositEvent(t *testing.T) {
 	require.NoError(t, err)
 	nsDB.Eth.SetDepositRoot(depositRoot)
 
+	// Get the current block number
+	currentBlock, err := sp.GetEthClient().BlockNumber(ctx)
+	require.NoError(t, err)
+	t.Logf("Current block number: %d", currentBlock)
+
 	// Add a fake deposit for 0 to the pending deposits on Beacon
 	bnMock.AddPendingDeposit(&db.Deposit{
 		Pubkey:                pubkeys[0],
@@ -380,7 +410,7 @@ func TestRelay_PendingDepositEvent(t *testing.T) {
 
 	// Initialize the key manager
 	keyMgr.LoadPrivateKeys(logger)
-	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(context.Background(), logger, depositRoot, swcommon.GetAvailableKeyOptions{
+	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, currentBlock, swcommon.GetAvailableKeyOptions{
 		SkipSyncCheck:  true,
 		DoLookbackScan: true,
 	})
@@ -440,6 +470,7 @@ func TestRelay_ActiveOnBeacon(t *testing.T) {
 	qMgr := sp.GetQueryManager()
 	bdc := sp.GetBeaconDepositContract()
 	bnMock := testMgr.GetBeaconMockManager()
+	ctx := context.Background()
 
 	// Set the max validators per node to 1
 	vault.MaxValidatorsPerUser = 1
@@ -466,6 +497,11 @@ func TestRelay_ActiveOnBeacon(t *testing.T) {
 	require.NoError(t, err)
 	nsDB.Eth.SetDepositRoot(depositRoot)
 
+	// Get the current block number
+	currentBlock, err := sp.GetEthClient().BlockNumber(ctx)
+	require.NoError(t, err)
+	t.Logf("Current block number: %d", currentBlock)
+
 	// Make the validator active on Beacon
 	bnValidator, err := bnMock.AddValidator(pubkeys[0], common.Hash{})
 	require.NoError(t, err)
@@ -478,7 +514,7 @@ func TestRelay_ActiveOnBeacon(t *testing.T) {
 
 	// Initialize the key manager
 	keyMgr.LoadPrivateKeys(logger)
-	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(context.Background(), logger, depositRoot, swcommon.GetAvailableKeyOptions{
+	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, currentBlock, swcommon.GetAvailableKeyOptions{
 		SkipSyncCheck:  true,
 		DoLookbackScan: true,
 	})
@@ -521,6 +557,7 @@ func TestRelay_KeysAlreadyExist(t *testing.T) {
 	qMgr := sp.GetQueryManager()
 	bdc := sp.GetBeaconDepositContract()
 	bnMock := testMgr.GetBeaconMockManager()
+	ctx := context.Background()
 
 	// Deposit the 3rd key so it has a deposit event
 	key2, err := keygen.GetBlsPrivateKey(2)
@@ -564,9 +601,14 @@ func TestRelay_KeysAlreadyExist(t *testing.T) {
 	require.NoError(t, err)
 	nsDB.Eth.SetDepositRoot(depositRoot)
 
+	// Get the current block number
+	currentBlock, err := sp.GetEthClient().BlockNumber(ctx)
+	require.NoError(t, err)
+	t.Logf("Current block number: %d", currentBlock)
+
 	// Initialize the key manager
 	keyMgr.LoadPrivateKeys(logger)
-	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(context.Background(), logger, depositRoot, swcommon.GetAvailableKeyOptions{
+	goodKeys, badKeys, err := keyMgr.GetAvailableKeys(ctx, logger, depositRoot, currentBlock, swcommon.GetAvailableKeyOptions{
 		SkipSyncCheck:  true,
 		DoLookbackScan: true,
 	})
