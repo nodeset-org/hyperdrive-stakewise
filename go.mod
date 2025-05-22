@@ -4,18 +4,21 @@ go 1.24
 
 toolchain go1.24.2
 
+require github.com/rocket-pool/node-manager-core v0.5.2-0.20250430074613-76bcf6bb1be0
+
+replace github.com/rocket-pool/node-manager-core => github.com/nodeset-org/node-manager-core v0.6.0
+
 require (
 	github.com/ethereum/go-ethereum v1.15.8
 	github.com/fatih/color v1.17.0
 	github.com/goccy/go-json v0.10.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.2.2-0.20250519034959-63ae9f746e1b
+	github.com/nodeset-org/hyperdrive-daemon v1.2.2
 	github.com/nodeset-org/nodeset-client-go v1.3.1
 	github.com/nodeset-org/osha v0.4.0
 	github.com/prysmaticlabs/prysm/v5 v5.1.0
 	github.com/rocket-pool/batch-query v1.0.0
-	github.com/rocket-pool/node-manager-core v0.5.2-0.20250430074613-76bcf6bb1be0
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.5
 	github.com/wealdtech/go-eth2-types/v2 v2.8.2
@@ -177,5 +180,3 @@ require (
 	lukechampine.com/blake3 v1.2.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
-
-replace github.com/rocket-pool/node-manager-core => github.com/nodeset-org/node-manager-core v0.5.2-0.20250517072521-25c73c4ebf98
