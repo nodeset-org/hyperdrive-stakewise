@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -316,12 +315,11 @@ func (h *baseHandler) getValidators(w http.ResponseWriter, r *http.Request) {
 	start = time.Now()
 	signatureResponse, err := hd.NodeSet_StakeWise.GetValidatorManagerSignature(res.DeploymentName, res.Vault, depositRoot, depositDatas, encryptedExits)
 	if err != nil {
-		// Manual handling of 409 since it was added after the daemon was tagged
-		if strings.Contains(err.Error(), "has already been assigned to a user recently") {
-			HandleError(w, logger, http.StatusConflict, fmt.Errorf("deposit root %s has already been used by another node operator", depositRoot.Hex()))
-			return
-		}
 		HandleError(w, logger, http.StatusInternalServerError, fmt.Errorf("error getting validators signature from nodeset: %w", err))
+		return
+	}
+	if signatureResponse.Data.DepositRootAlreadyUsed {
+		HandleError(w, logger, http.StatusConflict, fmt.Errorf("deposit root %s has already been used by another node operator", depositRoot.Hex()))
 		return
 	}
 	if signatureResponse.Data.NotRegistered {
