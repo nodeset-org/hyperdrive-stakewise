@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	ValidatorsPath = "validators"
+	ValidatorsPath string = "validators"
+	InfoPath       string = "info"
 )
 
 // Base routes for the relay
@@ -37,4 +38,5 @@ func NewBaseHandler(sp swcommon.IStakeWiseServiceProvider, logger *slog.Logger, 
 
 func (h *baseHandler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/"+ValidatorsPath, h.getValidators).Methods(http.MethodPost)
+	router.HandleFunc("/"+InfoPath, h.getInfo).Methods(http.MethodGet)
 }

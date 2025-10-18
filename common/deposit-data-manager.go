@@ -2,7 +2,9 @@ package swcommon
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -33,11 +35,10 @@ func NewDepositDataManager(sp IStakeWiseServiceProvider) (*DepositDataManager, e
 		sp: sp,
 	}
 
-	// Empty out the deposit data file
-	depositDataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile)
-	bytes := []byte("{}")
-	err := os.WriteFile(depositDataPath, bytes, fileMode)
-	if err != nil {
+	// Remove the old deposit data file
+	depositDataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile_Deprecated)
+	err := os.Remove(depositDataPath)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("error emptying deposit data file: %w", err)
 	}
 	return ddMgr, nil

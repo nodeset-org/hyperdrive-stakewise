@@ -34,10 +34,6 @@ func (c *StakeWiseConfig) VcContainerName() string {
 	return string(ContainerID_StakewiseValidator)
 }
 
-func (c *StakeWiseConfig) DepositDataFile() string {
-	return DepositDataFile
-}
-
 // The tag for the daemon container
 func (cfg *StakeWiseConfig) GetDaemonContainerTag() string {
 	return cfg.DaemonContainerTag.Value
