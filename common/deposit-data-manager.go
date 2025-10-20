@@ -35,11 +35,11 @@ func NewDepositDataManager(sp IStakeWiseServiceProvider) (*DepositDataManager, e
 		sp: sp,
 	}
 
-	// Remove the old deposit data file
-	depositDataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile_Deprecated)
-	err := os.Remove(depositDataPath)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("error emptying deposit data file: %w", err)
+	// Ensure the deposit data file is empty
+	// Replace with deleteDepositDataFile(sp) when v4 is introduced
+	err := emptyDepositDataFile(sp)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing deposit data manager: %w", err)
 	}
 	return ddMgr, nil
 }
@@ -81,4 +81,25 @@ func ValidateDepositInfo(logger *slog.Logger, depositDomain []byte, depositAmoun
 		Signature:             signature,
 	}
 	return prdeposit.VerifyDepositSignature(depositData, depositDomain)
+}
+
+// Empties out the v3 deposit data file
+func emptyDepositDataFile(sp IStakeWiseServiceProvider) error {
+	depositDataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile)
+	bytes := []byte("{}")
+	err := os.WriteFile(depositDataPath, bytes, fileMode)
+	if err != nil {
+		return fmt.Errorf("error emptying deposit data file: %w", err)
+	}
+	return nil
+}
+
+// Deletes the old deposit data file used in v3
+func deleteDepositDataFile(sp IStakeWiseServiceProvider) error {
+	depositDataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile)
+	err := os.Remove(depositDataPath)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("error deleting deposit data file: %w", err)
+	}
+	return nil
 }
