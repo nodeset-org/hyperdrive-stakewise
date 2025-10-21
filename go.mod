@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require github.com/rocket-pool/node-manager-core v0.5.2-0.20250430074613-76bcf6bb1be0
 
-replace github.com/rocket-pool/node-manager-core => github.com/nodeset-org/node-manager-core v0.6.1-0.20251020134607-548fce73442e
+replace github.com/rocket-pool/node-manager-core => github.com/nodeset-org/node-manager-core v0.7.0
 
 require (
 	github.com/ethereum/go-ethereum v1.16.5
@@ -14,7 +14,7 @@ require (
 	github.com/goccy/go-json v0.10.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/nodeset-org/hyperdrive-daemon v1.2.3-0.20251020135050-6de08f31187d
+	github.com/nodeset-org/hyperdrive-daemon v1.3.0-b1
 	github.com/nodeset-org/nodeset-client-go v1.3.1
 	github.com/nodeset-org/osha v0.4.0
 	github.com/prysmaticlabs/prysm/v5 v5.1.0
