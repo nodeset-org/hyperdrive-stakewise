@@ -95,6 +95,8 @@ func emptyDepositDataFile(sp IStakeWiseServiceProvider) error {
 }
 
 // Deletes the old deposit data file used in v3
+//
+//nolint:unused
 func deleteDepositDataFile(sp IStakeWiseServiceProvider) error {
 	depositDataPath := filepath.Join(sp.GetModuleDir(), swconfig.DepositDataFile)
 	err := os.Remove(depositDataPath)
